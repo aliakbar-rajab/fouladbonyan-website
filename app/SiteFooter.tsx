@@ -51,7 +51,7 @@ export function SiteFooter({
               <WhatsAppIcon />
             </span>
             <span className="footer-whatsapp-label">
-              عضویت در کامیونیتی واتساپ
+              عضویت در کانال واتساپ
             </span>
           </a>
         </div>
