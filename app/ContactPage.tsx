@@ -173,7 +173,7 @@ export default function ContactPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    عضویت در کامیونیتی واتساپ
+                    عضویت در کانال واتساپ
                   </a>
                 </div>
               </div>
