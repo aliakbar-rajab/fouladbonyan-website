@@ -181,6 +181,7 @@
   pointer-events: none;
   z-index: 0;
   opacity: 1;
+  mix-blend-mode: screen;
 }
 
 .light-pillar-container canvas {
