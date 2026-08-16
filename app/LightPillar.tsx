@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 
 // Decorative animated pillar behind the header/footer. Every site placement
-// uses the same brand-yellow-over-black look, so the look is baked in here
-// rather than passed as props -- there is no second configuration.
+// uses the same grey-over-black look, so the look is baked in here rather than
+// passed as props -- there is no second configuration.
 const globalClockStart =
   typeof performance !== "undefined" ? performance.now() : 0;
 
@@ -38,8 +38,8 @@ void main() {
 `;
 
 // Ray-marched ribbon inside a rounded bound, tinted from black at the base to
-// brand yellow at the top. All look constants (colors, glow, pillar size, the
-// -15deg tilt, the 0.4rad wave rotation) are compile-time literals.
+// mid-grey at the top. All look constants (colors, glow, pillar size, the
+// 49deg tilt, the 0.4rad wave rotation) are compile-time literals.
 const fragmentShader = (tier: (typeof QUALITY_TIERS)[keyof typeof QUALITY_TIERS]) => `#version 300 es
 precision ${tier.precision} float;
 
@@ -52,15 +52,15 @@ out vec4 fragColor;
 const float STEP_MULT = ${tier.stepMultiplier};
 const int MAX_ITER = ${tier.iterations};
 const int WAVE_ITER = ${tier.waveIterations};
-const vec3 TOP_COLOR = vec3(0.9647, 0.7098, 0.0);
+const vec3 TOP_COLOR = vec3(0.2510, 0.2510, 0.2510);
 const vec3 BOTTOM_COLOR = vec3(0.0);
-const float INTENSITY = 0.8;
+const float INTENSITY = 3.0;
 const float GLOW_AMOUNT = 0.005;
-const float PILLAR_WIDTH = 5.0;
-const float PILLAR_HEIGHT = 0.28;
-const float NOISE_INTENSITY = 0.1;
-const float PILLAR_ROT_COS = 0.965926;
-const float PILLAR_ROT_SIN = -0.258819;
+const float PILLAR_WIDTH = 4.5;
+const float PILLAR_HEIGHT = 0.1;
+const float NOISE_INTENSITY = 0.9;
+const float PILLAR_ROT_COS = 0.656059;
+const float PILLAR_ROT_SIN = 0.754710;
 const float WAVE_COS = 0.921061;
 const float WAVE_SIN = 0.389418;
 
