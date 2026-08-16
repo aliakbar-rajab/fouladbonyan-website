@@ -17,6 +17,9 @@ export interface LightPillarProps {
   quality?: "low" | "medium" | "high";
 }
 
+const globalClockStart =
+  typeof performance !== "undefined" ? performance.now() : 0;
+
 export function LightPillar({
   topColor = "#5227FF",
   bottomColor = "#FF9FFC",
@@ -40,7 +43,6 @@ export function LightPillar({
   const cameraRef = useRef<ThreeTypes.OrthographicCamera | null>(null);
   const geometryRef = useRef<ThreeTypes.PlaneGeometry | null>(null);
   const mouseRef = useRef<ThreeTypes.Vector2 | null>(null);
-  const timeRef = useRef(0);
   const rotationSpeedRef = useRef(rotationSpeed);
 
   useEffect(() => {
@@ -83,6 +85,9 @@ export function LightPillar({
 
         const width = currentContainer.clientWidth || 1;
         const height = currentContainer.clientHeight || 1;
+        const winW = window.innerWidth || 1;
+        const winH = window.innerHeight || 1;
+        const initialRect = currentContainer.getBoundingClientRect();
 
         const isMobile =
           typeof navigator !== "undefined" &&
@@ -153,8 +158,13 @@ export function LightPillar({
 
         renderer.setSize(width, height);
         renderer.setPixelRatio(settings.pixelRatio);
-        if (renderer.domElement) {
-          renderer.domElement.style.pointerEvents = "none";
+        renderer.domElement.style.display = "block";
+        renderer.domElement.style.width = "100%";
+        renderer.domElement.style.height = "100%";
+        renderer.domElement.style.pointerEvents = "none";
+
+        while (currentContainer.firstChild) {
+          currentContainer.removeChild(currentContainer.firstChild);
         }
         currentContainer.appendChild(renderer.domElement);
         rendererRef.current = renderer;
@@ -180,6 +190,9 @@ export function LightPillar({
 
           uniform float uTime;
           uniform vec2 uResolution;
+          uniform vec2 uWindowResolution;
+          uniform vec2 uCanvasOffset;
+          uniform float uPixelRatio;
           uniform vec2 uMouse;
           uniform vec3 uTopColor;
           uniform vec3 uBottomColor;
@@ -210,8 +223,16 @@ export function LightPillar({
           #endif
 
           void main() {
-            vec2 uv = (vUv * 2.0 - 1.0) * vec2(uResolution.x / uResolution.y, 1.0);
-            uv = vec2(uPillarRotCos * uv.x - uPillarRotSin * uv.y, uPillarRotSin * uv.x + uPillarRotCos * uv.y);
+            vec2 screenCoord = (gl_FragCoord.xy / uPixelRatio) + uCanvasOffset;
+            vec2 screenUv = vec2(
+              (screenCoord.x / uWindowResolution.x * 2.0 - 1.0) * (uWindowResolution.x / uWindowResolution.y),
+              (screenCoord.y / uWindowResolution.y * 2.0 - 1.0)
+            );
+
+            vec2 uv = vec2(
+              uPillarRotCos * screenUv.x - uPillarRotSin * screenUv.y,
+              uPillarRotSin * screenUv.x + uPillarRotCos * screenUv.y
+            );
 
             vec3 ro = vec3(0.0, 0.0, -10.0);
             vec3 rd = normalize(vec3(uv, 1.0));
@@ -279,6 +300,14 @@ export function LightPillar({
           uniforms: {
             uTime: { value: 0 },
             uResolution: { value: new THREE.Vector2(width, height) },
+            uWindowResolution: { value: new THREE.Vector2(winW, winH) },
+            uCanvasOffset: {
+              value: new THREE.Vector2(
+                initialRect.left,
+                winH - initialRect.bottom,
+              ),
+            },
+            uPixelRatio: { value: settings.pixelRatio },
             uMouse: { value: mouse },
             uTopColor: { value: parseColor(topColor) },
             uBottomColor: { value: parseColor(bottomColor) },
@@ -339,6 +368,21 @@ export function LightPillar({
         const targetFPS = effectiveQuality === "low" ? 30 : 60;
         const frameTime = 1000 / targetFPS;
 
+        const updateCanvasPosition = () => {
+          if (!currentContainer || !materialRef.current) return;
+          const rect = currentContainer.getBoundingClientRect();
+          const curWinW = window.innerWidth || 1;
+          const curWinH = window.innerHeight || 1;
+          materialRef.current.uniforms.uCanvasOffset.value.set(
+            rect.left,
+            curWinH - rect.bottom,
+          );
+          materialRef.current.uniforms.uWindowResolution.value.set(
+            curWinW,
+            curWinH,
+          );
+        };
+
         const renderSingleFrame = (tVal: number) => {
           if (
             !materialRef.current ||
@@ -347,6 +391,7 @@ export function LightPillar({
             !cameraRef.current
           )
             return;
+          updateCanvasPosition();
           materialRef.current.uniforms.uTime.value = tVal;
           materialRef.current.uniforms.uRotCos.value = Math.cos(tVal * 0.3);
           materialRef.current.uniforms.uRotSin.value = Math.sin(tVal * 0.3);
@@ -370,8 +415,11 @@ export function LightPillar({
           const deltaTime = currentTime - lastTime;
 
           if (deltaTime >= frameTime) {
-            timeRef.current += 0.016 * rotationSpeedRef.current;
-            const t = timeRef.current;
+            updateCanvasPosition();
+            const t =
+              (currentTime - globalClockStart) *
+              0.001 *
+              rotationSpeedRef.current;
             materialRef.current.uniforms.uTime.value = t;
             materialRef.current.uniforms.uRotCos.value = Math.cos(t * 0.3);
             materialRef.current.uniforms.uRotSin.value = Math.sin(t * 0.3);
@@ -416,7 +464,11 @@ export function LightPillar({
           const newWidth = containerRef.current.clientWidth || 1;
           const newHeight = containerRef.current.clientHeight || 1;
           rendererRef.current.setSize(newWidth, newHeight);
-          materialRef.current.uniforms.uResolution.value.set(newWidth, newHeight);
+          materialRef.current.uniforms.uResolution.value.set(
+            newWidth,
+            newHeight,
+          );
+          updateCanvasPosition();
           if (reducedMotion) {
             renderSingleFrame(3.4);
           }
@@ -431,6 +483,9 @@ export function LightPillar({
         }
 
         window.addEventListener("resize", updateSize, { passive: true });
+        window.addEventListener("scroll", updateCanvasPosition, {
+          passive: true,
+        });
 
         let intersectionObserver: IntersectionObserver | null = null;
         if (typeof IntersectionObserver !== "undefined") {
@@ -446,6 +501,7 @@ export function LightPillar({
 
         cleanupListeners = () => {
           window.removeEventListener("resize", updateSize);
+          window.removeEventListener("scroll", updateCanvasPosition);
           resizeObserver?.disconnect();
           intersectionObserver?.disconnect();
           motionQuery?.removeEventListener("change", onMotionChange);

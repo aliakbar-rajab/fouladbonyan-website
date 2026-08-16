@@ -1,19 +1,27 @@
 .contact-header-catalog {
   min-width: 0;
-  min-height: 3rem;
+  min-height: 3.2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   overflow: hidden;
-  border: 1px solid #d3d3d8;
-  border-radius: 10px;
-  background: var(--surface);
-  color: #75757b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(28, 22, 17, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #c9c9cf;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 4px 16px -2px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
 }
 
 .contact-header-catalog > span {
   padding-inline: 1rem;
+  color: #d1d1d6;
 }
 
 .contact-header-catalog > strong {
@@ -21,18 +29,22 @@
   display: inline-flex;
   align-items: center;
   padding-inline: 1rem;
-  background: var(--brand-yellow);
+  background: linear-gradient(135deg, #f6b500 0%, #e8a700 100%);
   color: var(--ink);
   font-size: 0.9rem;
+  font-weight: 800;
   white-space: nowrap;
+  transition: background 0.2s ease;
 }
 
 .contact-header-catalog:hover {
-  border-color: #8a6500;
+  border-color: rgba(246, 181, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(246, 181, 0, 0.18);
+  transform: translateY(-1px);
 }
 
 .contact-header-catalog:hover > strong {
-  background: #dca100;
+  background: linear-gradient(135deg, #ffc41f 0%, #f6b500 100%);
 }
 
 @media (max-width: 900px) {

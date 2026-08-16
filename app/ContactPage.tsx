@@ -15,6 +15,7 @@ import {
   whatsappCommunityUrl,
 } from "./contact-data";
 import { siteConfig } from "./site-config";
+import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
 
 const googleMapsUrl = buildGoogleMapsUrl(officeCoordinates);
@@ -59,6 +60,20 @@ export default function ContactPage() {
       </div>
 
       <header className="site-header">
+        <LightPillar
+          topColor="#f6b500"
+          bottomColor="#000000"
+          intensity={0.8}
+          rotationSpeed={0.15}
+          glowAmount={0.005}
+          pillarWidth={5}
+          pillarHeight={0.28}
+          noiseIntensity={0.1}
+          pillarRotation={-15}
+          interactive={false}
+          mixBlendMode="normal"
+        />
+
         <div className="shell header-main">
           <Brand headerLogo href="/" />
           <a className="contact-header-catalog" href="/#products">

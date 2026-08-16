@@ -26,6 +26,7 @@ import {
   type ProductGroupId,
 } from "./category-meta";
 import { phones } from "./contact-data";
+import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
 import { Brand, SectionTitle } from "./site-ui";
 import { CategoryGrid } from "./CategoryGrid";
@@ -286,6 +287,20 @@ export default function App() {
       </div>
 
       <header className="site-header">
+        <LightPillar
+          topColor="#f6b500"
+          bottomColor="#000000"
+          intensity={0.8}
+          rotationSpeed={0.15}
+          glowAmount={0.005}
+          pillarWidth={5}
+          pillarHeight={0.28}
+          noiseIntensity={0.1}
+          pillarRotation={-15}
+          interactive={false}
+          mixBlendMode="normal"
+        />
+
         <div className="shell header-main">
           <Brand headerLogo />
 
