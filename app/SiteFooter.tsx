@@ -40,15 +40,15 @@ export function SiteFooter({
   return (
     <footer className="site-footer" id="contact">
       <LightPillar
-        topColor="#f6b500"
+        topColor="#af6f28"
         bottomColor="#000000"
-        intensity={0.8}
-        rotationSpeed={0.2}
-        glowAmount={0.003}
-        pillarWidth={8}
-        pillarHeight={0.3}
+        intensity={0.34}
+        rotationSpeed={0.08}
+        glowAmount={0.0035}
+        pillarWidth={12}
+        pillarHeight={0.22}
         noiseIntensity={0}
-        pillarRotation={0}
+        pillarRotation={-20}
         interactive={false}
         mixBlendMode="normal"
       />

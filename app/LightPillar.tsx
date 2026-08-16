@@ -232,25 +232,28 @@ export function LightPillar({
               p.xz = vec2(rotC * p.x - rotS * p.z, rotS * p.x + rotC * p.z);
 
               vec3 q = p;
-              q.y = p.y * uPillarHeight + uTime;
+              q.y = p.y * uPillarHeight;
+              q.x += uTime * 0.25;
+              q.z += uTime * 0.15;
               
-              float freq = 1.0;
-              float amp = 1.0;
+              float freq = 0.28;
+              float amp = 1.35;
               for(int j = 0; j < WAVE_ITER; j++) {
                 q.xz = vec2(uWaveCos * q.x - uWaveSin * q.z, uWaveSin * q.x + uWaveCos * q.z);
-                q += cos(q.zxy * freq - uTime * float(j) * 2.0) * amp;
-                freq *= 2.0;
-                amp *= 0.5;
+                q += sin(vec3(q.z, q.x, q.y) * freq + vec3(uTime * 0.12, uTime * 0.06, uTime * 0.09) * float(j + 1)) * amp;
+                freq *= 1.5;
+                amp *= 0.48;
               }
               
-              float d = length(cos(q.xz)) - 0.2;
-              float bound = length(p.xz) - uPillarWidth;
+              vec2 ribbonCoord = vec2(q.x * 0.36 + q.y * 0.28, q.z * 0.55 - q.y * 0.18);
+              float d = length(cos(ribbonCoord)) - 0.48;
+              float bound = length(vec2(p.x * 0.22, p.z)) - uPillarWidth;
               float k = 4.0;
               float h = max(k - abs(d - bound), 0.0);
               d = max(d, bound) + h * h * 0.0625 / k;
-              d = abs(d) * 0.15 + 0.01;
+              d = abs(d) * 0.44 + 0.12;
 
-              float grad = clamp((15.0 - p.y) / 30.0, 0.0, 1.0);
+              float grad = clamp((10.0 - p.y) / 22.0, 0.0, 1.0);
               col += mix(uBottomColor, uTopColor, grad) / d;
 
               t += d * STEP_MULT;
