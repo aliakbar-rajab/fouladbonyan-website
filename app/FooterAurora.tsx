@@ -180,7 +180,19 @@ export function FooterAurora({
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host || typeof window === "undefined" || typeof document === "undefined") {
+    if (
+      !host ||
+      typeof window === "undefined" ||
+      typeof document === "undefined" ||
+      /*
+       * Bail before touching getContext when the constructors do not exist at
+       * all. jsdom reports an unimplemented getContext through its virtual
+       * console rather than by throwing, so probing there is uncatchable noise
+       * in the test output.
+       */
+      (typeof window.WebGLRenderingContext === "undefined" &&
+        typeof window.WebGL2RenderingContext === "undefined")
+    ) {
       return;
     }
 
