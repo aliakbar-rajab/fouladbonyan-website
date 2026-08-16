@@ -148,14 +148,56 @@
 }
 
 .site-footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   padding-top: 3.5rem;
   background: linear-gradient(180deg, #242427 0%, #1c1c1f 100%);
   color: #e8e8ea;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.footer-strands-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.footer-strands-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 85% 65% at 50% 30%, rgba(24, 24, 27, 0.35) 0%, rgba(18, 18, 21, 0.68) 100%),
+    linear-gradient(180deg, rgba(36, 36, 39, 0.25) 0%, rgba(28, 28, 31, 0.5) 100%);
+  pointer-events: none;
+}
+
+.strands-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: transparent;
+}
+
+.strands-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
 #phone-numbers {
   scroll-margin-top: 8rem;
+}
+
+.footer-main,
+.footer-contact-strip,
+.footer-bottom {
+  position: relative;
+  z-index: 1;
 }
 
 .footer-main {

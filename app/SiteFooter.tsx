@@ -8,6 +8,7 @@ import {
 } from "./contact-data";
 import { siteConfig } from "./site-config";
 import { Brand } from "./site-ui";
+import { Strands } from "./Strands";
 
 const quickAccessLinks = [
   { href: "/", label: "صفحه اصلی" },
@@ -38,6 +39,30 @@ export function SiteFooter({
 
   return (
     <footer className="site-footer" id="contact">
+      <div className="footer-strands-layer" aria-hidden="true">
+        <Strands
+          colors={["#F5B400", "#E06B22", "#5BB8C9"]}
+          count={3}
+          speed={0.18}
+          amplitude={1.35}
+          waviness={0.8}
+          thickness={0.65}
+          glow={0.8}
+          taper={1.8}
+          spread={2.4}
+          intensity={0.55}
+          saturation={1.35}
+          opacity={0.7}
+          scale={2.2}
+          glass={false}
+          refraction={1}
+          dispersion={1}
+          glassSize={1}
+          hueShift={0}
+        />
+        <div className="footer-strands-overlay" />
+      </div>
+
       <div className="shell footer-main">
         <div className="footer-col-brand">
           <Brand headerLogo href={homeHref} />
