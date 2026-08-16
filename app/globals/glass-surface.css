@@ -1,0 +1,108 @@
+/* ==========================================================================
+   Liquid glass material
+   ==========================================================================
+   The base recipe for every refractive pane on the site. The pane itself is
+   almost nothing: a 4% frost, a hairline rim, and a `backdrop-filter` that
+   points at the per-element displacement map built in `app/GlassSurface.tsx`.
+   Light behind the pane transmits cleanly and bends only at the edges.
+   ========================================================================== */
+
+.glass-surface {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition:
+    opacity 0.26s ease-out,
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Carrier for the filter definition only — never painted. */
+.glass-surface__filter {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  z-index: -1;
+}
+
+.glass-surface__content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+/*
+ * The prefixed property must come first: the CSS minifier collapses a
+ * prefixed/unprefixed pair down to whichever is declared last, and only the
+ * unprefixed property accepts a `var()`-substituted filter reference here.
+ */
+.glass-surface--svg {
+  background: rgba(18, 22, 25, var(--glass-frost, 0.04));
+  -webkit-backdrop-filter: var(--filter-id, url(#glass-filter))
+    saturate(var(--glass-saturation, 0.92));
+  backdrop-filter: var(--filter-id, url(#glass-filter))
+    saturate(var(--glass-saturation, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 12px 0 rgba(255, 255, 255, 0.01),
+    0 8px 24px -2px rgba(10, 12, 14, 0.3);
+}
+
+/* Safari/Firefox, which parse `backdrop-filter: url()` but never resolve it. */
+.glass-surface--fallback {
+  background: rgba(22, 26, 29, 0.7);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4) brightness(1.05);
+  backdrop-filter: blur(14px) saturate(1.4) brightness(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.35),
+    0 2px 16px 0 rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-surface--fallback {
+    background: rgba(20, 24, 27, 0.85);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.08);
+  }
+}
+
+/*
+ * Readability scrim. Transparent glass gives type nothing to sit on where a
+ * bright streak runs behind it, so each pane darkens slightly toward its
+ * centre and fades to nothing at the refracting rim.
+ */
+.glass-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+.glass-surface:focus-visible {
+  outline: 2px solid var(--brand-yellow);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-surface {
+    transition: none;
+  }
+}
