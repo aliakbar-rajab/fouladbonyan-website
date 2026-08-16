@@ -54,3 +54,24 @@ export function SectionTitle({
     </div>
   );
 }
+
+export function CatalogLoadMessage({
+  status,
+  subject,
+}: {
+  status: "loading" | "error";
+  subject: string;
+}) {
+  if (status === "error") {
+    return (
+      <p className="catalog-load-state" role="alert">
+        دریافت {subject} ممکن نشد. لطفاً صفحه را دوباره بارگذاری کنید.
+      </p>
+    );
+  }
+  return (
+    <p className="catalog-load-state" role="status">
+      در حال دریافت {subject}…
+    </p>
+  );
+}

@@ -17,14 +17,13 @@
         "preview": "vite preview",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit --incremental false",
-        "test": "node --import tsx --test tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/source-contract.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs",
+        "test": "node --import tsx --test tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/palette-contrast.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs",
         "test:build": "node --test tests/built-site.test.mjs",
         "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:build"
     },
     "dependencies": {
         "react": "19.2.8",
-        "react-dom": "19.2.8",
-        "three": "^0.185.1"
+        "react-dom": "19.2.8"
     },
     "devDependencies": {
         "@eslint/js": "10.0.1",
@@ -33,7 +32,6 @@
         "@types/node": "26.1.1",
         "@types/react": "19.2.17",
         "@types/react-dom": "19.2.3",
-        "@types/three": "^0.185.4",
         "@vitejs/plugin-react": "6.0.4",
         "eslint": "10.8.0",
         "eslint-plugin-react-hooks": "7.1.1",

@@ -1,14 +1,11 @@
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-const ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-
-/** Convert Persian and Arabic digits to ASCII digits. */
+/**
+ * Convert Persian and Arabic digits to ASCII digits. Both blocks (U+06F0 and
+ * U+0660) run 0-9 in order, so the digit's value is the low nibble.
+ */
 export function toAsciiDigits(value = "") {
-  return String(value).replace(/[۰-۹٠-٩]/g, (digit) => {
-    const persianIndex = PERSIAN_DIGITS.indexOf(digit);
-    return String(
-      persianIndex >= 0 ? persianIndex : ARABIC_DIGITS.indexOf(digit),
-    );
-  });
+  return String(value).replace(/[۰-۹٠-٩]/g, (digit) =>
+    String(digit.charCodeAt(0) & 0xf),
+  );
 }
 
 export function normalizeSearchText(value = "") {

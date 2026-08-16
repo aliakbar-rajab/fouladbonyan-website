@@ -19,8 +19,8 @@ export function deriveSummaryFromRows(rows) {
     .filter((price) => Number.isFinite(price) && price > 0);
   if (!prices.length) return { min: 0, max: 0, average: 0 };
   return {
-    min: prices.reduce((low, price) => (price < low ? price : low), prices[0]),
-    max: prices.reduce((high, price) => (price > high ? price : high), prices[0]),
+    min: Math.min(...prices),
+    max: Math.max(...prices),
     average: Math.round(
       prices.reduce((total, price) => total + price, 0) / prices.length,
     ),

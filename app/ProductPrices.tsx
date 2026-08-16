@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { PriceCatalog, type PriceCatalogConfig } from "./RebarPrices";
+import type { CatalogPriceData, CatalogViewRequest } from "./catalog-types";
+import { CatalogLoadMessage } from "./site-ui";
+import { useCatalogData } from "./use-catalog-data";
 import {
-  PriceCatalog,
-  type PriceCatalogConfig,
-} from "./RebarPrices";
-import type { CatalogPriceData } from "./catalog-types";
-import {
+  loadProductPriceCatalog,
   loadProductPricePayload,
   type ProductCatalogId,
-  type ProductViewRequest,
 } from "./product-price-data";
 
 const categoryIcons = ["◆", "◇", "◈", "▰", "▱", "⌁", "▦", "⬡"];
+
+const loadProductView = async (catalogId: ProductCatalogId) => ({
+  payload: await loadProductPricePayload(),
+  catalog: await loadProductPriceCatalog(catalogId),
+});
 
 export default function ProductPrices({
   catalogId,
@@ -19,46 +22,15 @@ export default function ProductPrices({
 }: {
   catalogId: ProductCatalogId;
   phoneHref: string;
-  requestedView?: ProductViewRequest;
+  requestedView?: CatalogViewRequest;
 }) {
-  const [loaded, setLoaded] = useState<{
-    payload: Awaited<ReturnType<typeof loadProductPricePayload>>;
-    catalog: Awaited<ReturnType<typeof loadProductPricePayload>>["catalogs"][number];
-  } | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const state = useCatalogData(loadProductView, catalogId);
 
-  useEffect(() => {
-    let active = true;
-    loadProductPricePayload()
-      .then((payload) => {
-        const catalog = payload.catalogs.find((item) => item.id === catalogId);
-        if (!catalog) throw new Error(`Unknown catalog ${catalogId}`);
-        if (active) setLoaded({ payload, catalog });
-      })
-      .catch(() => {
-        if (active) setLoadError(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [catalogId]);
-
-  if (loadError) {
-    return (
-      <p className="catalog-load-state" role="alert">
-        دریافت قیمت این گروه ممکن نشد. لطفاً صفحه را دوباره بارگذاری کنید.
-      </p>
-    );
-  }
-  if (!loaded) {
-    return (
-      <p className="catalog-load-state" role="status">
-        در حال دریافت قیمت محصولات…
-      </p>
-    );
+  if (state.status !== "ready") {
+    return <CatalogLoadMessage status={state.status} subject="قیمت این گروه" />;
   }
 
-  const { payload, catalog } = loaded;
+  const { payload, catalog } = state.data;
   const priceData: CatalogPriceData = {
     fetchedAt: payload.fetchedAt,
     sourceName: payload.sourceName,

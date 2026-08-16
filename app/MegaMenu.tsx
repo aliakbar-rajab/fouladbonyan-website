@@ -1,126 +1,117 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
-import {
-  loadProductPriceCatalog,
-  type ProductCatalogId,
-  type ProductPriceCatalog,
-  type ProductViewRequest,
-} from "./product-price-data";
-import {
-  isProductCatalogId,
-  productGroups,
-  type ProductGroupId,
-} from "./category-meta";
-import type { RebarViewRequest } from "./RebarPrices";
-import type { BeamViewRequest } from "./BeamPrices";
+import { loadGroupCatalog } from "./group-catalog";
+import { productGroups, type ProductGroupId } from "./category-meta";
+import type { CatalogViewRequest } from "./catalog-types";
+import { CatalogLoadMessage } from "./site-ui";
+import { useCatalogData } from "./use-catalog-data";
 import { useMediaQuery } from "./use-media-query";
 
-const rebarTypeLinks: Array<{
-  id: NonNullable<RebarViewRequest["categoryId"]>;
-  label: string;
-}> = [
-  { id: "ribbed", label: "قیمت میلگرد آجدار" },
-  { id: "simple", label: "قیمت میلگرد ساده" },
-  { id: "stainless", label: "قیمت میلگرد استیل" },
-  { id: "alloy", label: "قیمت میلگرد آلیاژی" },
-];
+// Each group's own catalog supplies the menu's types, factories and sizes, so
+// nothing here is a second copy of the price data.
+const MAX_MENU_ENTRIES = 16;
 
-const rebarFactories = [
-  "ذوب آهن",
-  "میانه",
-  "شاهین بناب",
-  "نیشابور",
-  "راد همدان",
-  "ظفر بناب",
-  "زاگرس",
-  "ابهر",
-  "ابرکوه",
-  "آناهیتا گیلان",
-  "شاهرود",
-  "کوثر اهواز",
-  "امیرکبیر",
-  "فایکو",
-  "کویر کاشان",
-  "اروند",
-];
+type SelectView = (view: Omit<CatalogViewRequest, "requestId">) => void;
 
-const rebarSizes = [
-  "8",
-  "10",
-  "12",
-  "14",
-  "16",
-  "18",
-  "20",
-  "22",
-  "25",
-  "28",
-  "32",
-  "36",
-  "40",
-];
+function MegaMenuSections({
+  groupId,
+  onSelect,
+}: {
+  groupId: ProductGroupId;
+  onSelect: SelectView;
+}) {
+  const state = useCatalogData(loadGroupCatalog, groupId);
 
-const beamTypeLinks: Array<{
-  id: NonNullable<BeamViewRequest["categoryId"]>;
-  label: string;
-}> = [
-  { id: "beam", label: "قیمت تیرآهن" },
-  { id: "hash", label: "قیمت هاش" },
-];
+  if (state.status !== "ready") {
+    return <CatalogLoadMessage status={state.status} subject="فهرست این گروه" />;
+  }
 
-const beamFactories = [
-  "ذوب آهن",
-  "یزد",
-  "فایکو",
-  "ناب تبریز",
-  "شاهین بناب",
-  "کرمانشاه",
-  "ماهان",
-  "اهواز",
-];
+  const catalog = state.data;
+  const initialCategory =
+    catalog.categories.find(
+      (category) => category.id === catalog.initialCategoryId,
+    ) ?? catalog.categories[0];
+  if (!initialCategory) return null;
 
-const beamSizes = ["12", "14", "16", "18", "20", "22", "24", "27", "30"];
+  return (
+    <>
+      <section className="mega-rebar-types">
+        <p className="mega-group-label">انواع {catalog.label}</p>
+        {catalog.categories.map((category) => (
+          <button
+            type="button"
+            key={category.id}
+            onClick={() => onSelect({ categoryId: category.id })}
+          >
+            قیمت {category.label}
+          </button>
+        ))}
+      </section>
+
+      <section className="mega-rebar-factories">
+        <p className="mega-group-label">
+          {initialCategory.groupingLabel}‌های {catalog.label}
+        </p>
+        <div>
+          {initialCategory.filters.factories
+            .slice(0, MAX_MENU_ENTRIES)
+            .map((factory) => (
+              <button
+                type="button"
+                key={factory}
+                onClick={() =>
+                  onSelect({ categoryId: initialCategory.id, factory })
+                }
+              >
+                {catalog.label} {factory}
+              </button>
+            ))}
+        </div>
+      </section>
+
+      <section className="mega-rebar-sizes">
+        <p className="mega-group-label">سایزهای {catalog.label}</p>
+        <div>
+          {initialCategory.filters.sizes
+            .slice(0, MAX_MENU_ENTRIES)
+            .map((size) => (
+              <button
+                type="button"
+                key={size}
+                onClick={() =>
+                  onSelect({ categoryId: initialCategory.id, size })
+                }
+              >
+                {catalog.label} {localizeCatalogValue(size)}
+              </button>
+            ))}
+        </div>
+      </section>
+    </>
+  );
+}
 
 type MegaMenuProps = {
   mobileOpen: boolean;
-  onMobileToggle: () => void;
   onMobileClose: () => void;
   activeGroup: ProductGroupId;
-  onSelectGroup: (groupId: ProductGroupId) => void;
-  onSelectRebarView: (
-    view: Omit<RebarViewRequest, "requestId">,
-  ) => void;
-  onSelectBeamView: (view: Omit<BeamViewRequest, "requestId">) => void;
-  onSelectProductView: (
-    catalogId: ProductCatalogId,
-    view: Omit<ProductViewRequest, "requestId">,
+  onNavigate: (
+    groupId: ProductGroupId,
+    view?: Omit<CatalogViewRequest, "requestId">,
   ) => void;
 };
 
-export function MegaMenu(props: MegaMenuProps) {
+export function MegaMenu({
+  mobileOpen,
+  onMobileClose,
+  activeGroup,
+  onNavigate,
+}: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
   const [megaProduct, setMegaProduct] = useState<ProductGroupId>("rebar");
-  const [loadedMegaCatalog, setLoadedMegaCatalog] =
-    useState<ProductPriceCatalog | null>(null);
-  const [megaCatalogError, setMegaCatalogError] =
-    useState<ProductCatalogId | null>(null);
 
   const isMobile = useMediaQuery("(max-width: 900px)");
   const productMenuRef = useRef<HTMLDivElement>(null);
-
-  const megaCatalog =
-    isProductCatalogId(megaProduct) && loadedMegaCatalog?.id === megaProduct
-      ? loadedMegaCatalog
-      : null;
-  const megaCatalogLoading =
-    isProductCatalogId(megaProduct) &&
-    !megaCatalog &&
-    megaCatalogError !== megaProduct;
-  const megaInitialCategory = megaCatalog
-    ? (megaCatalog.categories.find(
-        (category) => category.id === megaCatalog.initialCategoryId,
-      ) ?? megaCatalog.categories[0])
-    : null;
 
   useEffect(() => {
     if (!productsOpen) return undefined;
@@ -142,45 +133,10 @@ export function MegaMenu(props: MegaMenuProps) {
     };
   }, [productsOpen]);
 
-  useEffect(() => {
-    if (!productsOpen || !isProductCatalogId(megaProduct)) {
-      return undefined;
-    }
-    let active = true;
-    loadProductPriceCatalog(megaProduct)
-      .then((catalog) => {
-        if (active) {
-          setLoadedMegaCatalog(catalog);
-          setMegaCatalogError(null);
-        }
-      })
-      .catch(() => {
-        if (active) setMegaCatalogError(megaProduct);
-      });
-    return () => {
-      active = false;
-    };
-  }, [megaProduct, productsOpen]);
-
-  const selectRebarView = (view: Omit<RebarViewRequest, "requestId">) => {
-    props.onSelectRebarView(view);
+  const selectView: SelectView = (view) => {
+    onNavigate(megaProduct, view);
     setProductsOpen(false);
-    props.onMobileClose();
-  };
-
-  const selectBeamView = (view: Omit<BeamViewRequest, "requestId">) => {
-    props.onSelectBeamView(view);
-    setProductsOpen(false);
-    props.onMobileClose();
-  };
-
-  const selectProductView = (
-    catalogId: ProductCatalogId,
-    view: Omit<ProductViewRequest, "requestId">,
-  ) => {
-    props.onSelectProductView(catalogId, view);
-    setProductsOpen(false);
-    props.onMobileClose();
+    onMobileClose();
   };
 
   return (
@@ -189,9 +145,9 @@ export function MegaMenu(props: MegaMenuProps) {
         className="shell primary-nav"
         id="primary-navigation"
         aria-label="فهرست اصلی"
-        hidden={isMobile && !props.mobileOpen}
+        hidden={isMobile && !mobileOpen}
       >
-        <a href="#top" onClick={props.onMobileClose}>
+        <a href="#top" onClick={onMobileClose}>
           صفحه اصلی
         </a>
         <div className="products-menu" ref={productMenuRef}>
@@ -201,9 +157,7 @@ export function MegaMenu(props: MegaMenuProps) {
             aria-controls="product-navigation"
             onClick={() => {
               const nextOpen = !productsOpen;
-              if (nextOpen) {
-                setMegaProduct(props.activeGroup);
-              }
+              if (nextOpen) setMegaProduct(activeGroup);
               setProductsOpen(nextOpen);
             }}
           >
@@ -214,198 +168,7 @@ export function MegaMenu(props: MegaMenuProps) {
               id="product-navigation"
               className="product-dropdown rebar-mega-menu"
             >
-              {megaProduct === "rebar" ? (
-                <>
-                  <section className="mega-rebar-types">
-                    <p className="mega-group-label">انواع میلگرد</p>
-                    {rebarTypeLinks.map((item) => (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() =>
-                          selectRebarView({ categoryId: item.id })
-                        }
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </section>
-
-                  <section className="mega-rebar-factories">
-                    <p className="mega-group-label">کارخانه‌های میلگرد</p>
-                    <div>
-                      {rebarFactories.map((factory) => (
-                        <button
-                          type="button"
-                          key={factory}
-                          onClick={() =>
-                            selectRebarView({
-                              categoryId: "ribbed",
-                              factory:
-                                factory === "ابهر" ? "سیادن ابهر" : factory,
-                            })
-                          }
-                        >
-                          میلگرد {factory}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="mega-rebar-sizes">
-                    <p className="mega-group-label">سایزهای میلگرد</p>
-                    <div>
-                      {rebarSizes.map((size) => (
-                        <button
-                          type="button"
-                          key={size}
-                          onClick={() =>
-                            selectRebarView({
-                              categoryId: "ribbed",
-                              size,
-                            })
-                          }
-                        >
-                          میلگرد {Number(size).toLocaleString("fa-IR")}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </>
-              ) : megaProduct === "beam" ? (
-                <>
-                  <section className="mega-rebar-types">
-                    <p className="mega-group-label">انواع تیرآهن</p>
-                    {beamTypeLinks.map((item) => (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() =>
-                          selectBeamView({ categoryId: item.id })
-                        }
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </section>
-
-                  <section className="mega-rebar-factories">
-                    <p className="mega-group-label">کارخانه‌های تیرآهن</p>
-                    <div>
-                      {beamFactories.map((factory) => (
-                        <button
-                          type="button"
-                          key={factory}
-                          onClick={() =>
-                            selectBeamView({
-                              categoryId: "beam",
-                              factory,
-                            })
-                          }
-                        >
-                          تیرآهن {factory}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="mega-rebar-sizes">
-                    <p className="mega-group-label">سایزهای تیرآهن</p>
-                    <div>
-                      {beamSizes.map((size) => (
-                        <button
-                          type="button"
-                          key={size}
-                          onClick={() =>
-                            selectBeamView({
-                              categoryId: "beam",
-                              size,
-                            })
-                          }
-                        >
-                          تیرآهن {Number(size).toLocaleString("fa-IR")}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                </>
-              ) : megaCatalog && megaInitialCategory ? (
-                <>
-                  <section className="mega-rebar-types">
-                    <p className="mega-group-label">انواع {megaCatalog.label}</p>
-                    {megaCatalog.categories.map((category) => (
-                      <button
-                        type="button"
-                        key={category.id}
-                        onClick={() =>
-                          selectProductView(megaProduct, {
-                            categoryId: category.id,
-                          })
-                        }
-                      >
-                        قیمت {category.label}
-                      </button>
-                    ))}
-                  </section>
-
-                  <section className="mega-rebar-factories">
-                    <p className="mega-group-label">
-                      {megaInitialCategory.groupingLabel}‌های{" "}
-                      {megaCatalog.label}
-                    </p>
-                    <div>
-                      {megaInitialCategory.filters.factories
-                        .slice(0, 16)
-                        .map((factory) => (
-                          <button
-                            type="button"
-                            key={factory}
-                            onClick={() =>
-                              selectProductView(megaProduct, {
-                                categoryId: megaCatalog.initialCategoryId,
-                                factory,
-                              })
-                            }
-                          >
-                            {megaCatalog.label} {factory}
-                          </button>
-                        ))}
-                    </div>
-                  </section>
-
-                  <section className="mega-rebar-sizes">
-                    <p className="mega-group-label">
-                      سایزهای {megaCatalog.label}
-                    </p>
-                    <div>
-                      {megaInitialCategory.filters.sizes
-                        .slice(0, 16)
-                        .map((size) => (
-                          <button
-                            type="button"
-                            key={size}
-                            onClick={() =>
-                              selectProductView(megaProduct, {
-                                categoryId: megaCatalog.initialCategoryId,
-                                size,
-                              })
-                            }
-                          >
-                            {megaCatalog.label} {localizeCatalogValue(size)}
-                          </button>
-                        ))}
-                    </div>
-                  </section>
-                </>
-              ) : megaCatalogLoading ? (
-                <p className="catalog-load-state" role="status">
-                  در حال دریافت فهرست محصولات…
-                </p>
-              ) : (
-                <p className="catalog-load-state" role="alert">
-                  دریافت فهرست این گروه ممکن نشد.
-                </p>
-              )}
+              <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
 
               <section className="mega-other-products">
                 <p className="mega-group-label">گروه محصولات</p>
@@ -425,13 +188,13 @@ export function MegaMenu(props: MegaMenuProps) {
             </div>
           ) : null}
         </div>
-        <a href="#prices" onClick={props.onMobileClose}>
+        <a href="#prices" onClick={onMobileClose}>
           راهنمای استعلام
         </a>
-        <a href="/about/" onClick={props.onMobileClose}>
+        <a href="/about/" onClick={onMobileClose}>
           درباره ما
         </a>
-        <a href="/contact/" onClick={props.onMobileClose}>
+        <a href="/contact/" onClick={onMobileClose}>
           تماس با ما
         </a>
         <a className="nav-quote" href="/quote-process/#quote-form">

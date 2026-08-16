@@ -32,19 +32,7 @@ export function SiteFooter({
 
   return (
     <footer className="site-footer" id="contact">
-      <LightPillar
-        topColor="#f6b500"
-        bottomColor="#000000"
-        intensity={0.8}
-        rotationSpeed={0.15}
-        glowAmount={0.005}
-        pillarWidth={5}
-        pillarHeight={0.28}
-        noiseIntensity={0.1}
-        pillarRotation={-15}
-        interactive={false}
-        mixBlendMode="normal"
-      />
+      <LightPillar />
 
       <div className="shell footer-shell">
         <div className="footer-primary">

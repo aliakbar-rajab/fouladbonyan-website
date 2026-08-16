@@ -5,6 +5,8 @@ import React from "react";
 
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "https://example.test/",
+  // Supplies requestAnimationFrame, which the forms use to move focus.
+  pretendToBeVisual: true,
 });
 globalThis.window = dom.window;
 globalThis.document = dom.window.document;
@@ -279,4 +281,29 @@ test("calculator rejects fractional branch quantities", async () => {
   assert.equal(quantity.getAttribute("aria-invalid"), "true");
   assert.ok(screen.getByRole("alert"));
   assert.match(screen.getByText(/وزن تقریبی/).textContent, /—/);
+});
+
+test("a quote request grows and shrinks one item at a time", async () => {
+  const user = userEvent.setup({ document });
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+  await settle();
+
+  const itemCards = () => screen.getAllByRole("group");
+  assert.equal(itemCards().length, 1);
+
+  await user.click(screen.getByRole("button", { name: /افزودن کالای جدید/ }));
+  assert.equal(itemCards().length, 2);
+  // The new row takes focus so the buyer can keep typing.
+  await waitFor(() =>
+    assert.equal(
+      document.activeElement?.getAttribute("name"),
+      "itemProduct-2",
+    ),
+  );
+
+  await user.click(screen.getByRole("button", { name: "حذف کالای ۲" }));
+  assert.equal(itemCards().length, 1);
+  // The last row is never removable.
+  assert.equal(screen.queryByRole("button", { name: /حذف کالای/ }), null);
 });

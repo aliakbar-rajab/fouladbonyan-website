@@ -1,583 +1,320 @@
-import React, { useEffect, useRef } from "react";
-import type * as ThreeTypes from "three";
+import { useEffect, useRef } from "react";
 
-export interface LightPillarProps {
-  topColor?: string;
-  bottomColor?: string;
-  intensity?: number;
-  rotationSpeed?: number;
-  interactive?: boolean;
-  className?: string;
-  glowAmount?: number;
-  pillarWidth?: number;
-  pillarHeight?: number;
-  noiseIntensity?: number;
-  mixBlendMode?: React.CSSProperties["mixBlendMode"];
-  pillarRotation?: number;
-  quality?: "low" | "medium" | "high";
-}
-
+// Decorative animated pillar behind the header/footer. Every site placement
+// uses the same brand-yellow-over-black look, so the look is baked in here
+// rather than passed as props -- there is no second configuration.
 const globalClockStart =
   typeof performance !== "undefined" ? performance.now() : 0;
 
-function parseHexRgb(hex: string): [number, number, number] {
-  const clean = hex.replace("#", "");
-  const num = parseInt(clean, 16);
-  if (Number.isNaN(num)) return [0, 0, 0];
-  return [((num >> 16) & 255) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255];
+// Quality only ever varies by device capability, never by caller.
+const QUALITY_TIERS = {
+  low: { iterations: 24, waveIterations: 1, pixelRatio: 0.5, precision: "mediump", stepMultiplier: "1.5", fps: 30 },
+  medium: { iterations: 40, waveIterations: 2, pixelRatio: 0.65, precision: "mediump", stepMultiplier: "1.2", fps: 60 },
+  high: { iterations: 80, waveIterations: 4, pixelRatio: 0, precision: "highp", stepMultiplier: "1.0", fps: 60 },
+} as const;
+
+function pickQuality() {
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    );
+  if (isMobile) return QUALITY_TIERS.low;
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.hardwareConcurrency &&
+    navigator.hardwareConcurrency <= 4
+  ) {
+    return QUALITY_TIERS.medium;
+  }
+  return QUALITY_TIERS.high;
 }
 
-export function LightPillar({
-  topColor = "#5227FF",
-  bottomColor = "#FF9FFC",
-  intensity = 1.0,
-  rotationSpeed = 0.3,
-  interactive = false,
-  className = "",
-  glowAmount = 0.005,
-  pillarWidth = 3.0,
-  pillarHeight = 0.4,
-  noiseIntensity = 0.5,
-  mixBlendMode = "screen",
-  pillarRotation = 0,
-  quality = "high",
-}: LightPillarProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
-  const rendererRef = useRef<ThreeTypes.WebGLRenderer | null>(null);
-  const materialRef = useRef<ThreeTypes.ShaderMaterial | null>(null);
-  const sceneRef = useRef<ThreeTypes.Scene | null>(null);
-  const cameraRef = useRef<ThreeTypes.OrthographicCamera | null>(null);
-  const geometryRef = useRef<ThreeTypes.PlaneGeometry | null>(null);
-  const mouseRef = useRef<ThreeTypes.Vector2 | null>(null);
-  const rotationSpeedRef = useRef(rotationSpeed);
+const VERTEX_SHADER = `#version 300 es
+in vec2 position;
+void main() {
+  gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
 
-  useEffect(() => {
-    rotationSpeedRef.current = rotationSpeed;
-  }, [rotationSpeed]);
+// Ray-marched ribbon inside a rounded bound, tinted from black at the base to
+// brand yellow at the top. All look constants (colors, glow, pillar size, the
+// -15deg tilt, the 0.4rad wave rotation) are compile-time literals.
+const fragmentShader = (tier: (typeof QUALITY_TIERS)[keyof typeof QUALITY_TIERS]) => `#version 300 es
+precision ${tier.precision} float;
+
+uniform float uTime;
+uniform vec2 uWindowResolution;
+uniform vec2 uCanvasOffset;
+uniform float uPixelRatio;
+out vec4 fragColor;
+
+const float STEP_MULT = ${tier.stepMultiplier};
+const int MAX_ITER = ${tier.iterations};
+const int WAVE_ITER = ${tier.waveIterations};
+const vec3 TOP_COLOR = vec3(0.9647, 0.7098, 0.0);
+const vec3 BOTTOM_COLOR = vec3(0.0);
+const float INTENSITY = 0.8;
+const float GLOW_AMOUNT = 0.005;
+const float PILLAR_WIDTH = 5.0;
+const float PILLAR_HEIGHT = 0.28;
+const float NOISE_INTENSITY = 0.1;
+const float PILLAR_ROT_COS = 0.965926;
+const float PILLAR_ROT_SIN = -0.258819;
+const float WAVE_COS = 0.921061;
+const float WAVE_SIN = 0.389418;
+
+void main() {
+  vec2 screenCoord = (gl_FragCoord.xy / uPixelRatio) + uCanvasOffset;
+  vec2 screenUv = vec2(
+    (screenCoord.x / uWindowResolution.x * 2.0 - 1.0) * (uWindowResolution.x / uWindowResolution.y),
+    (screenCoord.y / uWindowResolution.y * 2.0 - 1.0)
+  );
+
+  vec2 uv = vec2(
+    PILLAR_ROT_COS * screenUv.x - PILLAR_ROT_SIN * screenUv.y,
+    PILLAR_ROT_SIN * screenUv.x + PILLAR_ROT_COS * screenUv.y
+  );
+
+  vec3 ro = vec3(0.0, 0.0, -10.0);
+  vec3 rd = normalize(vec3(uv, 1.0));
+
+  float rotC = cos(uTime * 0.3);
+  float rotS = sin(uTime * 0.3);
+
+  vec3 col = vec3(0.0);
+  float t = 0.1;
+
+  for (int i = 0; i < MAX_ITER; i++) {
+    vec3 p = ro + rd * t;
+    p.xz = vec2(rotC * p.x - rotS * p.z, rotS * p.x + rotC * p.z);
+
+    vec3 q = p;
+    q.y = p.y * PILLAR_HEIGHT;
+    q.x += uTime * 0.25;
+    q.z += uTime * 0.15;
+
+    float freq = 0.28;
+    float amp = 1.35;
+    for (int j = 0; j < WAVE_ITER; j++) {
+      q.xz = vec2(WAVE_COS * q.x - WAVE_SIN * q.z, WAVE_SIN * q.x + WAVE_COS * q.z);
+      q += sin(vec3(q.z, q.x, q.y) * freq + vec3(uTime * 0.12, uTime * 0.06, uTime * 0.09) * float(j + 1)) * amp;
+      freq *= 1.5;
+      amp *= 0.48;
+    }
+
+    vec2 ribbonCoord = vec2(q.x * 0.36 + q.y * 0.28, q.z * 0.55 - q.y * 0.18);
+    float d = length(cos(ribbonCoord)) - 0.48;
+    float bound = length(vec2(p.x * 0.22, p.z)) - PILLAR_WIDTH;
+    float k = 4.0;
+    float h = max(k - abs(d - bound), 0.0);
+    d = max(d, bound) + h * h * 0.0625 / k;
+    d = abs(d) * 0.44 + 0.12;
+
+    float grad = clamp((10.0 - p.y) / 22.0, 0.0, 1.0);
+    col += mix(BOTTOM_COLOR, TOP_COLOR, grad) / d;
+
+    t += d * STEP_MULT;
+    if (t > 50.0) break;
+  }
+
+  col = tanh(col * GLOW_AMOUNT / (PILLAR_WIDTH / 3.0));
+  col -= fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) / 15.0 * NOISE_INTENSITY;
+
+  fragColor = vec4(col * INTENSITY, 1.0);
+}
+`;
+
+function compile(gl: WebGL2RenderingContext, type: number, source: string) {
+  const shader = gl.createShader(type);
+  if (!shader) return null;
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    gl.deleteShader(shader);
+    return null;
+  }
+  return shader;
+}
+
+function createProgram(gl: WebGL2RenderingContext, fragmentSource: string) {
+  const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+  const fragment = compile(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vertex || !fragment) return null;
+  const program = gl.createProgram();
+  if (!program) return null;
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.deleteProgram(program);
+    return null;
+  }
+  return program;
+}
+
+export function LightPillar() {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (
-      !container ||
-      typeof window === "undefined" ||
-      typeof document === "undefined" ||
-      (typeof window.WebGLRenderingContext === "undefined" &&
-        typeof window.WebGL2RenderingContext === "undefined")
-    ) {
-      return;
-    }
+    if (!container || typeof window === "undefined") return undefined;
 
-    let isDestroyed = false;
-    let cleanupListeners: (() => void) | null = null;
+    const tier = pickQuality();
+    const pixelRatio = tier.pixelRatio || Math.min(window.devicePixelRatio || 1, 2);
 
-    import("three")
-      .then((THREE) => {
-        if (isDestroyed || !containerRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.style.display = "block";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
 
-        const currentContainer = containerRef.current;
-        const width = currentContainer.clientWidth || 1;
-        const height = currentContainer.clientHeight || 1;
-        const winW = window.innerWidth || 1;
-        const winH = window.innerHeight || 1;
-        const initialRect = currentContainer.getBoundingClientRect();
+    const gl = canvas.getContext("webgl2", {
+      alpha: true,
+      antialias: false,
+      depth: false,
+      stencil: false,
+      powerPreference: tier === QUALITY_TIERS.high ? "high-performance" : "low-power",
+    });
+    if (!gl) return undefined;
 
-        const isMobile =
-          typeof navigator !== "undefined" &&
-          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent,
-          );
-        const isLowEndDevice =
-          isMobile ||
-          (typeof navigator !== "undefined" &&
-            Boolean(
-              navigator.hardwareConcurrency &&
-                navigator.hardwareConcurrency <= 4,
-            ));
+    const program = createProgram(gl, fragmentShader(tier));
+    if (!program) return undefined;
 
-        let effectiveQuality = quality;
-        if (isLowEndDevice && quality === "high") effectiveQuality = "medium";
-        if (isMobile && quality !== "low") effectiveQuality = "low";
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+      gl.STATIC_DRAW,
+    );
+    const positionLocation = gl.getAttribLocation(program, "position");
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-        const qualitySettings = {
-          low: {
-            iterations: 24,
-            waveIterations: 1,
-            pixelRatio: 0.5,
-            precision: "mediump",
-            stepMultiplier: 1.5,
-          },
-          medium: {
-            iterations: 40,
-            waveIterations: 2,
-            pixelRatio: 0.65,
-            precision: "mediump",
-            stepMultiplier: 1.2,
-          },
-          high: {
-            iterations: 80,
-            waveIterations: 4,
-            pixelRatio: Math.min(
-              typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
-              2,
-            ),
-            precision: "highp",
-            stepMultiplier: 1.0,
-          },
-        };
+    gl.useProgram(program);
+    const uTime = gl.getUniformLocation(program, "uTime");
+    const uWindowResolution = gl.getUniformLocation(program, "uWindowResolution");
+    const uCanvasOffset = gl.getUniformLocation(program, "uCanvasOffset");
+    gl.uniform1f(gl.getUniformLocation(program, "uPixelRatio"), pixelRatio);
 
-        const settings =
-          qualitySettings[effectiveQuality] || qualitySettings.medium;
+    container.replaceChildren(canvas);
 
-        const scene = new THREE.Scene();
-        sceneRef.current = scene;
-        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        cameraRef.current = camera;
+    const resize = () => {
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    };
 
-        let renderer: ThreeTypes.WebGLRenderer;
-        try {
-          renderer = new THREE.WebGLRenderer({
-            antialias: false,
-            alpha: true,
-            powerPreference:
-              effectiveQuality === "high" ? "high-performance" : "low-power",
-            precision: settings.precision as "highp" | "mediump" | "lowp",
-            stencil: false,
-            depth: false,
-          });
-        } catch {
-          return;
-        }
+    const render = (time: number) => {
+      const rect = container.getBoundingClientRect();
+      gl.uniform2f(
+        uCanvasOffset,
+        rect.left,
+        (window.innerHeight || 1) - rect.bottom,
+      );
+      gl.uniform2f(
+        uWindowResolution,
+        window.innerWidth || 1,
+        window.innerHeight || 1,
+      );
+      gl.uniform1f(uTime, time);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
 
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(settings.pixelRatio);
-        renderer.domElement.style.display = "block";
-        renderer.domElement.style.width = "100%";
-        renderer.domElement.style.height = "100%";
-        renderer.domElement.style.pointerEvents = "none";
+    const motionQuery =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null;
+    let reducedMotion = motionQuery?.matches ?? false;
+    let isVisible = true;
+    let frame: number | null = null;
+    let lastTime = performance.now();
+    const frameTime = 1000 / tier.fps;
 
-        while (currentContainer.firstChild) {
-          currentContainer.removeChild(currentContainer.firstChild);
-        }
-        currentContainer.appendChild(renderer.domElement);
-        rendererRef.current = renderer;
+    const animate = (currentTime: number) => {
+      const delta = currentTime - lastTime;
+      if (delta >= frameTime) {
+        render((currentTime - globalClockStart) * 0.001 * 0.15);
+        lastTime = currentTime - (delta % frameTime);
+      }
+      frame = requestAnimationFrame(animate);
+    };
 
-        const parseColor = (hex: string): ThreeTypes.Vector3 => {
-          const color = new THREE.Color(hex);
-          return new THREE.Vector3(color.r, color.g, color.b);
-        };
+    const startOrStopLoop = () => {
+      if (reducedMotion || !isVisible) {
+        if (frame) cancelAnimationFrame(frame);
+        frame = null;
+        // A still frame keeps the panel from going blank when the loop stops.
+        if (reducedMotion) render(3.4);
+        return;
+      }
+      if (!frame) {
+        lastTime = performance.now();
+        frame = requestAnimationFrame(animate);
+      }
+    };
 
-        const mouse = new THREE.Vector2(0, 0);
-        mouseRef.current = mouse;
+    const onResize = () => {
+      resize();
+      if (reducedMotion || !isVisible) render(3.4);
+    };
+    const onScroll = () => {
+      if (reducedMotion || !isVisible) render(3.4);
+    };
+    const onMotionChange = (event: MediaQueryListEvent) => {
+      reducedMotion = event.matches;
+      startOrStopLoop();
+    };
 
-        const vertexShader = `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = vec4(position, 1.0);
-          }
-        `;
+    resize();
+    startOrStopLoop();
 
-        const fragmentShader = `
-          precision ${settings.precision} float;
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(onResize)
+        : null;
+    resizeObserver?.observe(container);
 
-          uniform float uTime;
-          uniform vec2 uResolution;
-          uniform vec2 uWindowResolution;
-          uniform vec2 uCanvasOffset;
-          uniform float uPixelRatio;
-          uniform vec2 uMouse;
-          uniform vec3 uTopColor;
-          uniform vec3 uBottomColor;
-          uniform float uIntensity;
-          uniform bool uInteractive;
-          uniform float uGlowAmount;
-          uniform float uPillarWidth;
-          uniform float uPillarHeight;
-          uniform float uNoiseIntensity;
-          uniform float uRotCos;
-          uniform float uRotSin;
-          uniform float uPillarRotCos;
-          uniform float uPillarRotSin;
-          uniform float uWaveSin;
-          uniform float uWaveCos;
-          varying vec2 vUv;
-
-          const float STEP_MULT = ${settings.stepMultiplier.toFixed(1)};
-          const int MAX_ITER = ${settings.iterations};
-          const int WAVE_ITER = ${settings.waveIterations};
-
-          #if __VERSION__ < 300
-          vec3 customTanh(vec3 x) {
-            vec3 e2x = exp(clamp(2.0 * x, -20.0, 20.0));
-            return (e2x - 1.0) / (e2x + 1.0);
-          }
-          #define tanh customTanh
-          #endif
-
-          void main() {
-            vec2 screenCoord = (gl_FragCoord.xy / uPixelRatio) + uCanvasOffset;
-            vec2 screenUv = vec2(
-              (screenCoord.x / uWindowResolution.x * 2.0 - 1.0) * (uWindowResolution.x / uWindowResolution.y),
-              (screenCoord.y / uWindowResolution.y * 2.0 - 1.0)
-            );
-
-            vec2 uv = vec2(
-              uPillarRotCos * screenUv.x - uPillarRotSin * screenUv.y,
-              uPillarRotSin * screenUv.x + uPillarRotCos * screenUv.y
-            );
-
-            vec3 ro = vec3(0.0, 0.0, -10.0);
-            vec3 rd = normalize(vec3(uv, 1.0));
-
-            float rotC = uRotCos;
-            float rotS = uRotSin;
-            if(uInteractive && (uMouse.x != 0.0 || uMouse.y != 0.0)) {
-              float a = uMouse.x * 6.283185;
-              rotC = cos(a);
-              rotS = sin(a);
-            }
-
-            vec3 col = vec3(0.0);
-            float t = 0.1;
-            
-            for(int i = 0; i < MAX_ITER; i++) {
-              vec3 p = ro + rd * t;
-              p.xz = vec2(rotC * p.x - rotS * p.z, rotS * p.x + rotC * p.z);
-
-              vec3 q = p;
-              q.y = p.y * uPillarHeight;
-              q.x += uTime * 0.25;
-              q.z += uTime * 0.15;
-              
-              float freq = 0.28;
-              float amp = 1.35;
-              for(int j = 0; j < WAVE_ITER; j++) {
-                q.xz = vec2(uWaveCos * q.x - uWaveSin * q.z, uWaveSin * q.x + uWaveCos * q.z);
-                q += sin(vec3(q.z, q.x, q.y) * freq + vec3(uTime * 0.12, uTime * 0.06, uTime * 0.09) * float(j + 1)) * amp;
-                freq *= 1.5;
-                amp *= 0.48;
-              }
-              
-              vec2 ribbonCoord = vec2(q.x * 0.36 + q.y * 0.28, q.z * 0.55 - q.y * 0.18);
-              float d = length(cos(ribbonCoord)) - 0.48;
-              float bound = length(vec2(p.x * 0.22, p.z)) - uPillarWidth;
-              float k = 4.0;
-              float h = max(k - abs(d - bound), 0.0);
-              d = max(d, bound) + h * h * 0.0625 / k;
-              d = abs(d) * 0.44 + 0.12;
-
-              float grad = clamp((10.0 - p.y) / 22.0, 0.0, 1.0);
-              col += mix(uBottomColor, uTopColor, grad) / d;
-
-              t += d * STEP_MULT;
-              if(t > 50.0) break;
-            }
-
-            float widthNorm = uPillarWidth / 3.0;
-            col = tanh(col * uGlowAmount / widthNorm);
-            
-            col -= fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) / 15.0 * uNoiseIntensity;
-            
-            gl_FragColor = vec4(col * uIntensity, 1.0);
-          }
-        `;
-
-        const pillarRotRad = (pillarRotation * Math.PI) / 180;
-        const waveSin = Math.sin(0.4);
-        const waveCos = Math.cos(0.4);
-
-        const material = new THREE.ShaderMaterial({
-          vertexShader,
-          fragmentShader,
-          uniforms: {
-            uTime: { value: 0 },
-            uResolution: { value: new THREE.Vector2(width, height) },
-            uWindowResolution: { value: new THREE.Vector2(winW, winH) },
-            uCanvasOffset: {
-              value: new THREE.Vector2(
-                initialRect.left,
-                winH - initialRect.bottom,
-              ),
-            },
-            uPixelRatio: { value: settings.pixelRatio },
-            uMouse: { value: mouse },
-            uTopColor: { value: parseColor(topColor) },
-            uBottomColor: { value: parseColor(bottomColor) },
-            uIntensity: { value: intensity },
-            uInteractive: { value: interactive },
-            uGlowAmount: { value: glowAmount },
-            uPillarWidth: { value: pillarWidth },
-            uPillarHeight: { value: pillarHeight },
-            uNoiseIntensity: { value: noiseIntensity },
-            uRotCos: { value: 1.0 },
-            uRotSin: { value: 0.0 },
-            uPillarRotCos: { value: Math.cos(pillarRotRad) },
-            uPillarRotSin: { value: Math.sin(pillarRotRad) },
-            uWaveSin: { value: waveSin },
-            uWaveCos: { value: waveCos },
-          },
-          transparent: true,
-          depthWrite: false,
-          depthTest: false,
-        });
-        materialRef.current = material;
-
-        const geometry = new THREE.PlaneGeometry(2, 2);
-        geometryRef.current = geometry;
-        const mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-
-        let mouseMoveTimeout: number | null = null;
-        const handleMouseMove = (event: MouseEvent) => {
-          if (!interactive || !mouseRef.current) return;
-
-          if (mouseMoveTimeout) return;
-
-          mouseMoveTimeout = window.setTimeout(() => {
-            mouseMoveTimeout = null;
-          }, 16);
-
-          const rect = currentContainer.getBoundingClientRect();
-          const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-          const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-          mouseRef.current.set(x, y);
-        };
-
-        if (interactive) {
-          currentContainer.addEventListener("mousemove", handleMouseMove, {
-            passive: true,
-          });
-        }
-
-        const motionQuery =
-          typeof window.matchMedia === "function"
-            ? window.matchMedia("(prefers-reduced-motion: reduce)")
-            : null;
-        let reducedMotion = motionQuery?.matches ?? false;
-
-        let isVisible = true;
-        let lastTime = performance.now();
-        const targetFPS = effectiveQuality === "low" ? 30 : 60;
-        const frameTime = 1000 / targetFPS;
-
-        const updateCanvasPosition = () => {
-          if (!currentContainer || !materialRef.current) return;
-          const rect = currentContainer.getBoundingClientRect();
-          const curWinW = window.innerWidth || 1;
-          const curWinH = window.innerHeight || 1;
-          materialRef.current.uniforms.uCanvasOffset.value.set(
-            rect.left,
-            curWinH - rect.bottom,
-          );
-          materialRef.current.uniforms.uWindowResolution.value.set(
-            curWinW,
-            curWinH,
-          );
-        };
-
-        const renderSingleFrame = (tVal: number) => {
-          if (
-            !materialRef.current ||
-            !rendererRef.current ||
-            !sceneRef.current ||
-            !cameraRef.current
-          )
-            return;
-          updateCanvasPosition();
-          materialRef.current.uniforms.uTime.value = tVal;
-          materialRef.current.uniforms.uRotCos.value = Math.cos(tVal * 0.3);
-          materialRef.current.uniforms.uRotSin.value = Math.sin(tVal * 0.3);
-          rendererRef.current.render(sceneRef.current, cameraRef.current);
-        };
-
-        const animate = (currentTime: number) => {
-          if (!isVisible || reducedMotion) {
-            rafRef.current = null;
-            return;
-          }
-
-          if (
-            !materialRef.current ||
-            !rendererRef.current ||
-            !sceneRef.current ||
-            !cameraRef.current
-          )
-            return;
-
-          const deltaTime = currentTime - lastTime;
-
-          if (deltaTime >= frameTime) {
-            updateCanvasPosition();
-            const t =
-              (currentTime - globalClockStart) *
-              0.001 *
-              rotationSpeedRef.current;
-            materialRef.current.uniforms.uTime.value = t;
-            materialRef.current.uniforms.uRotCos.value = Math.cos(t * 0.3);
-            materialRef.current.uniforms.uRotSin.value = Math.sin(t * 0.3);
-            rendererRef.current.render(sceneRef.current, cameraRef.current);
-            lastTime = currentTime - (deltaTime % frameTime);
-          }
-
-          rafRef.current = requestAnimationFrame(animate);
-        };
-
-        const startOrStopLoop = () => {
-          if (reducedMotion) {
-            if (rafRef.current) {
-              cancelAnimationFrame(rafRef.current);
-              rafRef.current = null;
-            }
-            renderSingleFrame(3.4);
-          } else if (isVisible && !rafRef.current) {
-            lastTime = performance.now();
-            rafRef.current = requestAnimationFrame(animate);
-          } else if (!isVisible && rafRef.current) {
-            cancelAnimationFrame(rafRef.current);
-            rafRef.current = null;
-          }
-        };
-
-        startOrStopLoop();
-
-        const onMotionChange = (event: MediaQueryListEvent) => {
-          reducedMotion = event.matches;
-          startOrStopLoop();
-        };
-        motionQuery?.addEventListener("change", onMotionChange);
-
-        const updateSize = () => {
-          if (
-            !rendererRef.current ||
-            !materialRef.current ||
-            !containerRef.current
-          )
-            return;
-          const newWidth = containerRef.current.clientWidth || 1;
-          const newHeight = containerRef.current.clientHeight || 1;
-          rendererRef.current.setSize(newWidth, newHeight);
-          materialRef.current.uniforms.uResolution.value.set(
-            newWidth,
-            newHeight,
-          );
-          updateCanvasPosition();
-          if (reducedMotion) {
-            renderSingleFrame(3.4);
-          }
-        };
-
-        let resizeObserver: ResizeObserver | null = null;
-        if (typeof ResizeObserver !== "undefined") {
-          resizeObserver = new ResizeObserver(() => {
-            updateSize();
-          });
-          resizeObserver.observe(currentContainer);
-        }
-
-        window.addEventListener("resize", updateSize, { passive: true });
-        window.addEventListener("scroll", updateCanvasPosition, {
-          passive: true,
-        });
-
-        let intersectionObserver: IntersectionObserver | null = null;
-        if (typeof IntersectionObserver !== "undefined") {
-          intersectionObserver = new IntersectionObserver(
+    const intersectionObserver =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
             (entries) => {
               isVisible = entries[0]?.isIntersecting ?? true;
               startOrStopLoop();
             },
             { threshold: 0.01 },
-          );
-          intersectionObserver.observe(currentContainer);
-        }
+          )
+        : null;
+    intersectionObserver?.observe(container);
 
-        cleanupListeners = () => {
-          window.removeEventListener("resize", updateSize);
-          window.removeEventListener("scroll", updateCanvasPosition);
-          resizeObserver?.disconnect();
-          intersectionObserver?.disconnect();
-          motionQuery?.removeEventListener("change", onMotionChange);
-          if (interactive) {
-            currentContainer.removeEventListener(
-              "mousemove",
-              handleMouseMove,
-            );
-          }
-        };
-      })
-      .catch(() => {
-        // Failed to load three
-      });
+    window.addEventListener("resize", onResize, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    motionQuery?.addEventListener("change", onMotionChange);
 
     return () => {
-      isDestroyed = true;
-      if (cleanupListeners) cleanupListeners();
-
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-        rendererRef.current.forceContextLoss();
-        if (
-          container &&
-          container.contains(rendererRef.current.domElement)
-        ) {
-          container.removeChild(rendererRef.current.domElement);
-        }
-      }
-      if (materialRef.current) {
-        materialRef.current.dispose();
-      }
-      if (geometryRef.current) {
-        geometryRef.current.dispose();
-      }
-
-      rendererRef.current = null;
-      materialRef.current = null;
-      sceneRef.current = null;
-      cameraRef.current = null;
-      geometryRef.current = null;
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll);
+      motionQuery?.removeEventListener("change", onMotionChange);
+      resizeObserver?.disconnect();
+      intersectionObserver?.disconnect();
+      gl.deleteProgram(program);
+      gl.deleteBuffer(buffer);
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      canvas.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quality]);
-
-  useEffect(() => {
-    const mat = materialRef.current;
-    if (!mat) return;
-
-    const [tr, tg, tb] = parseHexRgb(topColor);
-    mat.uniforms.uTopColor.value.set(tr, tg, tb);
-    const [br, bg, bb] = parseHexRgb(bottomColor);
-    mat.uniforms.uBottomColor.value.set(br, bg, bb);
-    mat.uniforms.uIntensity.value = intensity;
-    mat.uniforms.uInteractive.value = interactive;
-    mat.uniforms.uGlowAmount.value = glowAmount;
-    mat.uniforms.uPillarWidth.value = pillarWidth;
-    mat.uniforms.uPillarHeight.value = pillarHeight;
-    mat.uniforms.uNoiseIntensity.value = noiseIntensity;
-    const pillarRotRad = (pillarRotation * Math.PI) / 180;
-    mat.uniforms.uPillarRotCos.value = Math.cos(pillarRotRad);
-    mat.uniforms.uPillarRotSin.value = Math.sin(pillarRotRad);
-  }, [
-    topColor,
-    bottomColor,
-    intensity,
-    interactive,
-    glowAmount,
-    pillarWidth,
-    pillarHeight,
-    noiseIntensity,
-    pillarRotation,
-  ]);
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className={`light-pillar-container ${className}`}
-      style={{ mixBlendMode, pointerEvents: "none" }}
+      className="light-pillar-container"
+      style={{ pointerEvents: "none" }}
       aria-hidden="true"
     />
   );
