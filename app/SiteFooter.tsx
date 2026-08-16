@@ -1,12 +1,5 @@
 import { LightPillar } from "./LightPillar";
 import { WhatsAppIcon } from "./icons";
-import {
-  managementContacts,
-  officialEmail,
-  phones,
-  shortAddress,
-  whatsappCommunityUrl,
-} from "./contact-data";
 import { siteConfig } from "./site-config";
 import { Brand } from "./site-ui";
 
@@ -65,7 +58,7 @@ export function SiteFooter({
             </p>
             <a
               className="footer-whatsapp"
-              href={whatsappCommunityUrl}
+              href={siteConfig.contact.whatsappCommunityUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -108,11 +101,11 @@ export function SiteFooter({
             <p className="footer-cta-desc">
               کارشناسان فروش برای استعلام لحظه‌ای و صدور پیش‌فاکتور آماده‌اند.
             </p>
-            <a className="footer-call" href={phones[0].href} dir="ltr">
+            <a className="footer-call" href={siteConfig.contact.phones[0].href} dir="ltr">
               <span className="footer-call-icon" aria-hidden="true">
                 ☎
               </span>
-              <span>{phones[0].label}</span>
+              <span>{siteConfig.contact.phones[0].label}</span>
             </a>
           </section>
         </div>
@@ -132,14 +125,14 @@ export function SiteFooter({
           </div>
 
           <ul className="footer-lines-list">
-            {phones.map((phone) => (
+            {siteConfig.contact.phones.map((phone) => (
               <li key={phone.href}>
                 <a className="fg-pill" href={phone.href} dir="ltr">
                   {phone.label}
                 </a>
               </li>
             ))}
-            {managementContacts.map((contact) => (
+            {siteConfig.contact.management.map((contact) => (
               <li className="footer-line-item--named" key={contact.href}>
                 <a className="fg-pill fg-pill--named" href={contact.href}>
                   <span className="fg-pill-name">{contact.name}</span>
@@ -152,15 +145,15 @@ export function SiteFooter({
 
         <div className="footer-base">
           <div className="footer-base-contact">
-            {officialEmail ? (
-              <a className="fg-chip" href={`mailto:${officialEmail}`} dir="ltr">
+            {siteConfig.contact.officialEmail ? (
+              <a className="fg-chip" href={`mailto:${siteConfig.contact.officialEmail}`} dir="ltr">
                 <span aria-hidden="true">✉</span>
-                {officialEmail}
+                {siteConfig.contact.officialEmail}
               </a>
             ) : null}
             <address className="fg-chip">
               <span aria-hidden="true">⌖</span>
-              {shortAddress}
+              {siteConfig.business.shortAddress}
             </address>
           </div>
 

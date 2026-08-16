@@ -6,9 +6,7 @@ import {
 } from "./RebarPrices";
 import type { CatalogPriceData, CatalogViewRequest } from "./catalog-types";
 
-export type BeamViewRequest = Omit<CatalogViewRequest, "categoryId"> & {
-  categoryId?: "beam" | "hash";
-};
+export type BeamViewRequest = CatalogViewRequest;
 
 const beamConfig: PriceCatalogConfig = {
   productLabel: "تیرآهن",

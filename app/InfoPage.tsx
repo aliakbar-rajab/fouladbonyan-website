@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { phones } from "./contact-data";
 import { ComplaintForm } from "./ComplaintForm";
 import { QuoteRequestForm } from "./QuoteRequestForm";
 import { siteConfig } from "./site-config";
@@ -289,7 +288,7 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
         <div className="shell utility-inner">
           <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
           <div aria-label="شماره‌های تماس">
-            {phones.map((phone) => (
+            {siteConfig.contact.phones.map((phone) => (
               <a href={phone.href} key={phone.href} dir="ltr">
                 {phone.label}
               </a>
@@ -317,11 +316,11 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
             <span>قیمت‌های اطلاع‌رسانی و مشخصات محصولات</span>
             <strong>مشاهده محصولات</strong>
           </a>
-          <a className="header-phone" href={phones[0].href}>
+          <a className="header-phone" href={siteConfig.contact.phones[0].href}>
             <span aria-hidden="true">☎</span>
             <span>
               <small>تماس با واحد فروش</small>
-              <b dir="ltr">{phones[0].label}</b>
+              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
             </span>
           </a>
           <button
@@ -367,7 +366,7 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
       </main>
       <SiteFooter />
       <div className="mobile-actions" aria-label="اقدام‌های سریع">
-        <a href={phones[0].href}>
+        <a href={siteConfig.contact.phones[0].href}>
           <span aria-hidden="true">☎</span>
           تماس
         </a>

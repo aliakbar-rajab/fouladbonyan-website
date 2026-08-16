@@ -9,6 +9,17 @@ const ASSET_ICONS: Record<string, (props: IconProps) => ReturnType<typeof GoldIc
   eur: EurIcon,
 };
 
+const updatedAtFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Asia/Tehran",
+});
+
+const checkedAtFormatter = new Intl.DateTimeFormat("fa-IR", {
+  timeStyle: "short",
+  timeZone: "Asia/Tehran",
+});
+
 function formatPrice(value: number) {
   return value.toLocaleString("fa-IR");
 }
@@ -18,18 +29,11 @@ function formatPercent(value: number) {
 }
 
 function formatUpdatedAt(iso: string) {
-  return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "Asia/Tehran",
-  }).format(new Date(iso));
+  return updatedAtFormatter.format(new Date(iso));
 }
 
 function formatCheckedAt(iso: string) {
-  return new Intl.DateTimeFormat("fa-IR", {
-    timeStyle: "short",
-    timeZone: "Asia/Tehran",
-  }).format(new Date(iso));
+  return checkedAtFormatter.format(new Date(iso));
 }
 
 function MarketPriceCard({ item }: { item: MarketPriceItem }) {

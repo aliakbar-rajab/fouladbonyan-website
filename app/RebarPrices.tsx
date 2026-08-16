@@ -20,12 +20,7 @@ import type {
 } from "./catalog-types";
 import { localizeCatalogValue } from "./catalog-utils";
 
-export type RebarViewRequest = {
-  requestId: number;
-  categoryId?: "ribbed" | "simple" | "stainless" | "alloy";
-  factory?: string;
-  size?: string;
-};
+export type RebarViewRequest = CatalogViewRequest;
 
 export type PriceCatalogConfig = {
   productLabel: string;

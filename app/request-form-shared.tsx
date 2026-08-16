@@ -1,4 +1,3 @@
-import { phones } from "./contact-data";
 import { siteConfig } from "./site-config";
 
 export function ErrorMessage({ id, message }: { id: string; message?: string }) {
@@ -17,7 +16,7 @@ export function PreparedRequest({
   resultRef,
   onCopy,
   contactLabel = "تماس با واحد فروش",
-  contactHref = phones[0].href,
+  contactHref = siteConfig.contact.phones[0].href,
 }: {
   title: string;
   preparedText: string;
@@ -55,7 +54,7 @@ export function PreparedRequestActions({
   onCopy,
   copyLabel = "کپی متن درخواست",
   contactLabel = "تماس با واحد فروش",
-  contactHref = phones[0].href,
+  contactHref = siteConfig.contact.phones[0].href,
   emailTitle,
   emailBody,
 }: {

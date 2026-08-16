@@ -57,6 +57,15 @@ export const siteConfig = {
   neshanShareUrl: "https://nshn.ir/QbvL2OWxRwI7",
 } as const;
 
+export function buildGoogleMapsUrl({ lat, lng }: typeof siteConfig.officeCoordinates) {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+export function buildWazeUrl({ lat, lng }: typeof siteConfig.officeCoordinates) {
+  return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+}
+
+
 export const missingOwnerInformation = [
   {
     key: "legalName",

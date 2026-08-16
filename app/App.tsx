@@ -10,13 +10,12 @@ import { filterProductGroups } from "./site-logic.mjs";
 import { buildCatalogSearchGroups } from "./catalog-search.mjs";
 import { createRetryableLoader } from "./catalog-cache";
 import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
-import RebarPrices, { type RebarViewRequest } from "./RebarPrices";
-import BeamPrices, { type BeamViewRequest } from "./BeamPrices";
+import RebarPrices from "./RebarPrices";
+import BeamPrices from "./BeamPrices";
 import ProductPrices from "./ProductPrices";
 import {
   loadProductPricePayload,
   type ProductCatalogId,
-  type ProductViewRequest,
 } from "./product-price-data";
 import {
   getInitialCategory,
@@ -25,7 +24,8 @@ import {
   type ProductGroup,
   type ProductGroupId,
 } from "./category-meta";
-import { phones } from "./contact-data";
+import type { CatalogViewRequest } from "./catalog-types";
+import { siteConfig } from "./site-config";
 import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
 import { Brand, SectionTitle } from "./site-ui";
@@ -60,22 +60,15 @@ export default function App() {
   const [searchMessage, setSearchMessage] = useState("");
   const [searchGroups, setSearchGroups] = useState<ProductGroup[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [rebarViewRequest, setRebarViewRequest] = useState<RebarViewRequest>({
+  const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>({
     requestId: 0,
   });
-  const [beamViewRequest, setBeamViewRequest] = useState<BeamViewRequest>({
-    requestId: 0,
-  });
-  const [productViewRequest, setProductViewRequest] =
-    useState<ProductViewRequest>({
-      requestId: 0,
-    });
 
   const isDirectCallDevice = useMediaQuery(
     "(max-width: 900px) and (hover: none) and (pointer: coarse)",
   );
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const contactHref = isDirectCallDevice ? phones[0].href : "#phone-numbers";
+  const contactHref = isDirectCallDevice ? siteConfig.contact.phones[0].href : "#phone-numbers";
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const didAutoScrollCategoryRoute = useRef(false);
   const initialCategoryRoute = productGroups.some(
@@ -99,77 +92,40 @@ export default function App() {
     filteredGroups.find((group) => group.id === activeGroup) ??
     filteredGroups[0] ??
     null;
-  const resetGroupView = (groupId: ProductGroupId) => {
-    if (groupId === "rebar") {
-      setRebarViewRequest((current) => ({
-        requestId: current.requestId + 1,
-        categoryId: "ribbed",
-      }));
-    } else if (groupId === "beam") {
-      setBeamViewRequest((current) => ({
-        requestId: current.requestId + 1,
-        categoryId: "beam",
-      }));
-    } else if (isProductCatalogId(groupId)) {
-      setProductViewRequest((current) => ({
-        requestId: current.requestId + 1,
-      }));
-    }
-  };
 
-  const goToGroup = (groupId: ProductGroupId) => {
+  const navigateToCatalog = (
+    groupId: ProductGroupId,
+    view?: Omit<CatalogViewRequest, "requestId">,
+  ) => {
     setCommittedSearch("");
     setSearchInput("");
     setSearchMessage("");
     setActiveGroup(groupId);
-    resetGroupView(groupId);
-    setMobileNavOpen(false);
-    scrollToPrices(reduceMotion);
-  };
-
-  const goToRebarView = (
-    view: Omit<RebarViewRequest, "requestId">,
-  ) => {
-    setCommittedSearch("");
-    setSearchInput("");
-    setSearchMessage("");
-    setActiveGroup("rebar");
-    setRebarViewRequest((current) => ({
-      ...view,
+    setActiveViewRequest((current) => ({
       requestId: current.requestId + 1,
+      categoryId:
+        view?.categoryId ??
+        (groupId === "rebar"
+          ? "ribbed"
+          : groupId === "beam"
+            ? "beam"
+            : undefined),
+      factory: view?.factory,
+      size: view?.size,
     }));
     setMobileNavOpen(false);
     scrollToPrices(reduceMotion);
   };
 
-  const goToBeamView = (view: Omit<BeamViewRequest, "requestId">) => {
-    setCommittedSearch("");
-    setSearchInput("");
-    setSearchMessage("");
-    setActiveGroup("beam");
-    setBeamViewRequest((current) => ({
-      ...view,
-      requestId: current.requestId + 1,
-    }));
-    setMobileNavOpen(false);
-    scrollToPrices(reduceMotion);
-  };
-
+  const goToGroup = (groupId: ProductGroupId) => navigateToCatalog(groupId);
+  const goToRebarView = (view: Omit<CatalogViewRequest, "requestId">) =>
+    navigateToCatalog("rebar", view);
+  const goToBeamView = (view: Omit<CatalogViewRequest, "requestId">) =>
+    navigateToCatalog("beam", view);
   const goToProductView = (
     catalogId: ProductCatalogId,
-    view: Omit<ProductViewRequest, "requestId">,
-  ) => {
-    setCommittedSearch("");
-    setSearchInput("");
-    setSearchMessage("");
-    setActiveGroup(catalogId);
-    setProductViewRequest((current) => ({
-      ...view,
-      requestId: current.requestId + 1,
-    }));
-    setMobileNavOpen(false);
-    scrollToPrices(reduceMotion);
-  };
+    view: Omit<CatalogViewRequest, "requestId">,
+  ) => navigateToCatalog(catalogId, view);
 
   const submitSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -177,8 +133,7 @@ export default function App() {
     if (!query) {
       setCommittedSearch("");
       setSearchGroups(null);
-      setActiveGroup(productGroups[0].id);
-      resetGroupView(productGroups[0].id);
+      navigateToCatalog(productGroups[0].id);
       setSearchMessage("همه محصولات نمایش داده می‌شوند.");
     } else {
       setSearchLoading(true);
@@ -203,33 +158,17 @@ export default function App() {
       setCommittedSearch(query);
       const results = filterProductGroups(groups, query);
       if (results.length > 0) {
-      const resultGroupId = results[0].id as ProductGroupId;
-      const firstRow = results[0].rows[0];
-      setActiveGroup(resultGroupId);
-      if (resultGroupId === "rebar") {
-        setRebarViewRequest((current) => ({
-          requestId: current.requestId + 1,
-          categoryId: firstRow.categoryId as RebarViewRequest["categoryId"],
-          factory: firstRow.factory,
-          size: firstRow.size,
-        }));
-      } else if (resultGroupId === "beam") {
-        setBeamViewRequest((current) => ({
-          requestId: current.requestId + 1,
-          categoryId: firstRow.categoryId as BeamViewRequest["categoryId"],
-          factory: firstRow.factory,
-          size: firstRow.size,
-        }));
-      } else {
-        setProductViewRequest((current) => ({
+        const resultGroupId = results[0].id as ProductGroupId;
+        const firstRow = results[0].rows[0];
+        setActiveGroup(resultGroupId);
+        setActiveViewRequest((current) => ({
           requestId: current.requestId + 1,
           categoryId: firstRow.categoryId,
           factory: firstRow.factory,
           size: firstRow.size,
         }));
-      }
-      const count = results.reduce((sum, group) => sum + group.rows.length, 0);
-      setSearchMessage(`${count.toLocaleString("fa-IR")} نتیجه برای «${query}» پیدا شد.`);
+        const count = results.reduce((sum, group) => sum + group.rows.length, 0);
+        setSearchMessage(`${count.toLocaleString("fa-IR")} نتیجه برای «${query}» پیدا شد.`);
       } else {
         setSearchMessage(`نتیجه‌ای برای «${query}» پیدا نشد.`);
       }
@@ -252,10 +191,7 @@ export default function App() {
 
     event.preventDefault();
     const group = productGroups[target];
-    setCommittedSearch("");
-    setSearchInput("");
-    setActiveGroup(group.id);
-    resetGroupView(group.id);
+    navigateToCatalog(group.id);
     tabRefs.current[target]?.focus();
   };
 
@@ -277,7 +213,7 @@ export default function App() {
         <div className="shell utility-inner">
           <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
           <div aria-label="شماره‌های تماس">
-            {phones.map((phone) => (
+            {siteConfig.contact.phones.map((phone) => (
               <a href={phone.href} key={phone.href} dir="ltr">
                 {phone.label}
               </a>
@@ -328,7 +264,7 @@ export default function App() {
             <span aria-hidden="true">☎</span>
             <span>
               <small>تماس با واحد فروش</small>
-              <b dir="ltr">{phones[0].label}</b>
+              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
             </span>
           </a>
 
@@ -379,14 +315,7 @@ export default function App() {
               {committedSearch ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setCommittedSearch("");
-                    setSearchInput("");
-                    setSearchGroups(null);
-                    setSearchMessage("همه محصولات نمایش داده می‌شوند.");
-                    setActiveGroup(productGroups[0].id);
-                    resetGroupView(productGroups[0].id);
-                  }}
+                  onClick={() => navigateToCatalog(productGroups[0].id)}
                 >
                   پاک‌کردن جست‌وجو
                 </button>
@@ -414,9 +343,7 @@ export default function App() {
                         tabRefs.current[index] = node;
                       }}
                       onKeyDown={(event) => moveTabFocus(event, index)}
-                      onClick={() => {
-                        goToGroup(group.id);
-                      }}
+                      onClick={() => navigateToCatalog(group.id)}
                     >
                       {group.shortLabel}
                     </button>
@@ -435,22 +362,22 @@ export default function App() {
               >
                 {visibleGroup.id === "rebar" ? (
                   <RebarPrices
-                    key={rebarViewRequest.requestId}
+                    key={activeViewRequest.requestId}
                     phoneHref={contactHref}
-                    requestedView={rebarViewRequest}
+                    requestedView={activeViewRequest}
                   />
                 ) : visibleGroup.id === "beam" ? (
                   <BeamPrices
-                    key={beamViewRequest.requestId}
+                    key={activeViewRequest.requestId}
                     phoneHref={contactHref}
-                    requestedView={beamViewRequest}
+                    requestedView={activeViewRequest}
                   />
                 ) : isProductCatalogId(visibleGroup.id) ? (
                   <ProductPrices
-                    key={`${visibleGroup.id}-${productViewRequest.requestId}`}
+                    key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
                     catalogId={visibleGroup.id}
                     phoneHref={contactHref}
-                    requestedView={productViewRequest}
+                    requestedView={activeViewRequest}
                   />
                 ) : null}
               </div>
@@ -458,8 +385,8 @@ export default function App() {
               <div className="empty-state" role="status">
                 <h3>محصولی پیدا نشد</h3>
                 <p>عبارت دیگری جست‌وجو کنید یا با واحد فروش تماس بگیرید.</p>
-                <a href={phones[0].href} dir="ltr">
-                  {phones[0].label}
+                <a href={siteConfig.contact.phones[0].href} dir="ltr">
+                  {siteConfig.contact.phones[0].label}
                 </a>
               </div>
             )}

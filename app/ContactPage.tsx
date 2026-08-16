@@ -4,27 +4,20 @@ import { WhatsAppIcon } from "./icons";
 import { useMediaQuery } from "./use-media-query";
 import { localizeCatalogValue } from "./catalog-utils";
 import {
-  phones,
-  address,
-  postalCode,
-  managementContacts,
-  officeCoordinates,
   buildGoogleMapsUrl,
   buildWazeUrl,
-  neshanShareUrl,
-  whatsappCommunityUrl,
-} from "./contact-data";
-import { siteConfig } from "./site-config";
+  siteConfig,
+} from "./site-config";
 import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
 
-const googleMapsUrl = buildGoogleMapsUrl(officeCoordinates);
-const wazeUrl = buildWazeUrl(officeCoordinates);
+const googleMapsUrl = buildGoogleMapsUrl(siteConfig.officeCoordinates);
+const wazeUrl = buildWazeUrl(siteConfig.officeCoordinates);
 
 const mapDestinations = [
   {
     label: "مسیریابی با نشان",
-    href: neshanShareUrl,
+    href: siteConfig.neshanShareUrl,
   },
   {
     label: "مسیریابی با گوگل‌مپ",
@@ -50,7 +43,7 @@ export default function ContactPage() {
         <div className="shell utility-inner">
           <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
           <div aria-label="شماره‌های تماس">
-            {phones.map((phone) => (
+            {siteConfig.contact.phones.map((phone) => (
               <a href={phone.href} key={phone.href} dir="ltr">
                 {phone.label}
               </a>
@@ -80,11 +73,11 @@ export default function ContactPage() {
             <span>قیمت روز مقاطع فولادی و اطلاعات محصولات</span>
             <strong>مشاهده محصولات</strong>
           </a>
-          <a className="header-phone" href={phones[0].href}>
+          <a className="header-phone" href={siteConfig.contact.phones[0].href}>
             <span aria-hidden="true">☎</span>
             <span>
               <small>تماس با واحد فروش</small>
-              <b dir="ltr">{phones[0].label}</b>
+              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
             </span>
           </a>
           <button
@@ -144,7 +137,7 @@ export default function ContactPage() {
                 <div>
                   <h2>شماره‌های تماس</h2>
                   <ul className="contact-phone-list">
-                    {phones.map((phone) => (
+                    {siteConfig.contact.phones.map((phone) => (
                       <li key={phone.href}>
                         <a href={phone.href} dir="ltr">
                           {phone.label}
@@ -184,7 +177,7 @@ export default function ContactPage() {
                   <h2>کامیونیتی واتساپ</h2>
                   <a
                     className="contact-whatsapp-link"
-                    href={whatsappCommunityUrl}
+                    href={siteConfig.contact.whatsappCommunityUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -213,7 +206,7 @@ export default function ContactPage() {
                 <div>
                   <h2>تماس با مدیریت</h2>
                   <ul className="contact-phone-list">
-                    {managementContacts.map((contact) => (
+                    {siteConfig.contact.management.map((contact) => (
                       <li key={contact.href}>
                         <strong>{contact.name}</strong>
                         <a href={contact.href} dir="ltr">
@@ -232,9 +225,9 @@ export default function ContactPage() {
                 <div>
                   <h2>نشانی دفتر</h2>
                   <address>
-                    {address}
+                    {siteConfig.business.address}
                     <br />
-                    کد پستی {localizeCatalogValue(postalCode)}
+                    کد پستی {localizeCatalogValue(siteConfig.business.postalCode)}
                   </address>
                 </div>
               </div>
@@ -288,7 +281,7 @@ export default function ContactPage() {
                   </g>
                 </svg>
                 <span className="map-visual-caption">
-                  <strong>{address}</strong>
+                  <strong>{siteConfig.business.address}</strong>
                   <span>برای مسیریابی با گوگل‌مپ کلیک کنید</span>
                 </span>
               </a>
@@ -313,7 +306,7 @@ export default function ContactPage() {
       <SiteFooter topHref="/" />
 
       <div className="mobile-actions" aria-label="اقدام‌های سریع">
-        <a href={phones[0].href}>
+        <a href={siteConfig.contact.phones[0].href}>
           <span aria-hidden="true">☎</span>
           تماس
         </a>

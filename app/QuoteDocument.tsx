@@ -1,4 +1,3 @@
-import { phones } from "./contact-data";
 import { PreparedRequestActions } from "./request-form-shared";
 import { siteConfig } from "./site-config";
 import { rialToWords } from "./persian-numbers";
@@ -31,7 +30,7 @@ export function QuoteDocument({
             onCopy={onCopy}
             copyLabel="کپی مشخصات درخواست"
             contactLabel="تماس با واحد فروش"
-            contactHref={phones[0].href}
+            contactHref={siteConfig.contact.phones[0].href}
           />
         </div>
         <p className="copy-status" role="status" aria-live="polite">
@@ -138,7 +137,7 @@ export function QuoteDocument({
         <footer className="quote-print-footer">
           <address>
             <strong>نشانی:</strong> {siteConfig.business.address}، {siteConfig.business.city}<br />
-            <strong>تلفن:</strong> <span dir="ltr">{phones.map((phone) => phone.label).join(" - ")}</span>
+            <strong>تلفن:</strong> <span dir="ltr">{siteConfig.contact.phones.map((phone) => phone.label).join(" - ")}</span>
           </address>
         </footer>
           </article>

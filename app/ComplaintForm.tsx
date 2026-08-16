@@ -6,9 +6,32 @@ import {
   validatePhone,
   validateRequired,
 } from "./form-validation";
-import { managementContacts } from "./contact-data";
+import { siteConfig } from "./site-config";
 import { ErrorMessage, PreparedRequest } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
+
+function validateComplaintField(
+  name: string,
+  value: string,
+  requestType?: string,
+): string {
+  switch (name) {
+    case "fullName":
+      return validateFullName(value);
+    case "phone":
+      return validatePhone(value);
+    case "subject":
+      return validateRequired(value, "موضوع");
+    case "description":
+      return validateMinimumText(value, "شرح موضوع", 20);
+    case "reference":
+      return requestType === "پیگیری شکایت" && !value.trim()
+        ? "برای پیگیری، کد یا مرجع قبلی را وارد کنید."
+        : "";
+    default:
+      return "";
+  }
+}
 
 export function ComplaintForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -24,35 +47,18 @@ export function ComplaintForm() {
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
     form: HTMLFormElement,
   ) => {
-    switch (element.name) {
-      case "fullName":
-        updateFieldError("fullName", validateFullName(element.value));
-        break;
-      case "phone":
-        updateFieldError("phone", validatePhone(element.value));
-        break;
-      case "subject":
-        updateFieldError("subject", validateRequired(element.value, "موضوع"));
-        break;
-      case "description":
-        updateFieldError(
-          "description",
-          validateMinimumText(element.value, "شرح موضوع", 20),
-        );
-        break;
-      case "requestType":
-      case "reference": {
-        const formData = new FormData(form);
-        const requestType = String(formData.get("requestType") ?? "");
-        const reference = String(formData.get("reference") ?? "");
-        updateFieldError(
-          "reference",
-          requestType === "پیگیری شکایت" && !reference.trim()
-            ? "برای پیگیری، کد یا مرجع قبلی را وارد کنید."
-            : "",
-        );
-        break;
-      }
+    const formData = new FormData(form);
+    const requestType = String(formData.get("requestType") ?? "");
+    if (element.name === "requestType" || element.name === "reference") {
+      updateFieldError(
+        "reference",
+        validateComplaintField("reference", String(formData.get("reference") ?? ""), requestType),
+      );
+    } else {
+      updateFieldError(
+        element.name,
+        validateComplaintField(element.name, element.value, requestType),
+      );
     }
   };
 
@@ -67,14 +73,11 @@ export function ComplaintForm() {
     const description = String(form.get("description") ?? "");
 
     const nextErrors: FieldErrors = {
-      fullName: validateFullName(fullName),
-      phone: validatePhone(phone),
-      reference:
-        requestType === "پیگیری شکایت" && !reference.trim()
-          ? "برای پیگیری، کد یا مرجع قبلی را وارد کنید."
-          : "",
-      subject: validateRequired(subject, "موضوع"),
-      description: validateMinimumText(description, "شرح موضوع", 20),
+      fullName: validateComplaintField("fullName", fullName),
+      phone: validateComplaintField("phone", phone),
+      reference: validateComplaintField("reference", reference, requestType),
+      subject: validateComplaintField("subject", subject),
+      description: validateComplaintField("description", description),
     };
 
     setErrors(nextErrors);
@@ -214,7 +217,7 @@ export function ComplaintForm() {
         resultRef={prepared.resultRef}
         onCopy={prepared.copy}
         contactLabel="تماس با مدیریت"
-        contactHref={managementContacts[0].href}
+        contactHref={siteConfig.contact.management[0].href}
       />
     </form>
   );

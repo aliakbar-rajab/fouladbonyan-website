@@ -41,9 +41,8 @@ test("catalog snapshot producers stay independent from the React catalog present
 });
 
 test("brand, contact details, RTL, and palette match the approved contract", async () => {
-  const [component, contactData, siteConfig, siteUi, html, css, preloader, headerLogo] = await Promise.all([
+  const [component, siteConfig, siteUi, html, css, preloader, headerLogo] = await Promise.all([
     read("../app/App.tsx"),
-    read("../app/contact-data.ts"),
     read("../app/site-config.ts"),
     read("../app/site-ui.tsx"),
     read("../index.html"),
@@ -56,7 +55,7 @@ test("brand, contact details, RTL, and palette match the approved contract", asy
       ),
     ),
   ]);
-  const combined = `${component}\n${contactData}\n${siteConfig}\n${siteUi}\n${html}\n${preloader}`;
+  const combined = `${component}\n${siteConfig}\n${siteUi}\n${html}\n${preloader}`;
 
   assert.match(html, /<html lang="fa" dir="rtl">/);
   assert.match(combined, /بنیان فولاد داریا/);
@@ -120,7 +119,7 @@ test("request forms stay local and never simulate a confirmed submission", async
   );
   assert.match(
     component,
-    /const contactHref = isDirectCallDevice \? phones\[0\]\.href : "#phone-numbers"/,
+    /const contactHref = isDirectCallDevice\s*\?\s*siteConfig\.contact\.phones\[0\]\.href\s*:\s*"#phone-numbers"/,
   );
   assert.match(footer, /id="phone-numbers"/);
 });

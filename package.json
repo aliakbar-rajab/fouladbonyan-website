@@ -22,7 +22,6 @@
         "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:build"
     },
     "dependencies": {
-        "ogl": "^1.0.11",
         "react": "19.2.8",
         "react-dom": "19.2.8",
         "three": "^0.185.1"

@@ -20,6 +20,13 @@ export interface LightPillarProps {
 const globalClockStart =
   typeof performance !== "undefined" ? performance.now() : 0;
 
+function parseHexRgb(hex: string): [number, number, number] {
+  const clean = hex.replace("#", "");
+  const num = parseInt(clean, 16);
+  if (Number.isNaN(num)) return [0, 0, 0];
+  return [((num >> 16) & 255) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255];
+}
+
 export function LightPillar({
   topColor = "#5227FF",
   bottomColor = "#FF9FFC",
@@ -69,20 +76,6 @@ export function LightPillar({
         if (isDestroyed || !containerRef.current) return;
 
         const currentContainer = containerRef.current;
-        let hasWebGL = false;
-        try {
-          const probe = document.createElement("canvas");
-          hasWebGL = Boolean(
-            typeof probe.getContext === "function" &&
-              (probe.getContext("webgl2") ||
-                probe.getContext("webgl") ||
-                probe.getContext("experimental-webgl")),
-          );
-        } catch {
-          // WebGL unavailable
-        }
-        if (!hasWebGL) return;
-
         const width = currentContainer.clientWidth || 1;
         const height = currentContainer.clientHeight || 1;
         const winW = window.innerWidth || 1;
@@ -552,67 +545,33 @@ export function LightPillar({
   }, [quality]);
 
   useEffect(() => {
-    if (!materialRef.current) return;
-    import("three").then((THREE) => {
-      if (!materialRef.current) return;
-      const color = new THREE.Color(topColor);
-      materialRef.current.uniforms.uTopColor.value.set(
-        color.r,
-        color.g,
-        color.b,
-      );
-    });
-  }, [topColor]);
+    const mat = materialRef.current;
+    if (!mat) return;
 
-  useEffect(() => {
-    if (!materialRef.current) return;
-    import("three").then((THREE) => {
-      if (!materialRef.current) return;
-      const color = new THREE.Color(bottomColor);
-      materialRef.current.uniforms.uBottomColor.value.set(
-        color.r,
-        color.g,
-        color.b,
-      );
-    });
-  }, [bottomColor]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uIntensity.value = intensity;
-  }, [intensity]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uInteractive.value = interactive;
-  }, [interactive]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uGlowAmount.value = glowAmount;
-  }, [glowAmount]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uPillarWidth.value = pillarWidth;
-  }, [pillarWidth]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uPillarHeight.value = pillarHeight;
-  }, [pillarHeight]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
-    materialRef.current.uniforms.uNoiseIntensity.value = noiseIntensity;
-  }, [noiseIntensity]);
-
-  useEffect(() => {
-    if (!materialRef.current) return;
+    const [tr, tg, tb] = parseHexRgb(topColor);
+    mat.uniforms.uTopColor.value.set(tr, tg, tb);
+    const [br, bg, bb] = parseHexRgb(bottomColor);
+    mat.uniforms.uBottomColor.value.set(br, bg, bb);
+    mat.uniforms.uIntensity.value = intensity;
+    mat.uniforms.uInteractive.value = interactive;
+    mat.uniforms.uGlowAmount.value = glowAmount;
+    mat.uniforms.uPillarWidth.value = pillarWidth;
+    mat.uniforms.uPillarHeight.value = pillarHeight;
+    mat.uniforms.uNoiseIntensity.value = noiseIntensity;
     const pillarRotRad = (pillarRotation * Math.PI) / 180;
-    materialRef.current.uniforms.uPillarRotCos.value = Math.cos(pillarRotRad);
-    materialRef.current.uniforms.uPillarRotSin.value = Math.sin(pillarRotRad);
-  }, [pillarRotation]);
+    mat.uniforms.uPillarRotCos.value = Math.cos(pillarRotRad);
+    mat.uniforms.uPillarRotSin.value = Math.sin(pillarRotRad);
+  }, [
+    topColor,
+    bottomColor,
+    intensity,
+    interactive,
+    glowAmount,
+    pillarWidth,
+    pillarHeight,
+    noiseIntensity,
+    pillarRotation,
+  ]);
 
   return (
     <div
