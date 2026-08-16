@@ -154,42 +154,100 @@
   box-shadow: 0 10px 28px rgba(246, 181, 0, 0.5);
 }
 
+/* ==========================================================================
+   Site footer
+   ==========================================================================
+   A dark architectural base with braided light running through it (see
+   app/FooterAurora.tsx). Content never sits on a full-width glass band -- it
+   sits in individual glass objects (cards, pills, chips) that share one
+   material recipe, so the base stays visible between them and the light
+   behind is what reads, not the glass.
+   ========================================================================== */
+
 .site-footer {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding-top: 1.35rem;
-  padding-bottom: 0.4rem;
-  background: linear-gradient(180deg, #13100e 0%, #0a0807 100%);
-  color: #e5e5ea;
-  border-top: 1px solid rgba(245, 180, 0, 0.16);
+  padding-block: 2.15rem 1.15rem;
+  background:
+    radial-gradient(
+      150% 105% at 50% -8%,
+      rgba(126, 82, 26, 0.2) 0%,
+      rgba(126, 82, 26, 0) 62%
+    ),
+    /*
+     * Ambient pool sitting behind the card band. The aurora is deliberately
+     * biased toward the outer thirds, which leaves the middle of the footer
+     * near-black -- and glass over black is just black, however well its edges
+     * are built. This gives the panes something to transmit so they read as
+     * transparent rather than as dark tiles.
+     */
+    radial-gradient(
+      118% 78% at 50% 22%,
+      rgba(198, 130, 46, 0.12) 0%,
+      rgba(198, 130, 46, 0.04) 54%,
+      rgba(198, 130, 46, 0) 80%
+    ),
+    linear-gradient(180deg, #16120f 0%, #0d0b09 54%, #070605 100%);
+  color: #e6e3df;
+  border-top: 1px solid rgba(246, 181, 0, 0.14);
 }
 
-.footer-strands-layer {
+/*
+ * Overscanned well past the footer box on every side: the visitor sees the
+ * middle crop of a much larger picture, so the braids read as arriving from
+ * beyond the viewport rather than starting at a canvas edge.
+ */
+.footer-aurora {
   position: absolute;
-  inset: -25% -20%;
-  width: 140%;
-  height: 150%;
   z-index: 0;
+  inset: -34% -20%;
   pointer-events: none;
-  overflow: hidden;
   opacity: 0.85;
   mix-blend-mode: screen;
+  /*
+   * A single vertical feather (no horizontal one -- the light is supposed to
+   * run straight off the left and right edges). The ramp is placed so the
+   * braids are already dissolving by the time they reach the footer's top
+   * border, keeping the seam with the section above clean.
+   */
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 11%,
+    #000 27%,
+    #000 74%,
+    transparent 93%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 11%,
+    #000 27%,
+    #000 74%,
+    transparent 93%
+  );
 }
 
-.strands-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: transparent;
-}
-
-.strands-container canvas {
+.footer-aurora-canvas,
+.footer-aurora-canvas canvas {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Protects text contrast without flattening the light: a soft ceiling at the
+   seam and a deep vignette pooling under the bottom bar. */
+.footer-veil {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   pointer-events: none;
+  background:
+    radial-gradient(
+      125% 145% at 50% 122%,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0) 62%
+    ),
+    linear-gradient(180deg, rgba(8, 6, 5, 0.34) 0%, rgba(8, 6, 5, 0) 14%);
 }
 
 #phone-numbers {
@@ -201,143 +259,339 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 1.05rem;
 }
 
-/* 4-column primary card grid */
-.footer-cards-grid {
+/* --------------------------------------------------------------------------
+   Optical glass
+   --------------------------------------------------------------------------
+   Blur is the enemy of this material. At 26px the aurora's ribbons smeared
+   into one flat tan wash behind every pane -- which is exactly what made the
+   old surfaces read as brown smoke. At 9px the light keeps its structure and
+   the pane reads as something you are looking *through*, so saturation and
+   brightness go up rather than down and the body carries no dark fill at all.
+   Readability is bought back locally, per component, not by tinting the whole
+   surface (see .footer-card--brand / --cta below).
+
+   The edge is four separate constructions, all directional:
+     - an outer contour that is lit on the top and shadowed on the bottom;
+     - a warm inset lip one pixel in, which brightens on its own wherever the
+       aurora passes behind it, giving the refractive catch at the boundary;
+     - specular pools on the top corners, strongest at the inline-start one;
+     - an inset inner shell four pixels in, lit on the same side as the outer
+       contour -- the double shell is what gives the pane wall thickness.
+   -------------------------------------------------------------------------- */
+
+.fg-glass,
+.fg-pill,
+.fg-chip {
+  --fg-radius: 20px;
+  --fg-blur: blur(9px) saturate(1.32) brightness(1.16);
+  --fg-body: linear-gradient(
+    202deg,
+    rgba(255, 249, 238, 0.1) 0%,
+    rgba(255, 244, 228, 0.046) 40%,
+    rgba(255, 240, 220, 0.032) 100%
+  );
+  --fg-catch-a: 0.72;
+  --fg-rim: rgba(255, 233, 191, 0.22);
+  --fg-halo: inset 0 0 14px -7px rgba(255, 226, 180, 0.32);
+  --fg-floor: rgba(0, 0, 0, 0.3);
+  --fg-volume: inset 0 -22px 30px -30px rgba(0, 0, 0, 0.28);
+  --fg-lift: 0 2px 3px -1px rgba(0, 0, 0, 0.28),
+    0 12px 26px -10px rgba(0, 0, 0, 0.44),
+    0 30px 54px -30px rgba(0, 0, 0, 0.6);
+  --fg-shell-lit: rgba(255, 250, 240, 0.15);
+  --fg-shell-side: rgba(255, 248, 235, 0.06);
+  --fg-shell-dark: rgba(0, 0, 0, 0.24);
+  --fg-shell-inset: 4px;
+
+  position: relative;
+  border-radius: var(--fg-radius);
+  background: var(--fg-body);
+  backdrop-filter: var(--fg-blur);
+  -webkit-backdrop-filter: var(--fg-blur);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  border-bottom-color: rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 0 0 1px var(--fg-rim),
+    var(--fg-halo),
+    inset 0 -1px 0 0 var(--fg-floor),
+    var(--fg-volume),
+    var(--fg-lift);
+  transition:
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.26s ease,
+    box-shadow 0.26s ease,
+    color 0.18s ease;
+}
+
+/*
+ * Specular pass. The top light-catch lives here rather than in an
+ * `inset 0 1px 0` shadow so that it can run as a gradient along the edge --
+ * a uniform hairline all the way across reads as a drawn border, a graded one
+ * reads as a single light source catching the lip.
+ */
+.fg-glass::before,
+.fg-pill::before,
+.fg-chip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 246, 224, 0.26) 13%,
+        rgba(255, 253, 246, var(--fg-catch-a, 0.72)) 56%,
+        rgba(255, 246, 224, 0.3) 86%,
+        rgba(255, 255, 255, 0) 100%
+      )
+      0 0 / 100% 1px no-repeat,
+    radial-gradient(
+      28% 58% at 97% -2%,
+      rgba(255, 250, 233, 0.3) 0%,
+      rgba(255, 250, 233, 0) 62%
+    ),
+    radial-gradient(
+      52% 84% at 88% -10%,
+      rgba(255, 240, 210, 0.12) 0%,
+      rgba(255, 240, 210, 0) 66%
+    ),
+    radial-gradient(
+      26% 52% at 4% -2%,
+      rgba(255, 255, 255, 0.13) 0%,
+      rgba(255, 255, 255, 0) 64%
+    ),
+    linear-gradient(
+      202deg,
+      rgba(255, 255, 255, 0.11) 0%,
+      rgba(255, 255, 255, 0.025) 22%,
+      rgba(255, 255, 255, 0) 48%
+    ),
+    radial-gradient(
+      44% 66% at 3% 104%,
+      rgba(255, 222, 170, 0.075) 0%,
+      rgba(255, 222, 170, 0) 72%
+    );
+}
+
+/* Inner shell. */
+.fg-glass::after,
+.fg-pill::after {
+  content: "";
+  position: absolute;
+  inset: var(--fg-shell-inset);
+  border-radius: calc(var(--fg-radius) - var(--fg-shell-inset));
+  pointer-events: none;
+  border: 1px solid transparent;
+  border-top-color: var(--fg-shell-lit);
+  border-inline-start-color: var(--fg-shell-side);
+  border-inline-end-color: rgba(255, 255, 255, 0.02);
+  border-bottom-color: var(--fg-shell-dark);
+}
+
+/* Small objects: shallower depth and a tighter shell. They keep the same clear
+   body as the cards -- a phone number is short and bold enough to hold its own
+   against the braids with just the text shadow below. */
+.fg-pill,
+.fg-chip {
+  --fg-radius: 13px;
+  --fg-blur: blur(8px) saturate(1.28) brightness(1.14);
+  --fg-body: linear-gradient(
+    202deg,
+    rgba(255, 249, 238, 0.12) 0%,
+    rgba(255, 245, 230, 0.055) 46%,
+    rgba(255, 240, 220, 0.03) 100%
+  );
+  --fg-catch-a: 0.5;
+  --fg-volume: inset 0 -12px 16px -14px rgba(0, 0, 0, 0.4);
+  --fg-lift: 0 1px 2px -1px rgba(0, 0, 0, 0.3),
+    0 6px 14px -5px rgba(0, 0, 0, 0.42);
+  --fg-shell-inset: 3px;
+}
+
+.fg-chip {
+  --fg-radius: 11px;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .fg-glass,
+  .fg-pill,
+  .fg-chip {
+    background:
+      linear-gradient(
+        202deg,
+        rgba(255, 249, 238, 0.09) 0%,
+        rgba(255, 244, 228, 0.035) 40%,
+        rgba(255, 240, 220, 0.02) 100%
+      ),
+      rgba(16, 13, 10, 0.66);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Primary card row
+   -------------------------------------------------------------------------- */
+
+.footer-primary {
   display: grid;
-  grid-template-columns: 1.22fr 0.88fr 0.88fr 1.22fr;
-  gap: 0.65rem;
+  grid-template-columns: 1.2fr 0.85fr 0.85fr 1.1fr;
+  gap: 0.85rem;
   align-items: stretch;
 }
 
-/* Base Kara Borj Parseh-grade clean transparent glass card (double-shell / layered contour) */
+/*
+ * Contrast on transparent glass comes from the type, not from the pane. A one
+ * pixel shadow keeps every label legible where a braid runs behind it, which
+ * is what lets the material stay clear instead of being tinted down until the
+ * text is safe.
+ */
+.footer-card,
+.fg-pill,
+.fg-chip {
+  text-shadow: 0 1px 2px rgba(6, 4, 3, 0.55);
+}
+
+.footer-call,
+.footer-cta-tag {
+  text-shadow: none;
+}
+
 .footer-card {
-  position: relative;
-  border-radius: 18px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.055) 0%,
-    rgba(26, 25, 25, 0.38) 45%,
-    rgba(14, 13, 14, 0.58) 100%
-  );
-  backdrop-filter: blur(22px) saturate(135%);
-  -webkit-backdrop-filter: blur(22px) saturate(135%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 255, 255, 0.35);
-  border-left-color: rgba(255, 245, 220, 0.22);
-  border-right-color: rgba(255, 255, 255, 0.08);
-  border-bottom-color: rgba(0, 0, 0, 0.4);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 0 16px 0 rgba(255, 220, 150, 0.02),
-    0 12px 28px -6px rgba(0, 0, 0, 0.45),
-    0 4px 10px 0 rgba(0, 0, 0, 0.22);
-  padding: 0.85rem 1.05rem;
   display: flex;
   flex-direction: column;
-  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+  padding: 1.15rem 1.3rem;
   overflow: hidden;
 }
 
-/* Double-shell / inner contour for true physical glass thickness */
-.footer-card::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-top-color: rgba(255, 250, 235, 0.18);
-  border-left-color: rgba(255, 245, 220, 0.1);
-  border-bottom-color: rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.18);
-}
-
-/* Directional specular light line on top edge with warm micro-glow */
-.footer-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  inset-inline: 12%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.55) 30%,
-    rgba(255, 230, 160, 0.45) 60%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
 .footer-card:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  border-top-color: rgba(255, 255, 255, 0.55);
-  border-left-color: rgba(255, 240, 200, 0.35);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 0 20px 0 rgba(245, 180, 0, 0.04),
-    0 16px 36px -8px rgba(0, 0, 0, 0.55),
-    0 6px 14px 0 rgba(0, 0, 0, 0.28);
+  --fg-catch-a: 0.95;
+  --fg-rim: rgba(255, 236, 200, 0.24);
+  --fg-shell-lit: rgba(255, 252, 245, 0.18);
+  --fg-lift: 0 2px 3px -1px rgba(0, 0, 0, 0.3),
+    0 18px 34px -10px rgba(0, 0, 0, 0.5),
+    0 40px 70px -34px rgba(0, 0, 0, 0.68);
+  border-top-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
-.footer-card:hover::before {
-  border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 250, 235, 0.28);
+/*
+ * The two prose cards carry the longest text over the brightest part of the
+ * composition, so they get a scrim -- but a local one, weighted to the block
+ * of copy and gone well before the edges, so the material itself stays clear.
+ */
+.footer-card--brand,
+.footer-card--cta {
+  background:
+    radial-gradient(
+      74% 48% at 50% 47%,
+      rgba(9, 7, 5, 0.33) 0%,
+      rgba(9, 7, 5, 0.13) 58%,
+      rgba(9, 7, 5, 0) 100%
+    ),
+    var(--fg-body);
 }
 
-/* Brand card styling */
-.footer-card-brand {
-  gap: 0.5rem;
+/* Same idea for the link lists, shaped to the lower two thirds where the rows
+   sit, so the heading and the top specular stay in clear glass. */
+.footer-card--nav {
+  background:
+    radial-gradient(
+      86% 62% at 50% 68%,
+      rgba(9, 7, 5, 0.24) 0%,
+      rgba(9, 7, 5, 0.1) 62%,
+      rgba(9, 7, 5, 0) 100%
+    ),
+    var(--fg-body);
 }
 
-.site-footer .brand-copy strong {
+.footer-card--brand {
+  gap: 0.75rem;
+}
+
+.footer-card--brand .brand {
+  min-height: 0;
+  gap: 0.7rem;
+}
+
+.footer-card--brand .brand-mark {
+  width: 3.15rem;
+  height: 3.15rem;
+  gap: 0.2rem;
+  padding-bottom: 0.55rem;
+  grid-template-columns: repeat(3, 0.5rem);
+  border-radius: 0.68rem 0.68rem 1.1rem 0.68rem;
+  box-shadow: 0 5px 18px -4px rgba(246, 181, 0, 0.45);
+}
+
+.footer-card--brand .brand-mark i:nth-child(1) {
+  height: 0.95rem;
+}
+
+.footer-card--brand .brand-mark i:nth-child(2) {
+  height: 1.5rem;
+}
+
+.footer-card--brand .brand-mark i:nth-child(3) {
+  height: 1.95rem;
+}
+
+.footer-card--brand .brand-copy {
+  gap: 0.12rem;
+}
+
+.footer-card--brand .brand-copy strong {
   color: var(--white);
-  font-size: 0.92rem;
+  font-size: 1.18rem;
+  letter-spacing: -0.015em;
 }
 
-.site-footer .brand-copy span {
-  color: #b0b0b6;
-  font-size: 0.78rem;
-}
-
-.footer-card-brand .brand-header-logo img {
-  width: 3.25rem;
-  height: 3.25rem;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+.footer-card--brand .brand-copy span {
+  /* The header clamps this subtitle to 9rem with an ellipsis on small screens
+     because it shares a row with the search field. The footer gives it a whole
+     card, so the clamp only truncates it for no reason. */
+  max-width: none;
+  overflow: visible;
+  color: #918b81;
+  font-size: 0.66rem;
 }
 
 .footer-brand-desc {
   margin: 0;
-  color: #b0b0b8;
-  line-height: 1.48;
-  font-size: 0.8rem;
+  color: #b6b1a9;
+  font-size: 0.92rem;
+  line-height: 1.65;
 }
 
-.footer-whatsapp-btn {
+.footer-whatsapp {
   margin-top: auto;
-  min-height: 2.15rem;
+  min-height: 2.7rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 10px;
-  background: rgba(37, 211, 102, 0.08);
-  border: 1px solid rgba(37, 211, 102, 0.24);
-  color: #4ade80;
-  font-size: 0.8rem;
+  gap: 0.6rem;
+  padding-inline: 0.9rem;
+  border-radius: 13px;
+  background: rgba(37, 211, 102, 0.07);
+  border: 1px solid rgba(37, 211, 102, 0.22);
+  box-shadow: inset 0 1px 0 0 rgba(190, 255, 215, 0.18);
+  color: #5fdd90;
+  font-size: 0.9rem;
   font-weight: 800;
-  transition: all 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.footer-whatsapp-btn:hover {
-  background: rgba(37, 211, 102, 0.16);
-  border-color: rgba(37, 211, 102, 0.45);
-  color: #86efac;
+.footer-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.14);
+  border-color: rgba(37, 211, 102, 0.42);
+  color: #8ff0b4;
   transform: translateY(-1px);
 }
 
@@ -347,23 +601,19 @@
 }
 
 .footer-whatsapp-icon svg {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
-/* Nav cards styling */
-.footer-card-nav {
-  gap: 0.25rem;
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .footer-card-title {
-  margin: 0 0 0.45rem;
+  position: relative;
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.45rem;
   color: var(--white);
-  font-size: 0.88rem;
+  font-size: 1.01rem;
   font-weight: 800;
   line-height: 1.3;
-  position: relative;
-  padding-bottom: 0.3rem;
+  letter-spacing: -0.012em;
 }
 
 .footer-card-title::after {
@@ -371,356 +621,348 @@
   position: absolute;
   bottom: 0;
   inset-inline-start: 0;
-  width: 1.4rem;
+  width: 1.7rem;
   height: 2px;
-  background: linear-gradient(90deg, var(--brand-yellow), transparent);
   border-radius: 2px;
+  background: linear-gradient(to left, var(--brand-yellow), rgba(246, 181, 0, 0));
 }
 
-.footer-nav-list {
+.footer-link-list {
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.footer-nav-link {
-  min-height: 1.65rem;
-  display: inline-flex;
+.footer-link-list a {
+  min-height: 2rem;
+  display: flex;
   align-items: center;
-  color: #b5b5bf;
-  font-size: 0.82rem;
-  line-height: 1.4;
-  transition: color 0.18s ease, transform 0.18s ease;
+  gap: 0.5rem;
+  color: #c4bfb7;
+  font-size: 0.93rem;
+  line-height: 1.35;
+  transition:
+    color 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.footer-nav-link:hover {
+.footer-link-list a::before {
+  content: "";
+  flex: none;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.38;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.footer-link-list a:hover {
   color: var(--brand-yellow);
   transform: translateX(-3px);
 }
 
-/* Consultation card styling */
-.footer-card-consultation {
-  gap: 0.45rem;
+.footer-link-list a:hover::before {
+  opacity: 1;
+  transform: scale(1.7);
 }
 
-.footer-consultation-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-}
-
-.footer-consultation-tag {
-  padding: 0.14rem 0.5rem;
-  border-radius: 999px;
-  background: rgba(246, 181, 0, 0.14);
-  border: 1px solid rgba(246, 181, 0, 0.25);
-  color: var(--brand-yellow);
-  font-size: 0.68rem;
-  font-weight: 800;
-}
-
-.footer-consultation-heading {
-  margin: 0;
-  color: var(--white);
-  font-size: 0.88rem;
-  font-weight: 800;
-}
-
-.footer-consultation-desc {
-  margin: 0;
-  color: #aeafb6;
-  font-size: 0.77rem;
-  line-height: 1.44;
-}
-
-.footer-hours-row {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #cfd0d6;
-  font-size: 0.72rem;
-}
-
-.footer-hours-icon {
-  color: var(--brand-yellow);
-  font-size: 0.8rem;
-}
-
-.footer-call-btn {
-  margin-top: auto;
-  min-height: 2.15rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: 0.85rem;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #f6b500 0%, #e29e00 100%);
-  color: var(--ink);
-  font-weight: 900;
-  font-size: 0.86rem;
-  box-shadow: 0 3px 12px rgba(246, 181, 0, 0.3);
-  transition: all 0.2s ease;
-}
-
-.footer-call-btn:hover {
-  background: linear-gradient(135deg, #ffc928 0%, #f6b500 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 5px 16px rgba(246, 181, 0, 0.45);
-  color: var(--ink);
-}
-
-.footer-call-btn-icon {
-  font-size: 0.95rem;
-}
-
-/* Sales Communication Zone (Discrete Local Glass Components) */
-.footer-contact-zone {
-  display: flex;
-  flex-direction: column;
+.footer-card--cta {
   gap: 0.55rem;
-  padding-top: 0.15rem;
 }
 
-.footer-contact-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-  padding-inline: 0.25rem;
+.footer-cta-tag {
+  align-self: flex-start;
+  padding: 0.2rem 0.62rem;
+  border-radius: 999px;
+  background: rgba(246, 181, 0, 0.13);
+  border: 1px solid rgba(246, 181, 0, 0.26);
+  color: #f8c53a;
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
-.footer-contact-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 0.65rem;
-  flex-wrap: wrap;
-}
-
-.footer-contact-main-title {
+.footer-card--cta .footer-card-title {
   margin: 0;
-  color: var(--white);
+  padding: 0;
+}
+
+.footer-card--cta .footer-card-title::after {
+  display: none;
+}
+
+.footer-cta-desc {
+  margin: 0;
+  color: #c8c3bb;
   font-size: 0.88rem;
-  font-weight: 800;
+  line-height: 1.6;
 }
 
-.footer-contact-sub-title {
-  color: #8c8c94;
-  font-size: 0.73rem;
-}
-
-.footer-contact-hub-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--brand-yellow);
-  font-size: 0.78rem;
-  font-weight: 800;
-  transition: all 0.18s ease;
-}
-
-.footer-contact-hub-link:hover {
-  transform: translateX(-3px);
-  text-decoration: underline;
-}
-
-/* Individual Glass Phone Pills */
-.footer-phones-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.45rem 0.6rem;
-}
-
-.footer-phone-pill {
-  position: relative;
-  min-height: 2.2rem;
+.footer-call {
+  margin-top: auto;
+  min-height: 2.85rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-inline: 0.8rem;
-  border-radius: 12px;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(26, 25, 25, 0.35) 50%,
-    rgba(14, 13, 13, 0.52) 100%
-  );
-  backdrop-filter: blur(18px) saturate(135%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-top-color: rgba(255, 255, 255, 0.28);
-  border-left-color: rgba(255, 245, 220, 0.18);
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 13px;
+  background: linear-gradient(140deg, #ffc82f 0%, #f6b500 46%, #d99700 100%);
+  color: var(--ink);
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
   box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.14),
-    0 4px 12px -2px rgba(0, 0, 0, 0.32);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #dedee4;
-  transition: all 0.2s ease;
-  overflow: hidden;
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 0 rgba(120, 78, 0, 0.35),
+    0 6px 20px -5px rgba(246, 181, 0, 0.45);
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.footer-phone-pill::before {
+.footer-call:hover {
+  background: linear-gradient(140deg, #ffd455 0%, #ffc11a 46%, #e8a600 100%);
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 0 rgba(120, 78, 0, 0.35),
+    0 10px 28px -5px rgba(246, 181, 0, 0.55);
+}
+
+.footer-call-icon {
+  font-size: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Sales lines
+   -------------------------------------------------------------------------- */
+
+.footer-lines {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding-top: 0.95rem;
+}
+
+.footer-lines::before,
+.footer-base::before {
   content: "";
   position: absolute;
-  inset: 2px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-top-color: rgba(255, 250, 235, 0.14);
-  pointer-events: none;
+  top: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.075) 16%,
+    rgba(255, 236, 200, 0.12) 50%,
+    rgba(255, 255, 255, 0.075) 84%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
-.footer-phone-pill:hover {
-  border-color: rgba(246, 181, 0, 0.35);
-  border-top-color: rgba(255, 245, 210, 0.5);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.09) 0%,
-    rgba(36, 30, 24, 0.45) 50%,
-    rgba(20, 16, 13, 0.65) 100%
-  );
+.footer-lines-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+  padding-inline: 0.2rem;
+}
+
+.footer-lines-title {
+  margin: 0;
+  color: var(--white);
+  font-size: 0.99rem;
+  font-weight: 800;
+  letter-spacing: -0.012em;
+}
+
+/* The caption row and the legal row sit straight on the base with no pane
+   under them, so they carry the same one-pixel shadow the glass content gets. */
+.footer-lines-head,
+.footer-base-legal {
+  text-shadow: 0 1px 2px rgba(6, 4, 3, 0.6);
+}
+
+.footer-lines-hours {
+  color: #b8b2a8;
+  font-size: 0.83rem;
+}
+
+.footer-lines-hours span {
   color: var(--brand-yellow);
-  box-shadow:
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
-    0 6px 18px -3px rgba(0, 0, 0, 0.45),
-    0 0 12px 0 rgba(245, 180, 0, 0.08);
+}
+
+.footer-lines-map {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f0b52a;
+  font-size: 0.88rem;
+  font-weight: 800;
+  transition:
+    color 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.footer-lines-map:hover {
+  color: #ffd15e;
+  transform: translateX(-3px);
+}
+
+/*
+ * Flex rather than a fixed track count: the two management pills carry a name
+ * as well as a number and need visibly more room than the five office lines,
+ * which an equal-column grid cannot give them without overflowing.
+ */
+.footer-lines-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-lines-list li {
+  flex: 1 1 8.5rem;
+}
+
+.footer-lines-list li.footer-line-item--named {
+  flex: 1 1 11.5rem;
+}
+
+.fg-pill {
+  /* A pill is small enough that its own centre scrim stays well clear of the
+     rim, so the refractive edge is untouched. */
+  background:
+    radial-gradient(
+      80% 62% at 50% 55%,
+      rgba(9, 7, 5, 0.19) 0%,
+      rgba(9, 7, 5, 0.07) 64%,
+      rgba(9, 7, 5, 0) 100%
+    ),
+    var(--fg-body);
+  min-height: 2.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding-inline: 0.7rem;
+  overflow: hidden;
+  color: #e4e0da;
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+}
+
+.fg-pill:hover {
+  --fg-catch-a: 0.9;
+  --fg-rim: rgba(255, 226, 170, 0.3);
+  --fg-lift: 0 1px 2px -1px rgba(0, 0, 0, 0.3),
+    0 9px 20px -5px rgba(0, 0, 0, 0.5),
+    0 0 18px -4px rgba(246, 181, 0, 0.22);
+  border-color: rgba(246, 181, 0, 0.32);
+  border-top-color: rgba(255, 240, 205, 0.4);
+  color: #ffd15e;
   transform: translateY(-1px);
 }
 
-.footer-phone-num {
-  letter-spacing: 0.02em;
+.fg-pill--named {
+  gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.footer-phone-tag {
-  font-size: 0.62rem;
-  color: #8c8c94;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+.fg-pill-name {
+  color: #c0bab0;
+  font-size: 0.79rem;
+  font-weight: 700;
+  transition: color 0.18s ease;
 }
 
-/* Meta & Management Bar with Individual Glass Capsules */
-.footer-contact-footer-bar {
+.fg-pill--named:hover .fg-pill-name {
+  color: #d3ac57;
+}
+
+/* --------------------------------------------------------------------------
+   Base bar
+   -------------------------------------------------------------------------- */
+
+.footer-base {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.45rem 1.25rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  padding-top: 0.95rem;
 }
 
-.footer-meta-group {
+.footer-base-contact {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 1rem;
+  gap: 0.5rem;
 }
 
-.footer-meta-chip {
+.fg-chip {
+  min-height: 2.3rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  color: #a8a8b0;
-  font-size: 0.78rem;
+  gap: 0.42rem;
+  padding-inline: 0.75rem;
+  color: #b0aba3;
+  font-size: 0.855rem;
   font-style: normal;
-  padding: 0.2rem 0.55rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(12px) saturate(130%);
-  -webkit-backdrop-filter: blur(12px) saturate(130%);
-  transition: all 0.18s ease;
 }
 
-.footer-meta-chip:hover {
-  color: var(--brand-yellow);
-  border-color: rgba(246, 181, 0, 0.25);
-  background: rgba(246, 181, 0, 0.07);
-}
-
-.footer-management-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.65rem;
-}
-
-.footer-management-tag {
-  color: #808088;
-  font-size: 0.73rem;
-  font-weight: 700;
-}
-
-.footer-management-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.75rem;
-}
-
-.footer-management-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(12px) saturate(130%);
-  -webkit-backdrop-filter: blur(12px) saturate(130%);
-}
-
-.footer-management-chip strong {
-  color: var(--white);
-  font-weight: 700;
-}
-
-.footer-management-chip a {
-  color: #b8b8c0;
+.fg-chip span {
+  color: #8a847b;
   transition: color 0.18s ease;
 }
 
-.footer-management-chip a:hover {
-  color: var(--brand-yellow);
+a.fg-chip:hover {
+  --fg-catch-a: 0.9;
+  --fg-rim: rgba(255, 226, 170, 0.28);
+  border-color: rgba(246, 181, 0, 0.3);
+  color: #ffd15e;
 }
 
-/* Footer Bottom Bar */
-.footer-bottom {
-  min-height: 2.1rem;
+a.fg-chip:hover span {
+  color: #d3ac57;
+}
+
+.footer-base-legal {
+  margin-inline-start: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.85rem;
-  color: #808088;
-  font-size: 0.76rem;
-  padding-block: 0.2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.footer-bottom-links {
-  display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 1.1rem;
-  align-items: center;
+  gap: 0.35rem 1.15rem;
+  /* Sits straight on the base with no scrim behind it, so it needs more
+     headroom over 4.5:1 than the text inside the glass objects does. */
+  color: #948f87;
+  font-size: 0.83rem;
 }
 
-.footer-bottom a {
-  color: #888890;
+.footer-base-legal a {
+  color: #a29c93;
   transition: color 0.18s ease;
 }
 
-.footer-bottom a:hover {
+.footer-base-legal a:hover {
   color: var(--brand-yellow);
+}
+
+.footer-top-link {
+  font-weight: 700;
 }
 
 .about-more-link {
@@ -754,53 +996,61 @@
 /*
  * Footer responsive breakpoints
  */
-@media (max-width: 1100px) {
-  .footer-cards-grid {
+@media (max-width: 1080px) {
+  .footer-primary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
-  }
-
-  .footer-phones-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.45rem 0.6rem;
   }
 }
 
-@media (max-width: 699px) {
+@media (max-width: 640px) {
   .site-footer {
-    padding-top: 1.1rem;
+    padding-block: 1.7rem 1rem;
   }
 
   .footer-shell {
-    gap: 0.65rem;
+    gap: 0.9rem;
   }
 
-  .footer-cards-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.55rem;
+  /* Brand and the call-to-action run full width; the two link lists pair up,
+     which keeps the stacked footer roughly two rows shorter. */
+  .footer-card--brand,
+  .footer-card--cta {
+    grid-column: 1 / -1;
   }
 
-  .footer-phones-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.4rem;
+  .footer-card {
+    padding: 1rem 1.1rem;
   }
 
-  .footer-contact-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.35rem;
+  .footer-link-list a {
+    min-height: 2.45rem;
   }
 
-  .footer-contact-footer-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.65rem;
+  .footer-lines-map {
+    margin-inline-start: 0;
   }
 
-  .footer-bottom {
+  .footer-base {
     align-items: flex-start;
     flex-direction: column;
-    padding-block: 0.5rem;
-    gap: 0.35rem;
+    gap: 0.7rem;
+  }
+
+  .footer-base-legal {
+    margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-card,
+  .footer-card:hover,
+  .fg-pill,
+  .fg-pill:hover,
+  .footer-whatsapp:hover,
+  .footer-call:hover,
+  .footer-link-list a:hover,
+  .footer-lines-map:hover {
+    transform: none;
+    transition: none;
   }
 }
