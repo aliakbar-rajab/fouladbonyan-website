@@ -1,4 +1,4 @@
-import { FooterAurora } from "./FooterAurora";
+import { LightPillar } from "./LightPillar";
 import { WhatsAppIcon } from "./icons";
 import {
   managementContacts,
@@ -39,10 +39,19 @@ export function SiteFooter({
 
   return (
     <footer className="site-footer" id="contact">
-      <div className="footer-aurora" aria-hidden="true">
-        <FooterAurora />
-      </div>
-      <div className="footer-veil" aria-hidden="true" />
+      <LightPillar
+        topColor="#f6b500"
+        bottomColor="#000000"
+        intensity={0.8}
+        rotationSpeed={0.2}
+        glowAmount={0.003}
+        pillarWidth={8}
+        pillarHeight={0.3}
+        noiseIntensity={0}
+        pillarRotation={0}
+        interactive={false}
+        mixBlendMode="normal"
+      />
 
       <div className="shell footer-shell">
         <div className="footer-primary">

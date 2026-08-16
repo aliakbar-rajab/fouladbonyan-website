@@ -157,11 +157,9 @@
 /* ==========================================================================
    Site footer
    ==========================================================================
-   A dark architectural base with braided light running through it (see
-   app/FooterAurora.tsx). Content never sits on a full-width glass band -- it
+   A dark architectural base with LightPillar background effect. Content
    sits in individual glass objects (cards, pills, chips) that share one
-   material recipe, so the base stays visible between them and the light
-   behind is what reads, not the glass.
+   material recipe, so the base stays visible between them.
    ========================================================================== */
 
 .site-footer {
@@ -169,85 +167,36 @@
   isolation: isolate;
   overflow: hidden;
   padding-block: 2.15rem 1.15rem;
-  background:
-    radial-gradient(
-      150% 105% at 50% -8%,
-      rgba(126, 82, 26, 0.2) 0%,
-      rgba(126, 82, 26, 0) 62%
-    ),
-    /*
-     * Ambient pool sitting behind the card band. The aurora is deliberately
-     * biased toward the outer thirds, which leaves the middle of the footer
-     * near-black -- and glass over black is just black, however well its edges
-     * are built. This gives the panes something to transmit so they read as
-     * transparent rather than as dark tiles.
-     */
-    radial-gradient(
-      118% 78% at 50% 22%,
-      rgba(198, 130, 46, 0.12) 0%,
-      rgba(198, 130, 46, 0.04) 54%,
-      rgba(198, 130, 46, 0) 80%
-    ),
-    linear-gradient(180deg, #16120f 0%, #0d0b09 54%, #070605 100%);
+  background: #000000;
   color: #e6e3df;
   border-top: 1px solid rgba(246, 181, 0, 0.14);
 }
 
-/*
- * Overscanned well past the footer box on every side: the visitor sees the
- * middle crop of a much larger picture, so the braids read as arriving from
- * beyond the viewport rather than starting at a canvas edge.
- */
-.footer-aurora {
+.light-pillar-container {
   position: absolute;
-  z-index: 0;
-  inset: -34% -20%;
-  pointer-events: none;
-  opacity: 0.85;
-  mix-blend-mode: screen;
-  /*
-   * A single vertical feather (no horizontal one -- the light is supposed to
-   * run straight off the left and right edges). The ramp is placed so the
-   * braids are already dissolving by the time they reach the footer's top
-   * border, keeping the seam with the section above clean.
-   */
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 11%,
-    #000 27%,
-    #000 74%,
-    transparent 93%
-  );
-  mask-image: linear-gradient(
-    180deg,
-    transparent 11%,
-    #000 27%,
-    #000 74%,
-    transparent 93%
-  );
-}
-
-.footer-aurora-canvas,
-.footer-aurora-canvas canvas {
-  display: block;
+  inset: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 1;
 }
 
-/* Protects text contrast without flattening the light: a soft ceiling at the
-   seam and a deep vignette pooling under the bottom bar. */
-.footer-veil {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
+.light-pillar-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
   pointer-events: none;
-  background:
-    radial-gradient(
-      125% 145% at 50% 122%,
-      rgba(0, 0, 0, 0.5) 0%,
-      rgba(0, 0, 0, 0) 62%
-    ),
-    linear-gradient(180deg, rgba(8, 6, 5, 0.34) 0%, rgba(8, 6, 5, 0) 14%);
+}
+
+.light-pillar-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-color: transparent;
 }
 
 #phone-numbers {
@@ -340,14 +289,6 @@
 .fg-pill,
 .fg-chip {
   --fg-radius: 13px;
-  --fg-blur: blur(10px) saturate(1.15);
-  --fg-body: linear-gradient(
-    180deg,
-    rgba(24, 20, 16, 0.56) 0%,
-    rgba(14, 11, 9, 0.66) 100%
-  );
-  --fg-border: rgba(255, 255, 255, 0.08);
-  --fg-border-top: rgba(255, 255, 255, 0.15);
   --fg-lift: 0 2px 8px -1px rgba(0, 0, 0, 0.35);
 }
 
@@ -762,16 +703,6 @@
 }
 
 .fg-pill {
-  /* A pill is small enough that its own centre scrim stays well clear of the
-     rim, so the refractive edge is untouched. */
-  background:
-    radial-gradient(
-      80% 62% at 50% 55%,
-      rgba(9, 7, 5, 0.19) 0%,
-      rgba(9, 7, 5, 0.07) 64%,
-      rgba(9, 7, 5, 0) 100%
-    ),
-    var(--fg-body);
   min-height: 2.65rem;
   display: flex;
   align-items: center;
