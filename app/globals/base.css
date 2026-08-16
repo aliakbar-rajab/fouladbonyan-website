@@ -8,6 +8,7 @@
 
 :root {
   --brand-yellow: #f6b500;
+  --brand-yellow-glow: rgba(246, 181, 0, 0.35);
   --brand-dark: #3b3b3e;
   --ink: #222226;
   --muted: #65656c;
@@ -17,6 +18,23 @@
   --shadow: 0 18px 50px rgb(18 18 22 / 10%);
   --radius: 14px;
   --shell-gutter: 2rem;
+
+  /* Liquid Glass System Tokens */
+  --glass-light-bg: rgba(255, 255, 255, 0.78);
+  --glass-light-bg-hover: rgba(255, 255, 255, 0.92);
+  --glass-light-border: rgba(255, 255, 255, 0.65);
+  --glass-light-border-subtle: rgba(0, 0, 0, 0.08);
+  --glass-light-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  --glass-dark-bg: rgba(42, 43, 47, 0.78);
+  --glass-dark-bg-hover: rgba(53, 54, 59, 0.9);
+  --glass-dark-border: rgba(255, 255, 255, 0.12);
+  --glass-dark-border-highlight: rgba(255, 255, 255, 0.22);
+  --glass-dark-shadow: 0 16px 44px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+  --glass-blur-sm: blur(10px);
+  --glass-blur: blur(16px);
+  --glass-blur-lg: blur(24px);
 
   /* The image itself is the panel: one continuous, molded printer-like edge. */
   --hero-radius: 0px;
