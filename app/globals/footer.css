@@ -224,7 +224,6 @@
 .fg-pill,
 .fg-chip {
   --fg-radius: 20px;
-  --fg-blur: blur(0px) saturate(1);
   --fg-body: linear-gradient(
     180deg,
     rgba(22, 18, 15, 0) 0%,
@@ -240,8 +239,6 @@
   position: relative;
   border-radius: var(--fg-radius);
   background: var(--fg-body);
-  backdrop-filter: var(--fg-blur);
-  -webkit-backdrop-filter: var(--fg-blur);
   border: 1px solid var(--fg-border);
   border-top-color: var(--fg-border-top);
   border-bottom-color: var(--fg-border-bottom);
@@ -294,14 +291,6 @@
 
 .fg-chip {
   --fg-radius: 11px;
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .fg-glass,
-  .fg-pill,
-  .fg-chip {
-    background: rgba(18, 14, 12, 0.85);
-  }
 }
 
 /* --------------------------------------------------------------------------

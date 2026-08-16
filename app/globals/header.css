@@ -295,46 +295,14 @@
   display: flex;
 }
 
-.product-dropdown {
+.product-dropdown.rebar-mega-menu {
   position: absolute;
   z-index: 20;
   inset-block-start: 100%;
-  inset-inline-start: 0;
-  width: 19rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  padding: 0.85rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-top: 3px solid var(--brand-yellow);
-  border-radius: 0 0 14px 14px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: var(--glass-blur-lg);
-  -webkit-backdrop-filter: var(--glass-blur-lg);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16);
-}
-
-.product-dropdown button {
-  min-height: 2.75rem;
-  padding-inline: 0.8rem;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  text-align: start;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.product-dropdown button:hover,
-.product-dropdown button:focus-visible {
-  background: rgba(246, 181, 0, 0.14);
-  color: var(--brand-dark);
-}
-
-.product-dropdown.rebar-mega-menu {
+  inset-inline-start: -4rem;
   width: min(1040px, calc(100vw - 2rem));
   max-height: min(30rem, calc(100vh - 9.5rem));
+  display: grid;
   grid-template-columns:
     minmax(12.5rem, 1.15fr)
     minmax(9.5rem, 0.85fr)
@@ -352,7 +320,6 @@
   backdrop-filter: var(--glass-blur-lg);
   -webkit-backdrop-filter: var(--glass-blur-lg);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
-  inset-inline-start: -4rem;
 }
 
 .rebar-mega-menu section {

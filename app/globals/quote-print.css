@@ -390,33 +390,6 @@
     min-width: 42rem;
   }
 
-  .quote-print-table {
-    display: table;
-  }
-
-  .quote-print-table thead {
-    display: table-header-group;
-  }
-
-  .quote-print-table tbody {
-    display: table-row-group;
-    padding: 0;
-  }
-
-  .quote-print-table tr {
-    display: table-row;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-
-  .quote-print-table th,
-  .quote-print-table td {
-    width: auto;
-    min-height: 0;
-    display: table-cell;
-  }
-
   .quote-document-actions,
   .quote-document-action-buttons {
     align-items: stretch;
@@ -484,9 +457,5 @@
   .form-submit,
   .prepared-actions > * {
     width: 100%;
-  }
-
-  .footer-bottom-links {
-    flex-direction: column;
   }
 }

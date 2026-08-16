@@ -103,7 +103,7 @@
 .hero-frame + .products {
   position: relative;
   z-index: 1;
-  padding-block-start: calc(clamp(4rem, 8vw, 7rem) + var(--hero-depth));
+  padding-block-start: clamp(4rem, 8vw, 7rem);
 }
 
 .hero-frame + .products::before {
@@ -435,19 +435,6 @@ tbody tr:hover {
   background: #fffbef;
 }
 
-.price-status {
-  display: inline-flex;
-  min-height: 2rem;
-  align-items: center;
-  padding-inline: 0.65rem;
-  border-radius: 999px;
-  background: #ececef;
-  color: #3f3f44;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-tbody td a,
 .empty-state a {
   min-height: 2.75rem;
   display: inline-flex;

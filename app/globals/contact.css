@@ -71,9 +71,6 @@
   z-index: 0;
   inset: 0;
   background: rgb(20 21 24 / 72%);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
   pointer-events: none;
 }
 

@@ -5,32 +5,6 @@
   overflow: visible;
 }
 
-/* The former extrusion is intentionally removed; the hero is one soft surface. */
-.hero-frame::before {
-  display: none;
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: var(--hero-inset);
-  right: var(--hero-inset);
-  bottom: calc(var(--hero-inset) + var(--hero-depth));
-  left: var(--hero-inset);
-  border-radius: var(--hero-radius);
-  background: linear-gradient(
-    180deg,
-    #24252a 0,
-    #24252a calc(100% - var(--hero-depth)),
-    #303238 calc(100% - var(--hero-depth) + 1px),
-    #1b1c20 calc(100% - 12px),
-    #0c0d0f 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 12%),
-    0 32px 52px -20px rgb(0 0 0 / 88%),
-    0 14px 24px -12px rgb(0 0 0 / 66%);
-  transform: translateY(var(--hero-depth));
-}
-
 /* The image panel is clipped by one continuous rounded rectangle. */
 .hero {
   position: relative;
@@ -40,7 +14,6 @@
   align-items: center;
   isolation: isolate;
   overflow: hidden;
-  border-radius: var(--hero-radius);
   background: #242428;
   color: var(--white);
 }
@@ -91,11 +64,6 @@
     inset -3px 0 4px rgb(0 0 0 / 25%),
     inset 0 0 0 calc(var(--hero-bevel) - 1px) rgb(16 17 20 / 5%);
   pointer-events: none;
-}
-
-/* Cancel the panel inset so hero content keeps the page-wide .shell alignment. */
-.hero .shell {
-  width: min(100% - var(--shell-gutter) + var(--hero-inset) * 2, 1200px);
 }
 
 .hero-image,
