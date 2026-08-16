@@ -263,62 +263,42 @@
 }
 
 /* --------------------------------------------------------------------------
-   Optical glass
+   Optical glass — Restrained Architectural Glass
    --------------------------------------------------------------------------
-   Blur is the enemy of this material. At 26px the aurora's ribbons smeared
-   into one flat tan wash behind every pane -- which is exactly what made the
-   old surfaces read as brown smoke. At 9px the light keeps its structure and
-   the pane reads as something you are looking *through*, so saturation and
-   brightness go up rather than down and the body carries no dark fill at all.
-   Readability is bought back locally, per component, not by tinting the whole
-   surface (see .footer-card--brand / --cta below).
-
-   The edge is four separate constructions, all directional:
-     - an outer contour that is lit on the top and shadowed on the bottom;
-     - a warm inset lip one pixel in, which brightens on its own wherever the
-       aurora passes behind it, giving the refractive catch at the boundary;
-     - specular pools on the top corners, strongest at the inline-start one;
-     - an inset inner shell four pixels in, lit on the same side as the outer
-       contour -- the double shell is what gives the pane wall thickness.
+   Restrained, high-clarity architectural glass. Light behind the panes
+   transmits naturally without artificial white blooming, hazy halos, or
+   corner spotlights. A subtle 1px top light catch gives edge definition
+   while keeping the surface calm, deep, and premium.
    -------------------------------------------------------------------------- */
 
 .fg-glass,
 .fg-pill,
 .fg-chip {
   --fg-radius: 20px;
-  --fg-blur: blur(9px) saturate(1.32) brightness(1.16);
+  --fg-blur: blur(0px) saturate(1);
   --fg-body: linear-gradient(
-    202deg,
-    rgba(255, 249, 238, 0.1) 0%,
-    rgba(255, 244, 228, 0.046) 40%,
-    rgba(255, 240, 220, 0.032) 100%
+    180deg,
+    rgba(22, 18, 15, 0) 0%,
+    rgba(13, 11, 9, 0) 100%
   );
-  --fg-catch-a: 0.72;
-  --fg-rim: rgba(255, 233, 191, 0.22);
-  --fg-halo: inset 0 0 14px -7px rgba(255, 226, 180, 0.32);
-  --fg-floor: rgba(0, 0, 0, 0.3);
-  --fg-volume: inset 0 -22px 30px -30px rgba(0, 0, 0, 0.28);
-  --fg-lift: 0 2px 3px -1px rgba(0, 0, 0, 0.28),
-    0 12px 26px -10px rgba(0, 0, 0, 0.44),
-    0 30px 54px -30px rgba(0, 0, 0, 0.6);
-  --fg-shell-lit: rgba(255, 250, 240, 0.15);
-  --fg-shell-side: rgba(255, 248, 235, 0.06);
-  --fg-shell-dark: rgba(0, 0, 0, 0.24);
-  --fg-shell-inset: 4px;
+  --fg-border: rgba(255, 255, 255, 0.07);
+  --fg-border-top: rgba(255, 255, 255, 0.14);
+  --fg-border-bottom: rgba(0, 0, 0, 0.35);
+  --fg-floor: rgba(0, 0, 0, 0.25);
+  --fg-lift: 0 4px 16px -2px rgba(0, 0, 0, 0.36),
+    0 16px 36px -10px rgba(0, 0, 0, 0.5);
 
   position: relative;
   border-radius: var(--fg-radius);
   background: var(--fg-body);
   backdrop-filter: var(--fg-blur);
   -webkit-backdrop-filter: var(--fg-blur);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-top-color: rgba(255, 255, 255, 0.2);
-  border-bottom-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--fg-border);
+  border-top-color: var(--fg-border-top);
+  border-bottom-color: var(--fg-border-bottom);
   box-shadow:
-    inset 0 0 0 1px var(--fg-rim),
-    var(--fg-halo),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
     inset 0 -1px 0 0 var(--fg-floor),
-    var(--fg-volume),
     var(--fg-lift);
   transition:
     transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
@@ -328,10 +308,8 @@
 }
 
 /*
- * Specular pass. The top light-catch lives here rather than in an
- * `inset 0 1px 0` shadow so that it can run as a gradient along the edge --
- * a uniform hairline all the way across reads as a drawn border, a graded one
- * reads as a single light source catching the lip.
+ * Restrained edge catch. A very thin, subtle light catch along the top rim
+ * rather than a broad milky corner bloom.
  */
 .fg-glass::before,
 .fg-pill::before,
@@ -345,73 +323,32 @@
     linear-gradient(
         90deg,
         rgba(255, 255, 255, 0) 0%,
-        rgba(255, 246, 224, 0.26) 13%,
-        rgba(255, 253, 246, var(--fg-catch-a, 0.72)) 56%,
-        rgba(255, 246, 224, 0.3) 86%,
+        rgba(255, 245, 225, 0.06) 12%,
+        rgba(255, 250, 240, 0.22) 48%,
+        rgba(255, 245, 225, 0.1) 82%,
         rgba(255, 255, 255, 0) 100%
       )
       0 0 / 100% 1px no-repeat,
-    radial-gradient(
-      28% 58% at 97% -2%,
-      rgba(255, 250, 233, 0.3) 0%,
-      rgba(255, 250, 233, 0) 62%
-    ),
-    radial-gradient(
-      52% 84% at 88% -10%,
-      rgba(255, 240, 210, 0.12) 0%,
-      rgba(255, 240, 210, 0) 66%
-    ),
-    radial-gradient(
-      26% 52% at 4% -2%,
-      rgba(255, 255, 255, 0.13) 0%,
-      rgba(255, 255, 255, 0) 64%
-    ),
     linear-gradient(
-      202deg,
-      rgba(255, 255, 255, 0.11) 0%,
-      rgba(255, 255, 255, 0.025) 22%,
-      rgba(255, 255, 255, 0) 48%
-    ),
-    radial-gradient(
-      44% 66% at 3% 104%,
-      rgba(255, 222, 170, 0.075) 0%,
-      rgba(255, 222, 170, 0) 72%
+      180deg,
+      rgba(255, 255, 255, 0.022) 0%,
+      rgba(255, 255, 255, 0) 24%
     );
 }
 
-/* Inner shell. */
-.fg-glass::after,
-.fg-pill::after {
-  content: "";
-  position: absolute;
-  inset: var(--fg-shell-inset);
-  border-radius: calc(var(--fg-radius) - var(--fg-shell-inset));
-  pointer-events: none;
-  border: 1px solid transparent;
-  border-top-color: var(--fg-shell-lit);
-  border-inline-start-color: var(--fg-shell-side);
-  border-inline-end-color: rgba(255, 255, 255, 0.02);
-  border-bottom-color: var(--fg-shell-dark);
-}
-
-/* Small objects: shallower depth and a tighter shell. They keep the same clear
-   body as the cards -- a phone number is short and bold enough to hold its own
-   against the braids with just the text shadow below. */
+/* Small objects: shallower depth and tighter radius */
 .fg-pill,
 .fg-chip {
   --fg-radius: 13px;
-  --fg-blur: blur(8px) saturate(1.28) brightness(1.14);
+  --fg-blur: blur(10px) saturate(1.15);
   --fg-body: linear-gradient(
-    202deg,
-    rgba(255, 249, 238, 0.12) 0%,
-    rgba(255, 245, 230, 0.055) 46%,
-    rgba(255, 240, 220, 0.03) 100%
+    180deg,
+    rgba(24, 20, 16, 0.56) 0%,
+    rgba(14, 11, 9, 0.66) 100%
   );
-  --fg-catch-a: 0.5;
-  --fg-volume: inset 0 -12px 16px -14px rgba(0, 0, 0, 0.4);
-  --fg-lift: 0 1px 2px -1px rgba(0, 0, 0, 0.3),
-    0 6px 14px -5px rgba(0, 0, 0, 0.42);
-  --fg-shell-inset: 3px;
+  --fg-border: rgba(255, 255, 255, 0.08);
+  --fg-border-top: rgba(255, 255, 255, 0.15);
+  --fg-lift: 0 2px 8px -1px rgba(0, 0, 0, 0.35);
 }
 
 .fg-chip {
@@ -422,14 +359,7 @@
   .fg-glass,
   .fg-pill,
   .fg-chip {
-    background:
-      linear-gradient(
-        202deg,
-        rgba(255, 249, 238, 0.09) 0%,
-        rgba(255, 244, 228, 0.035) 40%,
-        rgba(255, 240, 220, 0.02) 100%
-      ),
-      rgba(16, 13, 10, 0.66);
+    background: rgba(18, 14, 12, 0.85);
   }
 }
 
@@ -446,9 +376,7 @@
 
 /*
  * Contrast on transparent glass comes from the type, not from the pane. A one
- * pixel shadow keeps every label legible where a braid runs behind it, which
- * is what lets the material stay clear instead of being tinted down until the
- * text is safe.
+ * pixel shadow keeps every label legible where a braid runs behind it.
  */
 .footer-card,
 .fg-pill,
@@ -469,41 +397,34 @@
 }
 
 .footer-card:hover {
-  --fg-catch-a: 0.95;
-  --fg-rim: rgba(255, 236, 200, 0.24);
-  --fg-shell-lit: rgba(255, 252, 245, 0.18);
-  --fg-lift: 0 2px 3px -1px rgba(0, 0, 0, 0.3),
-    0 18px 34px -10px rgba(0, 0, 0, 0.5),
-    0 40px 70px -34px rgba(0, 0, 0, 0.68);
-  border-top-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.12);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 0 var(--fg-floor),
+    0 8px 24px -4px rgba(0, 0, 0, 0.45),
+    0 24px 48px -12px rgba(0, 0, 0, 0.6);
   transform: translateY(-2px);
 }
 
-/*
- * The two prose cards carry the longest text over the brightest part of the
- * composition, so they get a scrim -- but a local one, weighted to the block
- * of copy and gone well before the edges, so the material itself stays clear.
- */
 .footer-card--brand,
 .footer-card--cta {
   background:
     radial-gradient(
       74% 48% at 50% 47%,
-      rgba(9, 7, 5, 0.33) 0%,
-      rgba(9, 7, 5, 0.13) 58%,
+      rgba(9, 7, 5, 0.22) 0%,
+      rgba(9, 7, 5, 0.08) 58%,
       rgba(9, 7, 5, 0) 100%
     ),
     var(--fg-body);
 }
 
-/* Same idea for the link lists, shaped to the lower two thirds where the rows
-   sit, so the heading and the top specular stay in clear glass. */
 .footer-card--nav {
   background:
     radial-gradient(
       86% 62% at 50% 68%,
-      rgba(9, 7, 5, 0.24) 0%,
-      rgba(9, 7, 5, 0.1) 62%,
+      rgba(9, 7, 5, 0.18) 0%,
+      rgba(9, 7, 5, 0.06) 62%,
       rgba(9, 7, 5, 0) 100%
     ),
     var(--fg-body);
@@ -866,13 +787,12 @@
 }
 
 .fg-pill:hover {
-  --fg-catch-a: 0.9;
-  --fg-rim: rgba(255, 226, 170, 0.3);
-  --fg-lift: 0 1px 2px -1px rgba(0, 0, 0, 0.3),
-    0 9px 20px -5px rgba(0, 0, 0, 0.5),
-    0 0 18px -4px rgba(246, 181, 0, 0.22);
-  border-color: rgba(246, 181, 0, 0.32);
-  border-top-color: rgba(255, 240, 205, 0.4);
+  border-color: rgba(246, 181, 0, 0.28);
+  border-top-color: rgba(255, 240, 205, 0.35);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 4px 14px -2px rgba(0, 0, 0, 0.45),
+    0 0 14px -4px rgba(246, 181, 0, 0.16);
   color: #ffd15e;
   transform: translateY(-1px);
 }
@@ -930,9 +850,11 @@
 }
 
 a.fg-chip:hover {
-  --fg-catch-a: 0.9;
-  --fg-rim: rgba(255, 226, 170, 0.28);
-  border-color: rgba(246, 181, 0, 0.3);
+  border-color: rgba(246, 181, 0, 0.26);
+  border-top-color: rgba(255, 240, 205, 0.3);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    0 3px 10px -2px rgba(0, 0, 0, 0.4);
   color: #ffd15e;
 }
 
