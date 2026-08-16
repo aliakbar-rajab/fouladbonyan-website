@@ -22,8 +22,8 @@
     rgba(36, 29, 24, 0.72) 0%,
     rgba(20, 16, 14, 0.82) 100%
   );
-  backdrop-filter: blur(20px) saturate(135%);
   -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
   border: 1px solid rgba(245, 180, 0, 0.1);
   border-top-color: rgba(255, 230, 180, 0.2);
   box-shadow:
@@ -763,8 +763,8 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: var(--white);
   font-weight: 800;
   transition: all 0.2s ease;

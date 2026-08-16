@@ -129,3 +129,49 @@ test("large live catalogs are split out of the initial JavaScript", async () => 
   assert.match(lazyJavaScript, /لوله مانیسمان/);
   assert.match(lazyJavaScript, /توری حصاری/);
 });
+
+/*
+ * The CSS minifier collapses a `backdrop-filter` / `-webkit-backdrop-filter`
+ * pair down to a single declaration, keeping whichever the source declares
+ * first. Authoring them standard-first therefore drops the standard property
+ * from the build, which costs Firefox every frosted surface on the site — and
+ * costs Chromium any filter whose value is a `var()`-substituted `url()`.
+ * Assert on the built stylesheet rather than the source, because the source
+ * looks correct either way.
+ */
+test("every built rule that blurs its backdrop keeps both the prefixed and standard property", async () => {
+  const assetsUrl = new URL("../dist/assets/", import.meta.url);
+  const stylesheets = (await readdir(assetsUrl)).filter((file) =>
+    file.endsWith(".css"),
+  );
+  assert.ok(stylesheets.length > 0);
+
+  const css = (
+    await Promise.all(
+      stylesheets.map((file) => readDist(`assets/${file}`)),
+    )
+  ).join("\n");
+
+  const rules = css.match(/[^{}]+\{[^{}]*\}/g) ?? [];
+  const declaring = rules.filter((rule) =>
+    /[;{]-?(webkit-)?backdrop-filter:/.test(rule),
+  );
+  assert.ok(
+    declaring.length >= 15,
+    `expected the site to still use backdrop-filter, found ${declaring.length} rules`,
+  );
+
+  const unpaired = declaring
+    .filter(
+      (rule) =>
+        /[;{]backdrop-filter:/.test(rule) !==
+        /[;{]-webkit-backdrop-filter:/.test(rule),
+    )
+    .map((rule) => rule.split("{")[0].trim());
+
+  assert.deepEqual(
+    unpaired,
+    [],
+    "these rules lost one half of the pair in the build; declare -webkit-backdrop-filter first",
+  );
+});
