@@ -59,8 +59,8 @@
   padding: 1.35rem 1.35rem 1.45rem;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid rgba(255, 255, 255, 0.65);
   border-top: 4px solid var(--brand-yellow);
   box-shadow: 0 12px 36px rgba(10, 10, 14, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -135,8 +135,8 @@
   border: 1px solid currentColor;
   border-radius: 999px;
   background: color-mix(in srgb, currentColor 10%, transparent);
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
   color: #576079;
   font-size: 0.82rem;
   font-weight: 800;
