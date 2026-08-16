@@ -204,85 +204,42 @@
 }
 
 /* --------------------------------------------------------------------------
-   Optical glass — Restrained Architectural Glass
+   Footer glass objects
    --------------------------------------------------------------------------
-   Restrained, high-clarity architectural glass. Light behind the panes
-   transmits naturally without artificial white blooming, hazy halos, or
-   corner spotlights. A subtle 1px top light catch gives edge definition
-   while keeping the surface calm, deep, and premium.
+   Cards, pills and chips are `GlassSurface` panes. The material itself — the
+   4% frost, the hairline rim and the refracting `backdrop-filter` — lives in
+   `globals/glass-surface.css`; the rules below only place the objects, give
+   each one its readability scrim, and describe how it answers a hover.
    -------------------------------------------------------------------------- */
 
-.fg-glass,
-.fg-pill,
-.fg-chip {
-  --fg-radius: 20px;
-  --fg-body: linear-gradient(
-    180deg,
-    rgba(22, 18, 15, 0) 0%,
-    rgba(13, 11, 9, 0) 100%
+/* Large panes: ~10% centre darkening, fading to nothing at the refracting rim. */
+.fg-glass::after {
+  background: radial-gradient(
+    ellipse 85% 85% at 50% 50%,
+    rgba(14, 17, 19, 0.28) 0%,
+    rgba(14, 17, 19, 0.12) 55%,
+    transparent 100%
   );
-  --fg-border: rgba(255, 255, 255, 0.07);
-  --fg-border-top: rgba(255, 255, 255, 0.14);
-  --fg-border-bottom: rgba(0, 0, 0, 0.35);
-  --fg-floor: rgba(0, 0, 0, 0.25);
-  --fg-lift: 0 4px 16px -2px rgba(0, 0, 0, 0.36),
-    0 16px 36px -10px rgba(0, 0, 0, 0.5);
+}
 
-  position: relative;
-  border-radius: var(--fg-radius);
-  background: var(--fg-body);
-  border: 1px solid var(--fg-border);
-  border-top-color: var(--fg-border-top);
-  border-bottom-color: var(--fg-border-bottom);
+/* Small objects carry a single line of type and need a lighter scrim. */
+.fg-pill::after,
+.fg-chip::after {
+  background: radial-gradient(
+    ellipse 90% 75% at 50% 50%,
+    rgba(14, 17, 19, 0.2) 0%,
+    rgba(14, 17, 19, 0.06) 60%,
+    transparent 100%
+  );
+}
+
+.fg-glass:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.14);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
-    inset 0 -1px 0 0 var(--fg-floor),
-    var(--fg-lift);
-  transition:
-    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.26s ease,
-    box-shadow 0.26s ease,
-    color 0.18s ease;
-}
-
-/*
- * Restrained edge catch. A very thin, subtle light catch along the top rim
- * rather than a broad milky corner bloom.
- */
-.fg-glass::before,
-.fg-pill::before,
-.fg-chip::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 245, 225, 0.06) 12%,
-        rgba(255, 250, 240, 0.22) 48%,
-        rgba(255, 245, 225, 0.1) 82%,
-        rgba(255, 255, 255, 0) 100%
-      )
-      0 0 / 100% 1px no-repeat,
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.022) 0%,
-      rgba(255, 255, 255, 0) 24%
-    );
-}
-
-/* Small objects: shallower depth and tighter radius */
-.fg-pill,
-.fg-chip {
-  --fg-radius: 13px;
-  --fg-lift: 0 2px 8px -1px rgba(0, 0, 0, 0.35);
-}
-
-.fg-chip {
-  --fg-radius: 11px;
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 12px 0 rgba(255, 255, 255, 0.02),
+    0 14px 34px -4px rgba(10, 12, 14, 0.42);
 }
 
 /* --------------------------------------------------------------------------
@@ -301,8 +258,8 @@
  * pixel shadow keeps every label legible where a braid runs behind it.
  */
 .footer-card,
-.fg-pill,
-.fg-chip {
+.fg-pill-link,
+.fg-chip-content {
   text-shadow: 0 1px 2px rgba(6, 4, 3, 0.55);
 }
 
@@ -311,45 +268,18 @@
   text-shadow: none;
 }
 
+/* The pane is the flex/grid item; the card is its full-bleed content. */
+.fg-glass > .glass-surface__content {
+  padding: 0;
+  align-items: stretch;
+}
+
 .footer-card {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
   padding: 1.15rem 1.3rem;
-  overflow: hidden;
-}
-
-.footer-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  border-top-color: rgba(255, 255, 255, 0.22);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
-    inset 0 -1px 0 0 var(--fg-floor),
-    0 8px 24px -4px rgba(0, 0, 0, 0.45),
-    0 24px 48px -12px rgba(0, 0, 0, 0.6);
-  transform: translateY(-2px);
-}
-
-.footer-card--brand,
-.footer-card--cta {
-  background:
-    radial-gradient(
-      74% 48% at 50% 47%,
-      rgba(9, 7, 5, 0.22) 0%,
-      rgba(9, 7, 5, 0.08) 58%,
-      rgba(9, 7, 5, 0) 100%
-    ),
-    var(--fg-body);
-}
-
-.footer-card--nav {
-  background:
-    radial-gradient(
-      86% 62% at 50% 68%,
-      rgba(9, 7, 5, 0.18) 0%,
-      rgba(9, 7, 5, 0.06) 62%,
-      rgba(9, 7, 5, 0) 100%
-    ),
-    var(--fg-body);
 }
 
 .footer-card--brand {
@@ -683,33 +613,41 @@
   flex: 1 1 11.5rem;
 }
 
-.fg-pill {
+.fg-pill > .glass-surface__content {
+  padding: 0;
+}
+
+.fg-pill-link {
   min-height: 2.65rem;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
   padding-inline: 0.7rem;
-  overflow: hidden;
   color: #e4e0da;
   font-size: 0.94rem;
   font-weight: 700;
   letter-spacing: 0.015em;
   white-space: nowrap;
+  transition: color 0.18s ease;
 }
 
 .fg-pill:hover {
-  border-color: rgba(246, 181, 0, 0.28);
-  border-top-color: rgba(255, 240, 205, 0.35);
+  border-color: rgba(246, 181, 0, 0.3);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-    0 4px 14px -2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 0 rgba(255, 240, 205, 0.24),
+    inset 0 0 12px 0 rgba(255, 255, 255, 0.02),
+    0 6px 18px -2px rgba(10, 12, 14, 0.4),
     0 0 14px -4px rgba(246, 181, 0, 0.16);
-  color: #ffd15e;
   transform: translateY(-1px);
 }
 
-.fg-pill--named {
+.fg-pill:hover .fg-pill-link {
+  color: #ffd15e;
+}
+
+.fg-pill--named .fg-pill-link {
   gap: 0.5rem;
   font-size: 0.9rem;
 }
@@ -745,32 +683,48 @@
   gap: 0.5rem;
 }
 
+/* Chips shrink-wrap their content, so the pane must not stretch in the row. */
 .fg-chip {
+  flex: 0 0 auto;
+}
+
+.fg-chip > .glass-surface__content {
+  width: auto;
+  padding: 0;
+}
+
+.fg-chip-content {
   min-height: 2.3rem;
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
+  margin: 0;
   padding-inline: 0.75rem;
   color: #b0aba3;
   font-size: 0.855rem;
   font-style: normal;
+  white-space: nowrap;
+  transition: color 0.18s ease;
 }
 
-.fg-chip span {
+.fg-chip-content span {
   color: #8a847b;
   transition: color 0.18s ease;
 }
 
-a.fg-chip:hover {
-  border-color: rgba(246, 181, 0, 0.26);
-  border-top-color: rgba(255, 240, 205, 0.3);
+.fg-chip--link:hover {
+  border-color: rgba(246, 181, 0, 0.28);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
-    0 3px 10px -2px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 0 rgba(255, 240, 205, 0.22),
+    inset 0 0 12px 0 rgba(255, 255, 255, 0.02),
+    0 5px 14px -2px rgba(10, 12, 14, 0.38);
+}
+
+.fg-chip--link:hover .fg-chip-content {
   color: #ffd15e;
 }
 
-a.fg-chip:hover span {
+.fg-chip--link:hover .fg-chip-content span {
   color: #d3ac57;
 }
 
@@ -847,8 +801,8 @@ a.fg-chip:hover span {
 
   /* Brand and the call-to-action run full width; the two link lists pair up,
      which keeps the stacked footer roughly two rows shorter. */
-  .footer-card--brand,
-  .footer-card--cta {
+  .fg-glass--brand,
+  .fg-glass--cta {
     grid-column: 1 / -1;
   }
 
@@ -876,8 +830,8 @@ a.fg-chip:hover span {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .footer-card,
-  .footer-card:hover,
+  .fg-glass,
+  .fg-glass:hover,
   .fg-pill,
   .fg-pill:hover,
   .footer-whatsapp:hover,
