@@ -34,11 +34,7 @@ uniform float uSaturation;
 
 out vec4 fragColor;
 
-const float PI = 3.14159265;
-
-vec3 spectrum(float t) {
-  return 0.5 + 0.5 * cos(2.0 * PI * (t + vec3(0.00, 0.33, 0.67)));
-}
+const float PI = 3.14159265359;
 
 vec3 samplePalette(float t) {
   t = fract(t);
@@ -47,55 +43,93 @@ vec3 samplePalette(float t) {
   float blend = fract(scaled);
   int nextIdx = idx + 1;
   if (nextIdx >= uColorCount) nextIdx = 0;
-  return mix(uColors[idx], uColors[nextIdx], blend);
+  return mix(uColors[idx], uColors[nextIdx], smoothstep(0.0, 1.0, blend));
 }
 
 vec3 strandColor(float t) {
   if (uColorCount > 0) return samplePalette(t);
-  return spectrum(t);
+  return 0.5 + 0.5 * cos(2.0 * PI * (t + vec3(0.00, 0.33, 0.67)));
 }
 
 void main() {
   vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y;
   uv /= max(uScale, 0.0001);
 
+  float aspect = (uResolution.x / max(uResolution.y, 1.0)) / max(uScale, 0.0001);
   float e = 0.06 + uIntensity * 0.94;
-  float env = pow(max(cos(uv.x * PI * 1.3), 0.0), uTaper);
-
   vec3 col = vec3(0.0);
+
+  // Soft vertical envelope allowing continuous diagonal sweep without harsh boundary cuts
+  float vertEnv = smoothstep(1.2, 0.2, abs(uv.y));
+
+  // Asymmetric crossing point shifted off-center
+  float centerOffset = -0.26 * aspect;
 
   for (int i = 0; i < ${MAX_STRANDS}; i++) {
     if (i >= uStrandCount) break;
 
     float fi = float(i);
-    float ph = fi * 1.7 * uSpread;
-    float freq = (2.0 + fi * 0.35) * uWaviness;
-    float spd = 1.4 + fi * 1.2;
+    float countF = max(float(uStrandCount), 1.0);
+    float strandNorm = countF > 1.0 ? fi / (countF - 1.0) : 0.5;
+
+    // Dual-edge origin logic:
+    // Left family (even indices) sweeps across from far-left to right
+    // Right family (odd indices) sweeps across from far-right to left
+    bool fromLeft = mod(fi, 2.0) == 0.0;
+    float subIdx = floor(fi / 2.0);
+    float subNorm = subIdx / max(floor(countF / 2.0), 1.0);
 
     float tt = uTime * uSpeed;
-    float w = sin(uv.x * freq + tt * spd + ph) * 0.60
-            + sin(uv.x * freq * 1.1 - tt * spd * 0.7 + ph * 1.7) * 0.40;
+    float xRel = uv.x - centerOffset;
+    float k = uWaviness;
+    float y = 0.0;
 
-    float amp = (0.1 + 0.02 * e) * env * uAmplitude;
-    float y = w * amp;
+    if (fromLeft) {
+      // Flowing organic ribbons entering from outer left corners
+      float flowPhase = tt * (0.75 + 0.22 * subIdx) + fi * 2.3;
+      float broadCurve = sin(uv.x * 0.48 * k + flowPhase * 0.75) * (0.24 + 0.08 * subIdx) * uAmplitude;
+      float meander = cos(uv.x * 1.18 * k - flowPhase * 0.9 + fi * 1.6) * (0.14 + 0.04 * subIdx) * uAmplitude;
+      float ripple = sin(uv.x * 2.35 * k + flowPhase * 1.3 + fi * 3.1) * 0.04 * uAmplitude;
+      float cornerSlope = -0.16 * (1.0 + 0.25 * subNorm);
+      float yOffset = 0.20 - subNorm * 0.44 * uSpread;
+
+      y = yOffset + cornerSlope * xRel + broadCurve + meander + ripple;
+    } else {
+      // Flowing organic ribbons entering from outer right corners
+      float flowPhase = -tt * (0.70 + 0.20 * subIdx) + fi * 2.8;
+      float broadCurve = cos(uv.x * 0.45 * k + flowPhase * 0.78) * (0.22 + 0.07 * subIdx) * uAmplitude;
+      float meander = sin(uv.x * 1.12 * k - flowPhase * 0.85 + fi * 1.9) * (0.13 + 0.04 * subIdx) * uAmplitude;
+      float ripple = cos(uv.x * 2.25 * k + flowPhase * 1.25 + fi * 2.5) * 0.038 * uAmplitude;
+      float cornerSlope = 0.15 * (1.0 + 0.22 * subNorm);
+      float yOffset = -0.16 + subNorm * 0.42 * uSpread;
+
+      y = yOffset + cornerSlope * xRel + broadCurve + meander + ripple;
+    }
 
     float d = abs(uv.y - y);
-    float thick = (0.001 + 0.05 * e) * (0.35 + env) * uThickness;
-    float g = thick / (d + thick * 0.45);
-    g = g * g;
 
-    float h = fi / float(uStrandCount) + uv.x * 0.30 + uTime * 0.04 + uHueShift;
-    col += strandColor(h) * g * env;
+    // Warm luminous filament core + soft ambient bloom
+    float coreThick = (0.0020 + 0.015 * e) * uThickness;
+    float glowThick = coreThick * 6.2;
+
+    float core = coreThick / (d + coreThick * 0.28);
+    float halo = glowThick / (d * d * 26.0 + glowThick * 0.8);
+    float g = (core * core * 0.82 + halo * 0.44) * vertEnv;
+
+    // Palette sampling with warm amber-gold dominance and subtle accents
+    float h = strandNorm * 0.65 + (uv.x / max(aspect, 1.0)) * 0.09 + uTime * (uSpeed * 0.04) + uHueShift;
+    col += strandColor(h) * g;
   }
 
-  col *= 0.45 + 0.7 * e;
-  col = 1.0 - exp(-col * uGlow);
+  col *= 0.52 + 0.65 * e;
+  // Tone mapping to preserve warm gold tone without harsh white blowout
+  col = vec3(1.0) - exp(-col * (uGlow * 1.15));
 
   float gray = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = max(mix(vec3(gray), col, uSaturation), 0.0);
 
   float lum = max(max(col.r, col.g), col.b);
-  float alpha = clamp(lum, 0.0, 1.0) * uOpacity;
+  float alpha = clamp(lum * 1.25, 0.0, 1.0) * uOpacity;
 
   fragColor = vec4(col * uOpacity, alpha);
 }
@@ -199,18 +233,18 @@ export interface StrandsProps {
 export function Strands({
   colors = ["#F5B400", "#E06B22", "#5BB8C9"],
   count = 3,
-  speed = 0.18,
-  amplitude = 1.35,
-  waviness = 0.8,
-  thickness = 0.65,
-  glow = 0.8,
-  taper = 1.8,
-  spread = 2.4,
+  speed = 0.14,
+  amplitude = 1.1,
+  waviness = 0.75,
+  thickness = 0.75,
+  glow = 1.05,
+  taper = 0.5,
+  spread = 2.2,
   hueShift = 0,
-  intensity = 0.55,
-  saturation = 1.35,
-  opacity = 0.7,
-  scale = 2.2,
+  intensity = 0.65,
+  saturation = 1.3,
+  opacity = 0.85,
+  scale = 1.5,
   glass = false,
   refraction = 1,
   dispersion = 1,
