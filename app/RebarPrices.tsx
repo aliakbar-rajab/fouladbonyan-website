@@ -1,6 +1,5 @@
 import {
   Fragment,
-  useEffect,
   useId,
   useMemo,
   useRef,
@@ -19,8 +18,8 @@ import type {
   CatalogViewRequest,
 } from "./catalog-types";
 import { localizeCatalogValue } from "./catalog-utils";
-
-export type RebarViewRequest = CatalogViewRequest;
+import { CatalogLoadMessage } from "./site-ui";
+import { useCatalogData } from "./use-catalog-data";
 
 export type PriceCatalogConfig = {
   productLabel: string;
@@ -49,16 +48,12 @@ function displayPrice(
   return formatNumber(adjustedPrice);
 }
 
-function StatIcon({ type }: { type: "max" | "min" | "change" | "average" }) {
-  const icons = {
-    max: "↗",
-    min: "↘",
-    change: "▥",
-    average: "▥",
-  };
+const statIcons = { max: "↗", min: "↘", change: "▥", average: "▥" };
+
+function StatIcon({ type }: { type: keyof typeof statIcons }) {
   return (
     <span className={`rebar-stat-icon is-${type}`} aria-hidden="true">
-      {icons[type]}
+      {statIcons[type]}
     </span>
   );
 }
@@ -711,43 +706,17 @@ export default function RebarPrices({
   requestedView,
 }: {
   phoneHref: string;
-  requestedView?: RebarViewRequest;
+  requestedView?: CatalogViewRequest;
 }) {
-  const [priceData, setPriceData] = useState<CatalogPriceData | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const state = useCatalogData(loadRebarPriceData, "rebar");
 
-  useEffect(() => {
-    let active = true;
-    loadRebarPriceData()
-      .then((data) => {
-        if (active) setPriceData(data);
-      })
-      .catch(() => {
-        if (active) setLoadError(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (loadError) {
-    return (
-      <p className="catalog-load-state" role="alert">
-        دریافت قیمت میلگرد ممکن نشد. لطفاً صفحه را دوباره بارگذاری کنید.
-      </p>
-    );
-  }
-  if (!priceData) {
-    return (
-      <p className="catalog-load-state" role="status">
-        در حال دریافت قیمت میلگرد…
-      </p>
-    );
+  if (state.status !== "ready") {
+    return <CatalogLoadMessage status={state.status} subject="قیمت میلگرد" />;
   }
 
   return (
     <PriceCatalog
-      priceData={priceData}
+      priceData={state.data}
       config={rebarConfig}
       phoneHref={phoneHref}
       requestedView={requestedView}

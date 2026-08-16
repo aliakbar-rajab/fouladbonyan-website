@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { PreparedRequestActions } from "./request-form-shared";
 import { siteConfig } from "./site-config";
 import { rialToWords } from "./persian-numbers";
@@ -17,10 +18,17 @@ export function QuoteDocument({
 }) {
   const calculableItems = quote.items.filter((item) => item.totalRial !== null);
   const emptyRowCount = Math.max(0, 8 - quote.items.length);
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  // The document replaces the submit button as the form's result, so move the
+  // reader there once it exists.
+  useEffect(() => {
+    actionsRef.current?.focus();
+  }, []);
 
   return (
     <section className="quote-document" aria-label="پیش‌نویس برآورد آماده چاپ">
-      <div className="quote-document-actions">
+      <div className="quote-document-actions" ref={actionsRef} tabIndex={-1}>
         <strong>پیش‌نویس برآورد غیرقطعی آماده است.</strong>
         <div className="quote-document-action-buttons">
           <button type="button" onClick={() => window.print()}>

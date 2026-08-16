@@ -15,16 +15,16 @@ export function PreparedRequest({
   copyMessage,
   resultRef,
   onCopy,
-  contactLabel = "تماس با واحد فروش",
-  contactHref = siteConfig.contact.phones[0].href,
+  contactLabel,
+  contactHref,
 }: {
   title: string;
   preparedText: string;
   copyMessage: string;
   resultRef: React.RefObject<HTMLDivElement | null>;
   onCopy: () => void;
-  contactLabel?: string;
-  contactHref?: string;
+  contactLabel: string;
+  contactHref: string;
 }) {
   if (!preparedText) return null;
 
@@ -53,15 +53,15 @@ export function PreparedRequest({
 export function PreparedRequestActions({
   onCopy,
   copyLabel = "کپی متن درخواست",
-  contactLabel = "تماس با واحد فروش",
-  contactHref = siteConfig.contact.phones[0].href,
+  contactLabel,
+  contactHref,
   emailTitle,
   emailBody,
 }: {
   onCopy: () => void;
   copyLabel?: string;
-  contactLabel?: string;
-  contactHref?: string;
+  contactLabel: string;
+  contactHref: string;
   emailTitle?: string;
   emailBody?: string;
 }) {

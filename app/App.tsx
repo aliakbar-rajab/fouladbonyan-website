@@ -13,10 +13,8 @@ import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
 import RebarPrices from "./RebarPrices";
 import BeamPrices from "./BeamPrices";
 import ProductPrices from "./ProductPrices";
-import {
-  loadProductPricePayload,
-  type ProductCatalogId,
-} from "./product-price-data";
+import { loadProductPricePayload } from "./product-price-data";
+import { initialCategoryIdOf } from "./group-catalog";
 import {
   getInitialCategory,
   isProductCatalogId,
@@ -103,29 +101,13 @@ export default function App() {
     setActiveGroup(groupId);
     setActiveViewRequest((current) => ({
       requestId: current.requestId + 1,
-      categoryId:
-        view?.categoryId ??
-        (groupId === "rebar"
-          ? "ribbed"
-          : groupId === "beam"
-            ? "beam"
-            : undefined),
+      categoryId: view?.categoryId ?? initialCategoryIdOf(groupId),
       factory: view?.factory,
       size: view?.size,
     }));
     setMobileNavOpen(false);
     scrollToPrices(reduceMotion);
   };
-
-  const goToGroup = (groupId: ProductGroupId) => navigateToCatalog(groupId);
-  const goToRebarView = (view: Omit<CatalogViewRequest, "requestId">) =>
-    navigateToCatalog("rebar", view);
-  const goToBeamView = (view: Omit<CatalogViewRequest, "requestId">) =>
-    navigateToCatalog("beam", view);
-  const goToProductView = (
-    catalogId: ProductCatalogId,
-    view: Omit<CatalogViewRequest, "requestId">,
-  ) => navigateToCatalog(catalogId, view);
 
   const submitSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -223,19 +205,7 @@ export default function App() {
       </div>
 
       <header className="site-header">
-        <LightPillar
-          topColor="#f6b500"
-          bottomColor="#000000"
-          intensity={0.8}
-          rotationSpeed={0.15}
-          glowAmount={0.005}
-          pillarWidth={5}
-          pillarHeight={0.28}
-          noiseIntensity={0.1}
-          pillarRotation={-15}
-          interactive={false}
-          mixBlendMode="normal"
-        />
+        <LightPillar />
 
         <div className="shell header-main">
           <Brand headerLogo />
@@ -282,13 +252,9 @@ export default function App() {
 
         <MegaMenu
           mobileOpen={mobileNavOpen}
-          onMobileToggle={toggleMobileNav}
           onMobileClose={closeMobileNav}
           activeGroup={activeGroup}
-          onSelectGroup={goToGroup}
-          onSelectRebarView={goToRebarView}
-          onSelectBeamView={goToBeamView}
-          onSelectProductView={goToProductView}
+          onNavigate={navigateToCatalog}
         />
       </header>
 
@@ -298,7 +264,7 @@ export default function App() {
           onGoToPrices={() => scrollToPrices(reduceMotion)}
         />
 
-        <CategoryGrid onSelectGroup={goToGroup} />
+        <CategoryGrid onSelectGroup={navigateToCatalog} />
 
         <MarketPrices />
 

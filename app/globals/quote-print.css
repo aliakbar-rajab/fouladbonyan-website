@@ -350,10 +350,6 @@
     flex-direction: column;
   }
 
-  .quote-item-count {
-    align-self: flex-start;
-  }
-
   .quote-item-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -433,15 +429,6 @@
 
   .quote-item-grid > label:last-child {
     grid-column: auto;
-  }
-
-  .quote-item-count {
-    width: 100%;
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .quote-item-count input {
-    width: 100%;
   }
 
   .remove-quote-item {

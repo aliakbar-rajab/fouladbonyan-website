@@ -1,12 +1,8 @@
-import { useEffect, useState } from "react";
 import { loadBeamPriceData } from "./catalog-data";
-import {
-  PriceCatalog,
-  type PriceCatalogConfig,
-} from "./RebarPrices";
-import type { CatalogPriceData, CatalogViewRequest } from "./catalog-types";
-
-export type BeamViewRequest = CatalogViewRequest;
+import { CatalogLoadMessage } from "./site-ui";
+import { useCatalogData } from "./use-catalog-data";
+import { PriceCatalog, type PriceCatalogConfig } from "./RebarPrices";
+import type { CatalogViewRequest } from "./catalog-types";
 
 const beamConfig: PriceCatalogConfig = {
   productLabel: "تیرآهن",
@@ -23,43 +19,17 @@ export default function BeamPrices({
   requestedView,
 }: {
   phoneHref: string;
-  requestedView?: BeamViewRequest;
+  requestedView?: CatalogViewRequest;
 }) {
-  const [priceData, setPriceData] = useState<CatalogPriceData | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const state = useCatalogData(loadBeamPriceData, "beam");
 
-  useEffect(() => {
-    let active = true;
-    loadBeamPriceData()
-      .then((data) => {
-        if (active) setPriceData(data);
-      })
-      .catch(() => {
-        if (active) setLoadError(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (loadError) {
-    return (
-      <p className="catalog-load-state" role="alert">
-        دریافت قیمت تیرآهن ممکن نشد. لطفاً صفحه را دوباره بارگذاری کنید.
-      </p>
-    );
-  }
-  if (!priceData) {
-    return (
-      <p className="catalog-load-state" role="status">
-        در حال دریافت قیمت تیرآهن…
-      </p>
-    );
+  if (state.status !== "ready") {
+    return <CatalogLoadMessage status={state.status} subject="قیمت تیرآهن" />;
   }
 
   return (
     <PriceCatalog
-      priceData={priceData}
+      priceData={state.data}
       config={beamConfig}
       phoneHref={phoneHref}
       requestedView={requestedView}

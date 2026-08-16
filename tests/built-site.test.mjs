@@ -96,8 +96,9 @@ test("built JavaScript has no external image or fake form dependency", async () 
   const javascript = await readDist(asset.slice(1));
   assert.doesNotMatch(javascript, /images\.pexels\.com|submitQuote|VITE_LEAD_ENDPOINT/);
   assert.match(javascript, /BONYAN FOULAD DARIA/);
-  assert.match(javascript, /قیمت هاش/);
-  assert.match(javascript, /کارخانه‌های تیرآهن/);
+  // Menu wording ships in the bundle; the product names inside it do not --
+  // those are read from the price snapshots at runtime.
+  assert.match(javascript, /قیمت روز محصولات/);
 });
 
 test("large live catalogs are split out of the initial JavaScript", async () => {

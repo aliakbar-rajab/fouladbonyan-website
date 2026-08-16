@@ -1,5 +1,4 @@
 import { createRetryableLoader } from "./catalog-cache";
-import { validateProductPricePayload } from "./catalog-validation.mjs";
 import type {
   CatalogCategory,
   CatalogPriceData,
@@ -27,10 +26,11 @@ export type ProductPricePayload = Omit<CatalogPriceData, "categories"> & {
   catalogs: ProductPriceCatalog[];
 };
 
+// Validated at build time by scripts/validate-price-data.mjs, not again here.
 export const loadProductPricePayload = createRetryableLoader(
   () =>
-    import("./data/product-prices.json").then((module) =>
-      validateProductPricePayload(module.default),
+    import("./data/product-prices.json").then(
+      (module) => module.default,
     ) as Promise<ProductPricePayload>,
 );
 

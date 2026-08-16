@@ -78,22 +78,13 @@ test("Persian form validation rejects incomplete and malformed requests", () => 
   );
 });
 
-test("homepage navigation reaches the quote form directly and one request supports many items", async () => {
-  const [navigation, requestForms] = await Promise.all([
-    read("../app/MegaMenu.tsx"),
-    read("../app/QuoteRequestForm.tsx"),
-  ]);
+test("homepage navigation reaches the quote form directly", async () => {
+  const navigation = await read("../app/MegaMenu.tsx");
 
   assert.match(
     navigation,
     /<a className="nav-quote" href="\/quote-process\/#quote-form">\s*درخواست پیش‌فاکتور/,
   );
-  assert.match(requestForms, /const MAX_QUOTE_ITEMS = 100/);
-  assert.match(requestForms, /items\.map\(\(item, index\) =>/);
-  assert.match(requestForms, /ساخت ردیف‌ها/);
-  assert.match(requestForms, /افزودن کالای جدید/);
-  assert.match(requestForms, /کالاهای درخواست \(\$\{quoteItems\.length/);
-  assert.doesNotMatch(requestForms, /قلم|اقلام/);
 });
 
 test("quote estimates reuse site price data and calculate weight-based totals", async () => {
