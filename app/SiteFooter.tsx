@@ -41,100 +41,108 @@ export function SiteFooter({
     <footer className="site-footer" id="contact">
       <div className="footer-strands-layer" aria-hidden="true">
         <Strands
-          colors={["#F5B400", "#E06B22", "#5BB8C9"]}
-          count={3}
-          speed={0.18}
-          amplitude={1.35}
-          waviness={0.8}
-          thickness={0.65}
-          glow={0.8}
-          taper={1.8}
-          spread={2.4}
-          intensity={0.55}
-          saturation={1.35}
-          opacity={0.7}
-          scale={2.2}
+          colors={["#F59E0B", "#D97706", "#FBBF24", "#E06B22", "#38BDF8", "#B45309"]}
+          count={5}
+          speed={0.09}
+          amplitude={1.15}
+          waviness={0.85}
+          thickness={0.72}
+          glow={0.88}
+          taper={0.0}
+          spread={1.9}
+          intensity={0.58}
+          saturation={1.3}
+          opacity={0.85}
+          scale={1.35}
           glass={false}
           refraction={1}
           dispersion={1}
           glassSize={1}
           hueShift={0}
         />
-        <div className="footer-strands-overlay" />
       </div>
 
-      <div className="shell footer-main">
-        <div className="footer-col-brand">
-          <Brand headerLogo href={homeHref} />
-          <p>
-            معرفی، استعلام لحظه‌ای و تأمین انواع مقاطع فولادی ساختمانی و صنعتی با تضمین اصالت و مشاوره تخصصی.
-          </p>
-          <a
-            className="footer-whatsapp-cta"
-            href={whatsappCommunityUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className="footer-whatsapp-badge" aria-hidden="true">
-              <WhatsAppIcon />
-            </span>
-            <span className="footer-whatsapp-label">
-              عضویت در کانال واتساپ
-            </span>
-          </a>
-        </div>
+      <div className="shell footer-shell">
+        <div className="footer-cards-grid">
+          {/* Brand & Community Card */}
+          <div className="footer-card footer-card-brand">
+            <Brand headerLogo href={homeHref} />
+            <p className="footer-brand-desc">
+              تأمین تخصصی مقاطع فولادی ساختمانی و صنعتی با تضمین اصالت کالا و مشاوره فنی.
+            </p>
+            <a
+              className="footer-whatsapp-btn"
+              href={whatsappCommunityUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="footer-whatsapp-icon" aria-hidden="true">
+                <WhatsAppIcon />
+              </span>
+              <span className="footer-whatsapp-text">عضویت در کانال واتساپ</span>
+            </a>
+          </div>
 
-        <div className="footer-col-quick">
-          <h2>دسترسی سریع</h2>
-          <nav aria-label="لینک‌های دسترسی سریع فوتر">
-            {quickAccessLinks.map((link) => (
-              <a href={link.href} key={link.href}>
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </div>
+          {/* Quick Access Card */}
+          <div className="footer-card footer-card-nav">
+            <h2 className="footer-card-title">دسترسی سریع</h2>
+            <nav aria-label="لینک‌های دسترسی سریع فوتر" className="footer-nav-list">
+              {quickAccessLinks.map((link) => (
+                <a href={link.href} key={link.href} className="footer-nav-link">
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
 
-        <div className="footer-col-info">
-          <h2>راهنما و قوانین</h2>
-          <nav aria-label="لینک‌های راهنما و قوانین فوتر">
-            {infoPageLinks.map((link) => (
-              <a href={link.href} key={link.href}>
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </div>
+          {/* Guide & Policies Card */}
+          <div className="footer-card footer-card-nav">
+            <h2 className="footer-card-title">راهنما و قوانین</h2>
+            <nav aria-label="لینک‌های راهنما و قوانین فوتر" className="footer-nav-list">
+              {infoPageLinks.map((link) => (
+                <a href={link.href} key={link.href} className="footer-nav-link">
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+          </div>
 
-        <div className="footer-col-consultation">
-          <div className="footer-consultation-card">
-            <span className="footer-consultation-badge">مشاوره و خرید</span>
-            <h3>استعلام تلفنی و پیش‌فاکتور</h3>
-            <p>
-              کارشناسان فروش برای اعلام موجودی و صدور پیش‌فاکتور آماده پاسخگویی هستند.
+          {/* Direct Consultation Card */}
+          <div className="footer-card footer-card-consultation">
+            <div className="footer-consultation-top">
+              <span className="footer-consultation-tag">مشاوره و خرید</span>
+              <h3 className="footer-consultation-heading">استعلام و پیش‌فاکتور</h3>
+            </div>
+            <p className="footer-consultation-desc">
+              کارشناسان فروش برای استعلام لحظه‌ای و صدور پیش‌فاکتور آماده‌اند.
             </p>
             {workingHours ? (
-              <div className="footer-hours-pill">
-                <span aria-hidden="true">◷</span>
-                <span>ساعات کاری: {workingHours}</span>
+              <div className="footer-hours-row">
+                <span aria-hidden="true" className="footer-hours-icon">◷</span>
+                <span>{workingHours}</span>
               </div>
             ) : null}
-            <a className="footer-call-action" href={phones[0].href} dir="ltr">
+            <a className="footer-call-btn" href={phones[0].href} dir="ltr">
               <span>{phones[0].label}</span>
-              <span className="footer-call-icon" aria-hidden="true">☎</span>
+              <span className="footer-call-btn-icon" aria-hidden="true">☎</span>
             </a>
           </div>
         </div>
-      </div>
 
-      <div className="footer-contact-strip" id="phone-numbers">
-        <div className="shell footer-contact-strip-inner">
-          <div className="footer-strip-header">
-            <h2 className="footer-strip-title">خطوط ارتباطی واحد فروش</h2>
-            <span className="footer-strip-subtitle">پاسخگویی سریع در ساعات کاری</span>
+        {/* Sales Communication & Contact Section (Discrete Glass Elements) */}
+        <div className="footer-contact-zone" id="phone-numbers">
+          <div className="footer-contact-header">
+            <div className="footer-contact-title-wrap">
+              <h2 className="footer-contact-main-title">خطوط ارتباطی واحد فروش</h2>
+              <span className="footer-contact-sub-title">پاسخگویی سریع کارشناسان در ساعات کاری</span>
+            </div>
+            <a className="footer-contact-hub-link" href="/contact/">
+              <span>مشاهده نقشه و نشانی کامل</span>
+              <span aria-hidden="true">←</span>
+            </a>
           </div>
 
-          <div className="footer-phones">
+          <div className="footer-phones-grid">
             {phones.map((phone, idx) => (
               <a href={phone.href} key={phone.href} dir="ltr" className="footer-phone-pill">
                 <span className="footer-phone-num">{phone.label}</span>
@@ -143,32 +151,26 @@ export function SiteFooter({
             ))}
           </div>
 
-          <div className="footer-contact-secondary">
-            <div className="footer-contact-meta">
+          <div className="footer-contact-footer-bar">
+            <div className="footer-meta-group">
               {officialEmail ? (
-                <a className="footer-meta-item" href={`mailto:${officialEmail}`} dir="ltr">
+                <a className="footer-meta-chip" href={`mailto:${officialEmail}`} dir="ltr">
                   <span aria-hidden="true">✉</span>
                   <span>{officialEmail}</span>
                 </a>
               ) : null}
-              <address className="footer-meta-item">
+              <address className="footer-meta-chip">
                 <span aria-hidden="true">📍</span>
                 <span>{shortAddress}</span>
               </address>
-              <a className="footer-contact-page-link" href="/contact/">
-                <span>مشاهده صفحه کامل تماس و نقشه</span>
-                <span aria-hidden="true">←</span>
-              </a>
             </div>
 
-            <div className="footer-management">
-              <span className="footer-management-label">تماس با مدیریت:</span>
-              <div className="footer-management-list">
+            <div className="footer-management-group">
+              <span className="footer-management-tag">مدیریت:</span>
+              <div className="footer-management-chips">
                 {managementContacts.map((contact) => (
-                  <span className="footer-management-item" key={contact.href}>
-                    <strong className="footer-contact-name">
-                      {contact.name}:
-                    </strong>
+                  <span className="footer-management-chip" key={contact.href}>
+                    <strong>{contact.name}:</strong>
                     <a href={contact.href} dir="ltr">
                       {contact.label}
                     </a>
@@ -178,15 +180,20 @@ export function SiteFooter({
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="shell footer-bottom">
-        <span>© ۲۰۲۰ بنیان فولاد داریا · کلیه حقوق محفوظ است.</span>
-        <span className="footer-bottom-links">
-          <a href="/privacy/">حریم خصوصی</a>
-          <a href="/terms/">شرایط استفاده</a>
-          <a href={topHref}>بازگشت به بالا ↑</a>
-        </span>
+        {/* Footer Bottom Bar */}
+        <div className="footer-bottom">
+          <span className="footer-copyright">
+            © ۲۰۲۰ بنیان فولاد داریا · کلیه حقوق محفوظ است.
+          </span>
+          <div className="footer-bottom-links">
+            <a href="/privacy/">حریم خصوصی</a>
+            <a href="/terms/">شرایط استفاده</a>
+            <a href={topHref} className="footer-back-to-top">
+              بازگشت به بالا ↑
+            </a>
+          </div>
+        </div>
       </div>
     </footer>
   );
