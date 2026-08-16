@@ -135,9 +135,13 @@
 .hero-kicker {
   width: fit-content;
   margin: 0 0 1.1rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.4rem 0.85rem;
   border-inline-start: 4px solid var(--brand-yellow);
-  background: rgb(255 255 255 / 10%);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   font-size: 0.92rem;
   font-weight: 800;
 }
@@ -164,44 +168,60 @@
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 2rem;
+  gap: 0.85rem;
+  margin-top: 2.25rem;
 }
 
 .hero-actions a,
 .hero-actions button {
-  min-height: 3.1rem;
+  min-height: 3.2rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding-inline: 1.35rem;
-  border: 1px solid rgb(255 255 255 / 50%);
-  border-radius: 8px;
-  background: rgb(30 30 33 / 35%);
+  padding-inline: 1.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(30, 30, 33, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--white);
   font: inherit;
   font-weight: 900;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  transition: all 0.22s ease;
 }
 
 .hero-actions a:first-child {
-  border-color: var(--brand-yellow);
-  background: var(--brand-yellow);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(135deg, #f6b500 0%, #e09e00 100%);
   color: var(--ink);
+  box-shadow: 0 6px 20px rgba(246, 181, 0, 0.35);
 }
 
-.hero-actions a:hover {
+.hero-actions a:first-child:hover {
+  background: linear-gradient(135deg, #ffc82d 0%, #f6b500 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(246, 181, 0, 0.48);
+}
+
+.hero-actions a:hover,
+.hero-actions button:hover {
   border-color: var(--brand-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .hero-actions .hero-price-jump {
-  border-color: var(--brand-yellow);
-  background: rgb(20 20 23 / 72%);
-  box-shadow: inset 0 0 0 1px rgb(255 211 56 / 18%);
+  border-color: rgba(246, 181, 0, 0.45);
+  background: rgba(20, 20, 23, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 56, 0.18), 0 6px 20px rgba(0, 0, 0, 0.3);
   cursor: pointer;
 }
 
 .hero-actions .hero-price-jump:hover {
-  background: rgb(20 20 23 / 88%);
+  background: rgba(20, 20, 23, 0.92);
+  border-color: var(--brand-yellow);
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 56, 0.35), 0 8px 26px rgba(0, 0, 0, 0.45);
 }
 
 .carousel-controls {
@@ -210,28 +230,34 @@
   bottom: 2rem;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .carousel-controls > button {
   min-width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid rgb(255 255 255 / 45%);
-  border-radius: 8px;
-  background: rgb(25 25 28 / 55%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(25, 25, 28, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--white);
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
 }
 
 .carousel-controls > button:hover {
   border-color: var(--brand-yellow);
   background: var(--brand-yellow);
   color: var(--ink);
+  box-shadow: 0 4px 18px rgba(246, 181, 0, 0.4);
+  transform: translateY(-1px);
 }
 
 .carousel-dots {
   display: flex;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .carousel-dots button {
@@ -248,19 +274,22 @@
   position: absolute;
   inset-inline: 0.5rem;
   top: 50%;
-  height: 0.28rem;
+  height: 0.32rem;
   border-radius: 999px;
-  background: rgb(255 255 255 / 48%);
+  background: rgba(255, 255, 255, 0.4);
   transform: translateY(-50%);
+  transition: all 0.25s ease;
 }
 
 .carousel-dots button.is-active::after {
   background: var(--brand-yellow);
+  box-shadow: 0 0 10px rgba(246, 181, 0, 0.6);
+  transform: translateY(-50%) scaleY(1.15);
 }
 
 .carousel-controls .carousel-pause {
   width: auto;
-  padding-inline: 0.8rem;
+  padding-inline: 0.9rem;
   font-size: 0.78rem;
   font-weight: 800;
 }

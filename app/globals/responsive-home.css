@@ -193,9 +193,13 @@
     min-height: calc(4rem + env(safe-area-inset-bottom));
     display: grid;
     grid-template-columns: 1fr 1.25fr;
-    padding: 0.45rem 0.75rem calc(0.45rem + env(safe-area-inset-bottom));
-    background: var(--white);
-    box-shadow: 0 -6px 22px rgb(20 20 24 / 14%);
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem calc(0.5rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -8px 28px rgba(20, 20, 24, 0.12);
   }
 
   .mobile-actions a {
@@ -203,16 +207,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    border: 1px solid var(--line);
+    gap: 0.45rem;
+    border: 1px solid rgba(0, 0, 0, 0.09);
+    border-radius: 10px;
     background: var(--white);
     color: var(--ink);
     font-weight: 900;
   }
 
   .mobile-actions a:last-child {
-    border-color: var(--brand-yellow);
-    background: var(--brand-yellow);
+    border-color: rgba(255, 255, 255, 0.35);
+    background: linear-gradient(135deg, #f6b500 0%, #e29e00 100%);
+    box-shadow: 0 4px 12px rgba(246, 181, 0, 0.3);
   }
 
   .rebar-layout {

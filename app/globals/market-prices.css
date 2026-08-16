@@ -55,12 +55,22 @@
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 0.7rem;
-  padding: 1.2rem 1.25rem 1.3rem;
-  border-top: 3px solid var(--brand-yellow);
-  border-radius: var(--radius);
-  background: var(--white);
-  box-shadow: 0 10px 28px rgb(12 12 16 / 22%);
+  gap: 0.75rem;
+  padding: 1.35rem 1.35rem 1.45rem;
+  border-top: 4px solid var(--brand-yellow);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-top: 4px solid var(--brand-yellow);
+  box-shadow: 0 12px 36px rgba(10, 10, 14, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.market-price-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px rgba(10, 10, 14, 0.28);
 }
 
 .market-price-card > header {
@@ -75,8 +85,9 @@
   place-items: center;
   width: 2.75rem;
   height: 2.75rem;
-  border-radius: 50%;
-  background: #f3ede0;
+  border-radius: 12px;
+  background: rgba(246, 181, 0, 0.12);
+  border: 1px solid rgba(246, 181, 0, 0.25);
   color: var(--brand-dark);
 }
 
@@ -88,7 +99,7 @@
 .market-price-card h3 {
   margin: 0;
   color: var(--brand-dark);
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 900;
 }
 
@@ -102,9 +113,10 @@
 
 .market-price-value strong {
   color: #1c1c20;
-  font-size: 1.45rem;
+  font-size: 1.5rem;
   font-weight: 950;
   word-break: break-word;
+  letter-spacing: -0.02em;
 }
 
 .market-price-value small {
@@ -120,12 +132,14 @@
   align-items: center;
   gap: 0.35rem;
   margin: 0;
-  padding: 0.3rem 0.65rem;
+  padding: 0.35rem 0.75rem;
   border: 1px solid currentColor;
   border-radius: 999px;
   background: color-mix(in srgb, currentColor 10%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   color: #576079;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
@@ -139,10 +153,10 @@
 
 .market-price-updated {
   margin: 0.3rem 0 0;
-  padding-top: 0.6rem;
+  padding-top: 0.65rem;
   border-top: 1px solid var(--line);
   color: #8a8b94;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .market-price-updated b {
