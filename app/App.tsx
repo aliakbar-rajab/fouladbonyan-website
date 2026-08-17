@@ -52,9 +52,28 @@ function scrollToPrices(reduceMotion: boolean) {
   });
 }
 
-export default function App() {
+export default function App({
+  initialCategory,
+}: {
+  initialCategory?: ProductGroupId;
+} = {}) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [activeGroup, setActiveGroup] = useState(getInitialCategory);
+  const initialCategorySlug =
+    initialCategory ??
+    (typeof document !== "undefined"
+      ? (document.getElementById("root")?.dataset.initialCategory as
+          | ProductGroupId
+          | undefined)
+      : undefined);
+  const isCategoryRoute = Boolean(
+    initialCategorySlug &&
+      productGroups.some((group) => group.id === initialCategorySlug),
+  );
+  const [activeGroup, setActiveGroup] = useState<ProductGroupId>(() =>
+    initialCategorySlug && productGroups.some((g) => g.id === initialCategorySlug)
+      ? initialCategorySlug
+      : getInitialCategory(),
+  );
   const [searchInput, setSearchInput] = useState("");
   const [committedSearch, setCommittedSearch] = useState("");
   const [searchMessage, setSearchMessage] = useState("");
@@ -74,14 +93,6 @@ export default function App() {
   const tabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const didAutoScrollCategoryRoute = useRef(false);
 
-  const initialCategorySlug =
-    typeof document !== "undefined"
-      ? document.getElementById("root")?.dataset.initialCategory
-      : undefined;
-  const isCategoryRoute = Boolean(
-    initialCategorySlug &&
-      productGroups.some((group) => group.id === initialCategorySlug),
-  );
   const categoryGroup = isCategoryRoute && initialCategorySlug
     ? getCategoryById(initialCategorySlug) ?? null
     : null;
@@ -91,6 +102,7 @@ export default function App() {
     didAutoScrollCategoryRoute.current = true;
     scrollToPrices(reduceMotion);
   }, [isCategoryRoute, reduceMotion]);
+
 
   const filteredGroups = useMemo(
     () => filterProductGroups(searchGroups ?? productGroups, committedSearch),

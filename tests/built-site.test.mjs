@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import test from "node:test";
+import { infoPageDefinitions } from "../app/info-page-data.ts";
+import { productGroups } from "../app/category-meta.ts";
+
 
 const readDist = (path) =>
   readFile(new URL(`../dist/${path}`, import.meta.url), "utf8");
+
 
 test("production output contains required GitHub Pages files", async () => {
   await Promise.all(
@@ -231,3 +235,95 @@ test("every built rule that blurs its backdrop keeps both the prefixed and stand
     "these rules lost one half of the pair in the build; declare -webkit-backdrop-filter first",
   );
 });
+
+test("prerendered SSG HTML contains complete meaningful content before JavaScript runs", async () => {
+  // 1. Homepage
+  const homeHtml = await readDist("index.html");
+  assert.match(
+    homeHtml,
+    /<div id="root">[\s\S]+<\/div>/,
+    "Homepage #root must not be empty",
+  );
+  assert.match(
+    homeHtml,
+    /<h1><span>قیمت روز آهن و فولاد؛<\/span><span>بنیان فولاد داریا<\/span><\/h1>/,
+    "Homepage must contain the primary H1 in initial HTML",
+  );
+  assert.match(
+    homeHtml,
+    /class="overview-table"/,
+    "Homepage must contain overview price table in initial HTML",
+  );
+  assert.match(
+    homeHtml,
+    /<script id="initial-overview-data" type="application\/json">/,
+    "Homepage must embed initial-overview-data JSON for hydration",
+  );
+
+  // 2. Category pages
+  for (const group of productGroups) {
+    const catHtml = await readDist(`${group.id}/index.html`);
+    assert.match(
+      catHtml,
+      new RegExp(`<div id="root" data-initial-category="${group.id}">[\\s\\S]+<\\/div>`),
+      `${group.id} #root must be prerendered with content`,
+    );
+    assert.match(
+      catHtml,
+      new RegExp(`<h1><span>${group.h1}<\\/span><\\/h1>`),
+      `${group.id} must contain expected H1 in initial HTML`,
+    );
+    assert.match(
+      catHtml,
+      /class="breadcrumb-nav"/,
+      `${group.id} must contain DOM breadcrumb navigation in initial HTML`,
+    );
+    assert.match(
+      catHtml,
+      /class="hero-category-intro"/,
+      `${group.id} must contain category-specific intro copy in initial HTML`,
+    );
+    assert.match(
+      catHtml,
+      /<script id="initial-page-data" type="application\/json">/,
+      `${group.id} must embed initial-page-data JSON for hydration`,
+    );
+    // Representative price data verification
+    assert.match(
+      catHtml,
+      /تومان/,
+      `${group.id} must contain prerendered prices in initial HTML`,
+    );
+  }
+
+
+  // 3. Contact & Info pages
+  const infoPages = [
+    { page: "contact", h1: "تماس با ما" },
+    ...Object.entries(infoPageDefinitions).map(([page, def]) => ({
+      page,
+      h1: def.title,
+    })),
+  ];
+
+
+  for (const { page, h1 } of infoPages) {
+    const pageHtml = await readDist(`${page}/index.html`);
+    assert.match(
+      pageHtml,
+      new RegExp(`<div id="root" data-page="${page}">[\\s\\S]+<\\/div>`),
+      `${page} #root must be prerendered with content`,
+    );
+    assert.match(
+      pageHtml,
+      new RegExp(`<h1[^>]*>${h1}<\\/h1>`),
+      `${page} must contain H1 in initial HTML`,
+    );
+    assert.match(
+      pageHtml,
+      /class="breadcrumb-nav"/,
+      `${page} must contain DOM breadcrumb navigation in initial HTML`,
+    );
+  }
+});
+

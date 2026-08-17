@@ -1,5 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import React from "react";
+import { renderToString } from "react-dom/server";
+import ContactPage from "../app/ContactPage.tsx";
+import InfoPage from "../app/InfoPage.tsx";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
 import {
   buildOrganizationStructuredData,
@@ -35,6 +39,7 @@ function buildBreadcrumbJsonLd(label, pageUrl) {
 function buildPageHtml(
   baseHtml,
   { page, title, description, pageUrl, breadcrumbLabel },
+  renderedContentHtml,
 ) {
   let html = baseHtml
     .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
@@ -47,6 +52,12 @@ function buildPageHtml(
     );
   }
 
+  // Remove homepage initial-overview-data if inherited from dist/index.html
+  html = html.replace(
+    /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
+    "",
+  );
+
   html = replaceTagContent(html, 'name="description"', description);
   html = replaceTagContent(html, 'property="og:title"', title);
   html = replaceTagContent(html, 'property="og:description"', description);
@@ -55,8 +66,8 @@ function buildPageHtml(
   html = replaceTagContent(html, 'name="twitter:description"', description);
 
   html = html.replace(
-    '<div id="root"></div>',
-    `<div id="root" data-page="${page}"></div>`,
+    /<div id="root"[\s\S]*?<\/div>/,
+    `<div id="root" data-page="${page}">${renderedContentHtml}</div>`,
   );
 
   return html.replace(
@@ -131,11 +142,16 @@ const pageEntries = [
 
 await Promise.all(
   pageEntries.map(async (pageEntry) => {
+    const renderedContentHtml =
+      pageEntry.page === "contact"
+        ? renderToString(React.createElement(ContactPage))
+        : renderToString(React.createElement(InfoPage, { page: pageEntry.page }));
+
     const outDir = resolve(distDir, pageEntry.page);
     await mkdir(outDir, { recursive: true });
     await writeFile(
       resolve(outDir, "index.html"),
-      buildPageHtml(baseHtml, pageEntry),
+      buildPageHtml(baseHtml, pageEntry, renderedContentHtml),
       "utf8",
     );
   }),
@@ -145,5 +161,5 @@ await addInformationUrlsToSitemap(pageEntries);
 await injectOrganizationData();
 
 console.log(
-  `تولید ${pageEntries.length.toLocaleString("fa-IR")} صفحه اطلاعاتی و بروزرسانی sitemap با موفقیت انجام شد.`,
+  `تولید و پیش‌رندر ${pageEntries.length.toLocaleString("fa-IR")} صفحه اطلاعاتی و تماس و بروزرسانی sitemap با موفقیت انجام شد.`,
 );

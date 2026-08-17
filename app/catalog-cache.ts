@@ -1,3 +1,9 @@
+export type RetryableLoader<T> = {
+  (): Promise<T>;
+  getCached: () => T | undefined;
+  setCached: (value: T) => void;
+};
+
 /**
  * Memoise an async loader, but only its successes.
  *
@@ -10,15 +16,33 @@
  */
 export function createRetryableLoader<T>(
   load: () => Promise<T>,
-): () => Promise<T> {
+): RetryableLoader<T> {
   let pending: Promise<T> | undefined;
-  return () => {
+  let cachedValue: T | undefined;
+
+  const fn = () => {
+    if (cachedValue !== undefined) {
+      return Promise.resolve(cachedValue);
+    }
     pending ??= Promise.resolve()
       .then(load)
+      .then((val) => {
+        cachedValue = val;
+        return val;
+      })
       .catch((error: unknown) => {
         pending = undefined;
         throw error;
       });
     return pending;
   };
+
+  fn.getCached = () => cachedValue;
+  fn.setCached = (val: T) => {
+    cachedValue = val;
+    pending = Promise.resolve(val);
+  };
+
+  return fn;
 }
+

@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from "react";
 
 function subscribeToMedia(query: string, callback: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
   const media = window.matchMedia(query);
   media.addEventListener("change", callback);
   return () => media.removeEventListener("change", callback);
@@ -9,7 +12,11 @@ function subscribeToMedia(query: string, callback: () => void) {
 export function useMediaQuery(query: string) {
   return useSyncExternalStore(
     (callback) => subscribeToMedia(query, callback),
-    () => window.matchMedia(query).matches,
+    () =>
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia(query).matches
+        : false,
     () => false,
   );
 }
+

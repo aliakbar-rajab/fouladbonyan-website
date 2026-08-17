@@ -17,12 +17,14 @@ function formatStatusText(status: string, percent: number): string {
 }
 
 export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
+  const initialSummaries = loadOverviewSummaries.getCached?.();
   const [summaries, setSummaries] = useState<CategoryPriceOverview[]>(
-    buildFallbackOverviews,
+    () => initialSummaries ?? buildFallbackOverviews(),
   );
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(() => initialSummaries !== undefined);
 
   useEffect(() => {
+    if (initialSummaries !== undefined) return;
     let active = true;
     loadOverviewSummaries()
       .then((data) => {
@@ -37,7 +39,8 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialSummaries]);
+
 
   return (
     <div className="steel-price-overview" id="overview-table">

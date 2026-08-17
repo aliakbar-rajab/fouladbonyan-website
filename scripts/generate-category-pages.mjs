@@ -1,6 +1,12 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import React from "react";
+import { renderToString } from "react-dom/server";
+import App from "../app/App.tsx";
 import { productGroups } from "../app/category-meta.ts";
+import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data.ts";
+import { loadProductPricePayload } from "../app/product-price-data.ts";
+import { loadOverviewSummaries } from "../app/catalog-overview.ts";
 
 const SITE_URL = "https://fouladbonyan.com";
 const distDir = resolve(import.meta.dirname, "..", "dist");
@@ -8,7 +14,7 @@ const dataDir = resolve(import.meta.dirname, "..", "app", "data");
 
 const readJson = (path) => readFile(path, "utf8").then(JSON.parse);
 
-async function loadPriceFreshness() {
+async function loadPriceData() {
   const [rebar, beam, products] = await Promise.all([
     readJson(resolve(dataDir, "rebar-prices.json")),
     readJson(resolve(dataDir, "beam-prices.json")),
@@ -31,7 +37,49 @@ async function loadPriceFreshness() {
     .at(-1)
     .slice(0, 10);
 
-  return { dates, latestDate };
+  return { rebar, beam, products, dates, latestDate };
+}
+
+function computeOverviewSummaries(rebarData, beamData, productData) {
+  return productGroups.map((group) => {
+    const isRebar = group.id === "rebar";
+    const isBeam = group.id === "beam";
+    const isPipe = group.id === "pipe";
+
+    const categories = isRebar
+      ? rebarData.categories
+      : isBeam
+        ? beamData.categories
+        : productData.catalogs.find((c) => c.id === group.id)?.categories ?? [];
+
+    const unit = isBeam || isPipe ? "شاخه / کیلوگرم" : "کیلوگرم";
+
+    const minValues = categories
+      .map((c) => c.summary.min)
+      .filter((v) => typeof v === "number" && v > 0);
+    const maxValues = categories
+      .map((c) => c.summary.max)
+      .filter((v) => typeof v === "number" && v > 0);
+
+    const minPrice = minValues.length > 0 ? Math.min(...minValues) : null;
+    const maxPrice = maxValues.length > 0 ? Math.max(...maxValues) : null;
+    const firstSummary = categories[0]?.summary;
+
+    return {
+      id: group.id,
+      label: group.label,
+      shortLabel: group.shortLabel,
+      subTypes: group.subTypes,
+      image: group.image,
+      description: group.description,
+      minPrice,
+      maxPrice,
+      unit,
+      date: firstSummary?.date || "امروز",
+      status: firstSummary?.status || "steady",
+      percent: firstSummary?.percent || 0,
+    };
+  });
 }
 
 function buildBreadcrumbJsonLd(group) {
@@ -57,7 +105,7 @@ const replaceTagContent = (html, attrMatcher, value) =>
     `$1${value}$2`,
   );
 
-function buildCategoryHtml(baseHtml, group) {
+function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
   const pageUrl = `${SITE_URL}/${group.id}/`;
 
   let html = baseHtml
@@ -68,6 +116,10 @@ function buildCategoryHtml(baseHtml, group) {
     )
     .replace(
       /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
+      "",
+    )
+    .replace(
+      /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
       "",
     );
 
@@ -87,9 +139,12 @@ function buildCategoryHtml(baseHtml, group) {
   );
 
   html = html.replace(
-    '<div id="root"></div>',
-    `<div id="root" data-initial-category="${group.id}"></div>`,
+    /<div id="root"[\s\S]*?<\/div>/,
+    `<div id="root" data-initial-category="${group.id}">${renderedAppHtml}</div>`,
   );
+
+  const initialDataScript = `\n    <script id="initial-page-data" type="application/json">${JSON.stringify(dataPayload)}</script>`;
+  html = html.replace("</body>", `${initialDataScript}\n  </body>`);
 
   return html.replace(
     "</head>",
@@ -119,18 +174,50 @@ async function updateSitemapWithCategories(freshnessMap, latestRootDate) {
   await writeFile(sitemapPath, updatedSitemap, "utf8");
 }
 
-const [baseHtml, { dates: freshnessDates, latestDate }] = await Promise.all([
+const [baseHtml, priceData] = await Promise.all([
   readFile(resolve(distDir, "index.html"), "utf8"),
-  loadPriceFreshness(),
+  loadPriceData(),
 ]);
 
+const { rebar: rebarData, beam: beamData, products: productData, dates: freshnessDates, latestDate } = priceData;
+
+// 1. Prerender the homepage (dist/index.html)
+const overviewSummaries = computeOverviewSummaries(rebarData, beamData, productData);
+loadOverviewSummaries.setCached(overviewSummaries);
+const homeRenderedHtml = renderToString(React.createElement(App));
+
+let homeHtml = baseHtml.replace(
+  '<div id="root"></div>',
+  `<div id="root">${homeRenderedHtml}</div>`,
+);
+const overviewDataScript = `\n    <script id="initial-overview-data" type="application/json">${JSON.stringify(overviewSummaries)}</script>`;
+homeHtml = homeHtml.replace("</body>", `${overviewDataScript}\n  </body>`);
+await writeFile(resolve(distDir, "index.html"), homeHtml, "utf8");
+
+// 2. Prerender all category landing pages
 await Promise.all(
   productGroups.map(async (group) => {
+    let dataPayload;
+    if (group.id === "rebar") {
+      loadRebarPriceData.setCached(rebarData);
+      dataPayload = { type: "rebar", data: rebarData };
+    } else if (group.id === "beam") {
+      loadBeamPriceData.setCached(beamData);
+      dataPayload = { type: "beam", data: beamData };
+    } else {
+      loadProductPricePayload.setCached(productData);
+      dataPayload = { type: "product", data: productData };
+    }
+
+    const renderedAppHtml = renderToString(
+      React.createElement(App, { initialCategory: group.id }),
+    );
+
     const outDir = resolve(distDir, group.id);
     await mkdir(outDir, { recursive: true });
     await writeFile(
       resolve(outDir, "index.html"),
-      buildCategoryHtml(baseHtml, group),
+      buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload),
       "utf8",
     );
   }),
@@ -139,5 +226,5 @@ await Promise.all(
 await updateSitemapWithCategories(freshnessDates, latestDate);
 
 console.log(
-  `تولید ${productGroups.length} صفحه‌ی فرود دسته‌بندی محصولات و بروزرسانی sitemap با موفقیت انجام شد.`,
+  `تولید و پیش‌رندر ${productGroups.length} صفحه‌ی فرود دسته‌بندی محصولات، صفحه اصلی و بروزرسانی sitemap با موفقیت انجام شد.`,
 );

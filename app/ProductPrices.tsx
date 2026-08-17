@@ -10,10 +10,27 @@ import {
 
 const categoryIcons = ["◆", "◇", "◈", "▰", "▱", "⌁", "▦", "⬡"];
 
-const loadProductView = async (catalogId: ProductCatalogId) => ({
-  payload: await loadProductPricePayload(),
-  catalog: await loadProductPriceCatalog(catalogId),
-});
+const loadProductView = async (catalogId: ProductCatalogId) => {
+  const cachedPayload = loadProductPricePayload.getCached();
+  if (cachedPayload) {
+    const catalog = cachedPayload.catalogs.find((item) => item.id === catalogId);
+    if (catalog) return { payload: cachedPayload, catalog };
+  }
+  return {
+    payload: await loadProductPricePayload(),
+    catalog: await loadProductPriceCatalog(catalogId),
+  };
+};
+
+loadProductView.getCached = (catalogId?: ProductCatalogId) => {
+  if (!catalogId) return undefined;
+  const payload = loadProductPricePayload.getCached();
+  if (!payload) return undefined;
+  const catalog = payload.catalogs.find((item) => item.id === catalogId);
+  if (!catalog) return undefined;
+  return { payload, catalog };
+};
+
 
 export default function ProductPrices({
   catalogId,

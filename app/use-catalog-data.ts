@@ -5,20 +5,26 @@ export type CatalogLoadState<T> =
   | { status: "error" }
   | { status: "ready"; data: T };
 
+export type CatalogLoader<T, K extends string> = ((key: K) => Promise<T>) & {
+  getCached?: (key?: K) => T | undefined;
+};
+
 /**
  * Load a catalog snapshot for `key`, once per key. `load` must be a stable
  * (module-level) function -- it is a dependency, so an inline arrow would
  * restart the fetch on every render.
  */
 export function useCatalogData<T, K extends string>(
-  load: (key: K) => Promise<T>,
+  load: CatalogLoader<T, K>,
   key: K,
 ): CatalogLoadState<T> {
+  const initialData = load.getCached ? load.getCached(key) : undefined;
   const [loaded, setLoaded] = useState<
     (CatalogLoadState<T> & { key: K }) | null
-  >(null);
+  >(() => (initialData !== undefined ? { key, status: "ready", data: initialData } : null));
 
   useEffect(() => {
+    if (loaded?.key === key && loaded.status === "ready") return;
     let active = true;
     load(key)
       .then((data) => {
@@ -30,9 +36,12 @@ export function useCatalogData<T, K extends string>(
     return () => {
       active = false;
     };
-  }, [load, key]);
+  }, [load, key, loaded]);
 
-  // A key change reads as "loading" immediately, without a second render pass
-  // to reset the state the effect is about to replace.
-  return loaded?.key === key ? loaded : { status: "loading" };
+  // A key change reads as "loading" immediately (unless initial data exists for it),
+  // without a second render pass to reset the state the effect is about to replace.
+  if (loaded?.key === key) return loaded;
+  if (initialData !== undefined) return { status: "ready", data: initialData };
+  return { status: "loading" };
 }
+

@@ -1,4 +1,16 @@
-import { useEffect, useId, useRef, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+
+const emptySubscribe = () => () => {};
+const getSvgClientSnapshot = () => supportsSVGFilters();
+const getSvgServerSnapshot = () => false;
+
 
 /*
  * Refractive liquid glass.
@@ -108,7 +120,13 @@ export default function GlassSurface({
   const blueChannelRef = useRef<SVGFEDisplacementMapElement>(null);
   const gaussianBlurRef = useRef<SVGFEGaussianBlurElement>(null);
 
-  const svgSupported = supportsSVGFilters();
+  const svgSupported = useSyncExternalStore(
+    emptySubscribe,
+    getSvgClientSnapshot,
+    getSvgServerSnapshot,
+  );
+
+
 
   useEffect(() => {
     const container = containerRef.current;
