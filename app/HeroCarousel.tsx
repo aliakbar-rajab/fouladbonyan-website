@@ -97,7 +97,7 @@ export function HeroCarousel({
                 type="button"
                 key={item.id}
                 className={index === activeSlide ? "is-active" : ""}
-                aria-label={`اسلاید ${index + 1}: ${item.label}`}
+                aria-label={`اسلاید ${(index + 1).toLocaleString("fa-IR")}: ${item.label}`}
                 aria-current={index === activeSlide ? "true" : undefined}
                 onClick={() => setActiveSlide(index)}
               />

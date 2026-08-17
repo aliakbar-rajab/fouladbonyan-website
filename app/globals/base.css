@@ -34,6 +34,8 @@
   --hero-backdrop: #17171b;
   font-family:
     "Vazirmatn", Tahoma, Arial, sans-serif;
+  font-feature-settings: "ss01" 1, "tnum" 1;
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
   background: var(--white);
   font-synthesis: none;

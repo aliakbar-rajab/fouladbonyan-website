@@ -17,7 +17,7 @@ import type {
   CatalogRow,
   CatalogViewRequest,
 } from "./catalog-types";
-import { localizeCatalogValue } from "./catalog-utils";
+import { localizeCatalogValue, toPersianDigits } from "./catalog-utils";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 
@@ -89,7 +89,10 @@ function getRowDetails(
   if (row.specifications?.length) {
     return [
       { label: "نام محصول", value: row.title },
-      ...row.specifications,
+      ...row.specifications.map((spec) => ({
+        label: spec.label,
+        value: localizeCatalogValue(spec.value),
+      })),
       { label: "محل تحویل", value: row.delivery || "—" },
       { label: "واحد", value: row.unit || "—" },
       {
@@ -98,30 +101,30 @@ function getRowDetails(
       },
       {
         label: "آخرین بروزرسانی",
-        value: row.updatedDate || "—",
+        value: toPersianDigits(row.updatedDate) || "—",
       },
     ];
   }
 
   return [
     { label: "نام محصول", value: row.title },
-    { label: "حالت", value: row.form || "—" },
-    { label: "وزن تقریبی", value: row.approximateWeight || "—" },
+    { label: "حالت", value: localizeCatalogValue(row.form) || "—" },
+    { label: "وزن تقریبی", value: localizeCatalogValue(row.approximateWeight) || "—" },
     {
       label: "طول شاخه",
       value: row.branchLength
         ? row.branchLength.includes("متر")
-          ? row.branchLength
-          : `${row.branchLength} متر`
+          ? localizeCatalogValue(row.branchLength)
+          : `${localizeCatalogValue(row.branchLength)} متر`
         : "—",
     },
-    { label: "گرید", value: row.grade || "—" },
+    { label: "گرید", value: localizeCatalogValue(row.grade) || "—" },
     { label: "واحد", value: row.unit || "—" },
     {
       label: groupingLabel,
       value: row.factory || factoryName || "—",
     },
-    { label: "آخرین بروزرسانی", value: row.updatedDate || "—" },
+    { label: "آخرین بروزرسانی", value: toPersianDigits(row.updatedDate) || "—" },
   ];
 }
 
@@ -313,7 +316,7 @@ export function PriceCatalog({
               </p>
             ) : (
               <p>
-                قیمت {category.label} امروز {category.summary.date} در بازه‌ای
+                قیمت {category.label} امروز {toPersianDigits(category.summary.date)} در بازه‌ای
                 بین <b>{summaryPrice(category.summary.min)}</b> تا{" "}
                 <b>{summaryPrice(category.summary.max)}</b> تومان
                 {taxIncluded
@@ -386,7 +389,7 @@ export function PriceCatalog({
                   </h4>
                   <p>
                     <span aria-hidden="true">▣</span> آخرین بروزرسانی:{" "}
-                    <b>{factory.updatedDate || "—"}</b>
+                    <b>{toPersianDigits(factory.updatedDate) || "—"}</b>
                   </p>
                 </header>
 

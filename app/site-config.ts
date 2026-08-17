@@ -16,26 +16,26 @@ export const siteConfig = {
   siteUrl: "https://fouladbonyan.com",
   contact: {
     phones: [
-      { label: "021-88888280", href: "tel:+982188888280" },
-      { label: "021-88888780", href: "tel:+982188888780" },
-      { label: "021-88888122", href: "tel:+982188888122" },
-      { label: "021-88889005", href: "tel:+982188889005" },
-      { label: "021-88889006", href: "tel:+982188889006" },
+      { label: "۰۲۱-۸۸۸۸۸۲۸۰", href: "tel:+982188888280" },
+      { label: "۰۲۱-۸۸۸۸۸۷۸۰", href: "tel:+982188888780" },
+      { label: "۰۲۱-۸۸۸۸۸۱۲۲", href: "tel:+982188888122" },
+      { label: "۰۲۱-۸۸۸۸۹۰۰۵", href: "tel:+982188889005" },
+      { label: "۰۲۱-۸۸۸۸۹۰۰۶", href: "tel:+982188889006" },
     ] satisfies ContactNumber[],
     management: [
       {
         name: "اسماعیل‌پور",
         href: "tel:+989123300815",
-        label: "09123300815",
+        label: "۰۹۱۲۳۳۰۰۸۱۵",
       },
       {
         name: "کریمی",
         href: "tel:+989126333326",
-        label: "09126333326",
+        label: "۰۹۱۲۶۳۳۳۳۲۶",
       },
     ] satisfies ManagementContact[],
     officialEmail: "info@fouladbonyan.com" as string | null,
-    workingHours: "9 الی 18" as string | null,
+    workingHours: "۹ الی ۱۸" as string | null,
     whatsappCommunityUrl: "https://chat.whatsapp.com/IXb2LqQ6UQvFq3shgQCRiW",
   },
   business: {

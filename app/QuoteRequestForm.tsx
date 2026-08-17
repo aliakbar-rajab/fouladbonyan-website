@@ -235,7 +235,7 @@ function ItemPriceHint({
           <strong>{formatToman(estimate.unitPriceTomanPerKg)}</strong> برای هر
           کیلوگرم
           {item.product === "میلگرد" && byPiece
-            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${REBAR_STANDARD_BRANCH_LENGTH_M} متر)`
+            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${REBAR_STANDARD_BRANCH_LENGTH_M.toLocaleString("fa-IR")} متر)`
             : null}
         </span>
       )}
@@ -547,7 +547,7 @@ export function QuoteRequestForm() {
             inputMode="tel"
             dir="ltr"
             autoComplete="tel"
-            placeholder="09121234567"
+            placeholder="۰۹۱۲۱۲۳۴۵۶۷"
             aria-invalid={Boolean(errors.phone)}
             aria-describedby={errors.phone ? "quote-phone-error" : undefined}
           />
@@ -693,7 +693,7 @@ export function QuoteRequestForm() {
                     ابعاد، گرید یا استاندارد
                     <input
                       name={`itemDimensions-${item.id}`}
-                      placeholder="مثلاً میلگرد A3 سایز 16"
+                      placeholder="مثلاً میلگرد A3 سایز ۱۶"
                       value={item.dimensions}
                       onChange={(event) =>
                         updateItem(item.id, {
@@ -712,7 +712,7 @@ export function QuoteRequestForm() {
                         min="4"
                         step="0.5"
                         inputMode="decimal"
-                        placeholder="مثلاً 8"
+                        placeholder="مثلاً ۸"
                         value={item.rebarDiameterMm}
                         onChange={(event) =>
                           updateItem(item.id, {

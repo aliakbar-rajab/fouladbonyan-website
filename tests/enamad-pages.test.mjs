@@ -42,7 +42,7 @@ test("owner-only legal information remains explicitly unset, except the confirme
   assert.match(config, /legalName: null/);
   assert.match(config, /nationalId: null/);
   assert.match(config, /registrationNumber: null/);
-  assert.match(config, /workingHours: "9 الی 18"/);
+  assert.match(config, /workingHours: "۹ الی ۱۸"/);
   assert.match(config, /officialEmail: "info@fouladbonyan\.com"/);
   assert.match(checklist, /نام حقوقی/);
   assert.match(checklist, /شناسه ملی/);
@@ -62,8 +62,11 @@ test("Persian form validation rejects incomplete and malformed requests", () => 
   assert.equal(validateFullName("علی رضایی"), "");
 
   assert.equal(normalizePhone("0912 123-4567"), "09121234567");
+  assert.equal(normalizePhone("۰۹۱۲ ۱۲۳-۴۵۶۷"), "09121234567");
   assert.equal(validatePhone("0912 123-4567"), "");
+  assert.equal(validatePhone("۰۹۱۲ ۱۲۳-۴۵۶۷"), "");
   assert.equal(validatePhone("021-88888280"), "");
+  assert.equal(validatePhone("۰۲۱-۸۸۸۸۸۲۸۰"), "");
   assert.ok(validatePhone("123").includes("معتبر ایرانی"));
 
   assert.equal(validateRequired("", "نوع محصول"), "نوع محصول را وارد کنید.");

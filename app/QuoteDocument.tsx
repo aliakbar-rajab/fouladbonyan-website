@@ -3,6 +3,7 @@ import { PreparedRequestActions } from "./request-form-shared";
 import { siteConfig } from "./site-config";
 import { rialToWords } from "./persian-numbers";
 import { quoteDisclaimer, type GeneratedQuote } from "./quote-types";
+import { toPersianDigits } from "./catalog-utils";
 
 const formatRial = (value: number) =>
   `${value.toLocaleString("fa-IR")} ریال`;
@@ -66,7 +67,7 @@ export function QuoteDocument({
             <strong>نام خریدار:</strong> {quote.fullName}
           </p>
           <div className="quote-customer-meta">
-            <p><strong>شماره تماس:</strong> <b dir="ltr">{quote.phone}</b></p>
+            <p><strong>شماره تماس:</strong> <b dir="ltr">{toPersianDigits(quote.phone)}</b></p>
             <p><strong>شهر مقصد:</strong> {quote.destination}</p>
           </div>
         </section>

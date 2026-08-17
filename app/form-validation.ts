@@ -1,9 +1,11 @@
+import { toAsciiDigits } from "./site-logic.mjs";
+
 export type FieldErrors = Record<string, string>;
 
 const iranianPhonePattern = /^(?:\+98|0098|98|0)?(?:9\d{9}|21\d{8})$/;
 
 export function normalizePhone(value: string) {
-  return value.replace(/[\s()-]/g, "");
+  return toAsciiDigits(value).replace(/[\s()-]/g, "");
 }
 
 export function validateFullName(value: string) {
@@ -17,7 +19,7 @@ export function validatePhone(value: string) {
   const normalized = normalizePhone(value);
   if (!normalized) return "شماره تماس را وارد کنید.";
   if (!iranianPhonePattern.test(normalized)) {
-    return "شماره تماس معتبر ایرانی وارد کنید؛ مانند 09121234567.";
+    return "شماره تماس معتبر ایرانی وارد کنید؛ مانند ۰۹۱۲۱۲۳۴۵۶۷.";
   }
   return "";
 }
