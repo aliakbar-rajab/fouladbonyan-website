@@ -25,6 +25,11 @@ test("production output contains required GitHub Pages files", async () => {
       "categories/hero-rebar-1680.jpg",
       "categories/hero-beam-1680.jpg",
       "categories/hero-sheet-1680.jpg",
+      "categories/hero-rebar-640.webp",
+      "categories/hero-rebar-640.avif",
+      "categories/01-rebar.webp",
+      "categories/01-rebar.avif",
+      "categories/01-rebar-240.webp",
     ].map((path) => access(new URL(`../dist/${path}`, import.meta.url))),
   );
 });
@@ -326,4 +331,82 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
     );
   }
 });
+
+test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload hints are correctly emitted across all pages", async () => {
+  // 1. Homepage hero: picture with AVIF and WebP sources, eager loading on active, lazy on inactive
+  const homeHtml = await readDist("index.html");
+  assert.match(
+    homeHtml,
+    /<link[\s\S]*?id="hero-image-preload"[\s\S]*?href="\/categories\/hero-rebar-1680\.webp"[\s\S]*?imagesrcset="[^"]*"[\s\S]*?imagesizes="100vw"[\s\S]*?fetchpriority="high"\s*\/?>/,
+    "Homepage head must preload active hero WebP variant with imagesrcset",
+  );
+  assert.match(
+    homeHtml,
+    /<picture class="hero-image is-active">\s*<source type="image\/avif"/,
+    "Homepage active hero must use picture with AVIF source",
+  );
+  assert.match(
+    homeHtml,
+    /<picture class="hero-image is-active">[\s\S]*?<source type="image\/webp"/,
+    "Homepage active hero must use picture with WebP source",
+  );
+  assert.match(
+    homeHtml,
+    /<picture class="hero-image is-active">[\s\S]*?<img [^>]*loading="eager"[^>]*fetch[pP]riority="high"/,
+    "Homepage active hero img must have loading=eager and fetchpriority=high",
+  );
+  assert.match(
+    homeHtml,
+    /<picture class="hero-image">[\s\S]*?<img [^>]*loading="lazy"[^>]*fetch[pP]riority="low"/,
+    "Homepage inactive hero img must have loading=lazy and fetchpriority=low",
+  );
+
+  // 2. Category pages: hero picture and preload matching the category
+  for (const group of productGroups) {
+    const catHtml = await readDist(`${group.id}/index.html`);
+    assert.match(
+      catHtml,
+      /<link[\s\S]*?id="hero-image-preload"[\s\S]*?rel="preload"[\s\S]*?as="image"/,
+      `${group.id} must have hero-image-preload link in head`,
+    );
+    assert.match(
+      catHtml,
+      /<picture class="hero-image is-active">\s*<source type="image\/avif"/,
+      `${group.id} hero must use picture with AVIF source`,
+    );
+    assert.match(
+      catHtml,
+      /<picture class="hero-image is-active">[\s\S]*?<img [^>]*loading="eager"[^>]*fetch[pP]riority="high"/,
+      `${group.id} hero img must have loading=eager and fetchpriority=high`,
+    );
+  }
+
+  // 3. Info pages: must NOT have hero image preload
+  for (const page of ["contact", "about", "terms", "privacy", "quote-process"]) {
+    const infoHtml = await readDist(`${page}/index.html`);
+    assert.doesNotMatch(
+      infoHtml,
+      /<link id="hero-image-preload"/,
+      `${page} must not have hero-image-preload`,
+    );
+  }
+
+  // 4. CategoryGrid cards: meaningful alt text and responsive picture
+  for (const group of productGroups) {
+    assert.ok(group.imageAlt, `${group.id} must have meaningful imageAlt defined`);
+    assert.match(
+      homeHtml,
+      new RegExp(`alt="${group.imageAlt}"`),
+      `Homepage category card for ${group.id} must contain meaningful alt text`,
+    );
+  }
+
+  // 5. Overview thumbnails have decorative alt=""
+  assert.match(
+    homeHtml,
+    /<img src="\/categories\/01-rebar\.jpg" alt="" width="40" height="40"/,
+    "Overview table thumb must keep decorative alt=''",
+  );
+});
+
 

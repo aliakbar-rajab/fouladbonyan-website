@@ -105,6 +105,34 @@ const replaceTagContent = (html, attrMatcher, value) =>
     `$1${value}$2`,
   );
 
+function buildHeroPreloadTag(group) {
+  const heroImg = group.heroImage ?? group.image;
+  if (heroImg.includes("hero-")) {
+    const base = heroImg
+      .replace(/-1680\.(jpg|webp|avif)$/, "")
+      .replace(/\.(jpg|webp|avif)$/, "");
+    return `<link
+      id="hero-image-preload"
+      rel="preload"
+      as="image"
+      href="${base}-1680.webp"
+      imagesrcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1280.webp 1280w, ${base}-1680.webp 1672w"
+      imagesizes="100vw"
+      fetchpriority="high"
+    />`;
+  }
+  const base = heroImg.replace(/\.(jpg|webp|avif)$/, "");
+  return `<link
+      id="hero-image-preload"
+      rel="preload"
+      as="image"
+      href="${base}.webp"
+      imagesrcset="${base}-240.webp 240w, ${base}-384.webp 384w"
+      imagesizes="100vw"
+      fetchpriority="high"
+    />`;
+}
+
 function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
   const pageUrl = `${SITE_URL}/${group.id}/`;
 
@@ -121,6 +149,10 @@ function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
     .replace(
       /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
       "",
+    )
+    .replace(
+      /\s*<link id="hero-image-preload"[\s\S]*?\/>/,
+      `\n    ${buildHeroPreloadTag(group)}`,
     );
 
   html = replaceTagContent(html, 'name="description"', group.seoDescription);

@@ -15,7 +15,7 @@
   padding-block: clamp(3rem, 7vw, 5.5rem);
   background:
     linear-gradient(105deg, rgb(19 20 23 / 94%), rgb(59 59 62 / 70%)),
-    url("/categories/hero-sheet-1680.jpg") center / cover;
+    url("/categories/hero-sheet-1280.webp") center / cover;
   color: var(--white);
 }
 

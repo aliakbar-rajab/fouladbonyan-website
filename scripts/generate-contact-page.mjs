@@ -58,6 +58,12 @@ function buildPageHtml(
     "",
   );
 
+  // Remove homepage hero image preload on non-hero info pages
+  html = html.replace(
+    /\s*<link id="hero-image-preload"[\s\S]*?\/>/,
+    "",
+  );
+
   html = replaceTagContent(html, 'name="description"', description);
   html = replaceTagContent(html, 'property="og:title"', title);
   html = replaceTagContent(html, 'property="og:description"', description);

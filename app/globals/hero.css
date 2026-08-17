@@ -82,11 +82,19 @@
   transition:
     opacity 650ms ease-in-out,
     transform 1100ms ease;
+  pointer-events: none;
 }
 
 .hero-image.is-active {
   opacity: 1;
   transform: scale(1);
+}
+
+.hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .hero-overlay {

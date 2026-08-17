@@ -209,13 +209,23 @@
   border-color: rgba(246, 181, 0, 0.45);
 }
 
+.category-card picture {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+}
+
+.category-card picture img,
 .category-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.category-card:hover picture img,
 .category-card:hover img {
   transform: scale(1.05);
 }
@@ -535,6 +545,12 @@
 .overview-group-link:hover {
   color: #ffd866;
   transform: translateX(-3px);
+}
+
+.overview-thumb-picture,
+.overview-card-thumb-picture {
+  display: inline-flex;
+  flex-shrink: 0;
 }
 
 .overview-thumb {

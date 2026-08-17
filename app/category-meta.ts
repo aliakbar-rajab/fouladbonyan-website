@@ -17,6 +17,7 @@ export type ProductGroup = {
   label: string;
   shortLabel: string;
   image: string;
+  imageAlt: string;
   heroImage?: string;
   description: string;
   h1: string;
@@ -55,6 +56,7 @@ export const productGroups: ProductGroup[] = [
     label: "میلگرد",
     shortLabel: "میلگرد",
     image: "/categories/01-rebar.jpg",
+    imageAlt: "انواع میلگرد آجدار و ساده ساختمانی",
     heroImage: "/categories/hero-rebar-1680.jpg",
     description: "میلگرد آجدار و ساده برای پروژه‌های ساختمانی و صنعتی",
     h1: "قیمت روز میلگرد آجدار و ساده",
@@ -71,6 +73,7 @@ export const productGroups: ProductGroup[] = [
     label: "تیرآهن",
     shortLabel: "تیرآهن",
     image: "/categories/02-ibeam.jpg",
+    imageAlt: "انواع تیرآهن IPE و هاش سازه‌ای",
     heroImage: "/categories/hero-beam-1680.jpg",
     description: "تیرآهن IPE، هاش و مقاطع سازه‌ای",
     h1: "قیمت روز تیرآهن IPE و هاش",
@@ -87,6 +90,7 @@ export const productGroups: ProductGroup[] = [
     label: "ورق فولادی",
     shortLabel: "ورق",
     image: "/categories/03-sheet-coil.jpg",
+    imageAlt: "انواع رول و شیت ورق فولادی سیاه و گالوانیزه",
     heroImage: "/categories/hero-sheet-1680.jpg",
     description: "ورق سیاه، گالوانیزه، روغنی و رنگی",
     h1: "قیمت روز انواع ورق فولادی",
@@ -103,6 +107,7 @@ export const productGroups: ProductGroup[] = [
     label: "قوطی و پروفیل",
     shortLabel: "پروفیل",
     image: "/categories/04-profile.jpg",
+    imageAlt: "انواع قوطی و پروفیل ساختمانی و صنعتی",
     description: "پروفیل ساختمانی و صنعتی در ابعاد گوناگون",
     h1: "قیمت روز قوطی و پروفیل ساختمانی و صنعتی",
     intro:
@@ -118,6 +123,7 @@ export const productGroups: ProductGroup[] = [
     label: "لوله فولادی",
     shortLabel: "لوله",
     image: "/categories/05-pipe.jpg",
+    imageAlt: "انواع لوله فولادی صنعتی، گازی و داربستی",
     description: "لوله صنعتی، گازی و داربستی",
     h1: "قیمت روز لوله فولادی صنعتی، گازی و داربستی",
     intro:
@@ -133,6 +139,7 @@ export const productGroups: ProductGroup[] = [
     label: "نبشی",
     shortLabel: "نبشی",
     image: "/categories/06-angle.jpg",
+    imageAlt: "انواع نبشی فولادی بال مساوی و نامساوی",
     description: "نبشی بال مساوی و بال نامساوی",
     h1: "قیمت روز نبشی بال مساوی و نامساوی",
     intro:
@@ -148,6 +155,7 @@ export const productGroups: ProductGroup[] = [
     label: "ناودانی",
     shortLabel: "ناودانی",
     image: "/categories/07-channel.jpg",
+    imageAlt: "انواع ناودانی فولادی سبک و سنگین ساختمانی",
     description: "ناودانی سبک و سنگین برای مصارف سازه‌ای",
     h1: "قیمت روز ناودانی سبک و سنگین",
     intro:
@@ -163,6 +171,7 @@ export const productGroups: ProductGroup[] = [
     label: "مفتول و سیم",
     shortLabel: "مفتول",
     image: "/categories/08-wire.jpg",
+    imageAlt: "انواع مفتول سیاه، گالوانیزه و محصولات سیمی",
     description: "مفتول سیاه، گالوانیزه و محصولات سیمی",
     h1: "قیمت روز مفتول سیاه و محصولات سیمی",
     intro:

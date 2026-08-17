@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { productGroups, type ProductGroup } from "./category-meta";
 import { Breadcrumb } from "./Breadcrumb";
+import { getHeroImageSources } from "./image-utils";
 
 const heroSlides = productGroups.slice(0, 3);
 const HERO_SLIDE_INTERVAL_MS = 1_700;
@@ -31,21 +32,36 @@ export function HeroCarousel({
 
   if (categoryGroup) {
     const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
+    const heroSources = getHeroImageSources(heroImg);
     return (
       <div className="hero-frame hero-frame-category">
         <section
           className="hero hero-category"
           aria-label={`معرفی و قیمت روز ${categoryGroup.label}`}
         >
-          <img
-            className="hero-image is-active"
-            src={heroImg}
-            alt={categoryGroup.label}
-            width="1672"
-            height="941"
-            decoding="async"
-            fetchPriority="high"
-          />
+          <picture className="hero-image is-active">
+            <source
+              type="image/avif"
+              srcSet={heroSources.avifSrcSet}
+              sizes={heroSources.sizes}
+            />
+            <source
+              type="image/webp"
+              srcSet={heroSources.webpSrcSet}
+              sizes={heroSources.sizes}
+            />
+            <img
+              src={heroSources.fallbackSrc}
+              srcSet={heroSources.jpgSrcSet}
+              sizes={heroSources.sizes}
+              alt={categoryGroup.label}
+              width={heroSources.width}
+              height={heroSources.height}
+              decoding="async"
+              loading="eager"
+              fetchPriority="high"
+            />
+          </picture>
           <div className="hero-overlay" />
           <div className="shell hero-content">
             <Breadcrumb
@@ -97,20 +113,39 @@ export function HeroCarousel({
           }
         }}
       >
-        {heroSlides.map((item, index) => (
-          <img
-            className={`hero-image${
-              index === activeSlide ? " is-active" : ""
-            }`}
-            src={item.heroImage ?? item.image}
-            alt={item.label}
-            width="1672"
-            height="941"
-            decoding="async"
-            fetchPriority={index === 0 ? "high" : "low"}
-            key={item.id}
-          />
-        ))}
+        {heroSlides.map((item, index) => {
+          const heroSources = getHeroImageSources(item.heroImage ?? item.image);
+          const isCurrentActive = index === activeSlide;
+          const isInitialEager = index === 0;
+          return (
+            <picture
+              key={item.id}
+              className={`hero-image${isCurrentActive ? " is-active" : ""}`}
+            >
+              <source
+                type="image/avif"
+                srcSet={heroSources.avifSrcSet}
+                sizes={heroSources.sizes}
+              />
+              <source
+                type="image/webp"
+                srcSet={heroSources.webpSrcSet}
+                sizes={heroSources.sizes}
+              />
+              <img
+                src={heroSources.fallbackSrc}
+                srcSet={heroSources.jpgSrcSet}
+                sizes={heroSources.sizes}
+                alt={item.label}
+                width={heroSources.width}
+                height={heroSources.height}
+                decoding="async"
+                loading={isInitialEager ? "eager" : "lazy"}
+                fetchPriority={isInitialEager ? "high" : "low"}
+              />
+            </picture>
+          );
+        })}
         <div className="hero-overlay" />
         <div className="shell hero-content">
           <p className="hero-kicker">تأمین و استعلام مقاطع فولادی</p>
