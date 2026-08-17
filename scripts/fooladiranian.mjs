@@ -26,6 +26,16 @@ const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   timeZone: "Asia/Tehran",
 });
 
+export function toPersianDigits(value = "") {
+  return String(value)
+    .replace(/[0-9]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 1728),
+    )
+    .replace(/[٠-٩]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 144),
+    );
+}
+
 export function metaValue(item, key) {
   const directValue = item[`meta-${key}`];
   if (directValue !== undefined && directValue !== null) {
@@ -139,7 +149,7 @@ function parseCatalogPage(html, source) {
     sourceTitle: String(shopData.title ?? source.label),
     sourceUrl: source.url,
     summary: {
-      date: String(compare.date ?? ""),
+      date: toPersianDigits(String(compare.date ?? "")),
       // Derived from the rows, never from compare.min_price/max_price/avg_price:
       // the upstream fields are rial and rounding them to hundreds of toman
       // produced prices that appear in no row of the table.

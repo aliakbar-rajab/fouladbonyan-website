@@ -2,6 +2,7 @@ import { createRetryableLoader } from "./catalog-cache";
 import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
 import { loadProductPricePayload } from "./product-price-data";
 import type { CatalogCategory } from "./catalog-types";
+import { localizeCatalogValue } from "./catalog-utils";
 
 export type QuoteProductName =
   | "میلگرد"
@@ -117,9 +118,13 @@ function buildPieceOptions(
     const priceToman = Math.round(
       prices.reduce((sum, price) => sum + price, 0) / prices.length,
     );
-    const label = specification
-      ? `${category.label} — ${size} (${category.specificationLabel}: ${specification})`
-      : `${category.label} — ${size}`;
+    const localizedSize = localizeCatalogValue(size);
+    const localizedSpec = specification
+      ? localizeCatalogValue(specification)
+      : "";
+    const label = localizedSpec
+      ? `${category.label} — ${localizedSize} (${category.specificationLabel}: ${localizedSpec})`
+      : `${category.label} — ${localizedSize}`;
     options.push({ key: `${category.id}:${groupKey}`, label, unit, priceToman });
   }
   return options;

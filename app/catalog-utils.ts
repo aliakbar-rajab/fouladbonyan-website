@@ -1,12 +1,21 @@
-export function localizeCatalogValue(value: string) {
+export function toPersianDigits(
+  value: string | number | null | undefined,
+): string {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/[0-9]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 1728),
+    )
+    .replace(/[٠-٩]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 144),
+    );
+}
+
+export function localizeCatalogValue(value: string | null | undefined) {
   if (!value) return "—";
   // This formats dimensions and spec values (sizes, lengths, weights), never
   // money -- prices go through RebarPrices.tsx's own formatNumber. Grouping
   // must stay off here, or "1250" (a length in mm) becomes "۱٬۲۵۰".
-  return value.replace(/\d+(?:\.\d+)?/g, (part) =>
-    Number(part).toLocaleString("fa-IR", {
-      maximumFractionDigits: Math.min(part.split(".")[1]?.length ?? 0, 20),
-      useGrouping: false,
-    }),
-  );
+  return toPersianDigits(value);
 }
+

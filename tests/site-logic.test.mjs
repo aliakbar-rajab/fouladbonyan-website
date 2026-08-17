@@ -5,7 +5,7 @@ import {
   normalizeSearchText,
   toAsciiDigits,
 } from "../app/site-logic.mjs";
-import { localizeCatalogValue } from "../app/catalog-utils.ts";
+import { localizeCatalogValue, toPersianDigits } from "../app/catalog-utils.ts";
 
 // Shaped like the rows buildCatalogSearchGroups actually produces: ASCII digits
 // in the title, plus the categoryId/factory/size/searchText navigation metadata.
@@ -82,4 +82,15 @@ test("F5: dimensions convert to Persian digits without a thousands separator", (
   // implies a completely different magnitude).
   assert.equal(localizeCatalogValue("طول*1250"), "طول*۱۲۵۰");
   assert.equal(localizeCatalogValue("1000 گرم"), "۱۰۰۰ گرم");
+  assert.equal(localizeCatalogValue("A3"), "A۳");
 });
+
+test("ASCII and Arabic digits convert to Persian digits", () => {
+  assert.equal(toPersianDigits("0123456789"), "۰۱۲۳۴۵۶۷۸۹");
+  assert.equal(toPersianDigits("٠١٢٣٤٥٦٧٨٩"), "۰۱۲۳۴۵۶۷۸۹");
+  assert.equal(toPersianDigits("021-88888280"), "۰۲۱-۸۸۸۸۸۲۸۰");
+  assert.equal(toPersianDigits("امروز دوشنبه 26 مرداد"), "امروز دوشنبه ۲۶ مرداد");
+  assert.equal(toPersianDigits(null), "");
+  assert.equal(toPersianDigits(undefined), "");
+});
+
