@@ -7,6 +7,7 @@ import { productGroups } from "../app/category-meta.ts";
 import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data.ts";
 import { loadProductPricePayload } from "../app/product-price-data.ts";
 import { loadOverviewSummaries } from "../app/catalog-overview.ts";
+import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
 
 const SITE_URL = "https://fouladbonyan.com";
 const distDir = resolve(import.meta.dirname, "..", "dist");
@@ -200,7 +201,10 @@ function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
   );
 
   const initialDataScript = `\n    <script id="initial-page-data" type="application/json">${JSON.stringify(dataPayload)}</script>`;
-  html = html.replace("</body>", `${initialDataScript}\n  </body>`);
+  html = html.replace(
+    "</body>",
+    `${menuDataScript}${initialDataScript}\n  </body>`,
+  );
 
   return html.replace(
     "</head>",
@@ -253,7 +257,10 @@ function buildSubcategoryHtml(baseHtml, group, sub, renderedAppHtml, dataPayload
   );
 
   const initialDataScript = `\n    <script id="initial-page-data" type="application/json">${JSON.stringify(dataPayload)}</script>`;
-  html = html.replace("</body>", `${initialDataScript}\n  </body>`);
+  html = html.replace(
+    "</body>",
+    `${menuDataScript}${initialDataScript}\n  </body>`,
+  );
 
   return html.replace(
     "</head>",
@@ -304,6 +311,17 @@ loadRebarPriceData.setCached(rebarData);
 loadBeamPriceData.setCached(beamData);
 loadProductPricePayload.setCached(productData);
 
+/*
+ * The mega menu renders from this small payload rather than from the price
+ * snapshots, and every page that renders <App /> embeds it. Without it the menu
+ * would be populated during prerender (caches primed above) but "loading" in
+ * the browser on any route that does not ship the rebar snapshot -- a
+ * guaranteed hydration mismatch. Build it once, before anything is rendered.
+ */
+const menuCatalog = await buildMenuCatalog();
+setMenuCatalog(menuCatalog);
+const menuDataScript = `\n    <script id="initial-menu-data" type="application/json">${JSON.stringify(menuCatalog)}</script>`;
+
 // 1. Prerender the homepage (dist/index.html)
 const overviewSummaries = computeOverviewSummaries(rebarData, beamData, productData);
 loadOverviewSummaries.setCached(overviewSummaries);
@@ -315,7 +333,10 @@ let homeHtml = baseHtml.replace(
   `<div id="root">${homeRenderedHtml}</div>`,
 );
 const overviewDataScript = `\n    <script id="initial-overview-data" type="application/json">${JSON.stringify(overviewSummaries)}</script>`;
-homeHtml = homeHtml.replace("</body>", `${overviewDataScript}\n  </body>`);
+homeHtml = homeHtml.replace(
+  "</body>",
+  `${menuDataScript}${overviewDataScript}\n  </body>`,
+);
 await writeFile(resolve(distDir, "index.html"), homeHtml, "utf8");
 
 // 2. Prerender all category landing pages and subcategory pages

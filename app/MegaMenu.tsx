@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
-import { loadGroupCatalog } from "./group-catalog";
 import { productGroups, type ProductGroupId } from "./category-meta";
 import type { CatalogViewRequest } from "./catalog-types";
+import { loadMenuGroup } from "./menu-catalog";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 import { useMediaQuery } from "./use-media-query";
 
-// Each group's own catalog supplies the menu's types, factories and sizes, so
-// nothing here is a second copy of the price data.
-const MAX_MENU_ENTRIES = 16;
-
 type SelectView = (view: Omit<CatalogViewRequest, "requestId">) => void;
 
+/*
+ * Driven by the small menu payload (see menu-catalog.ts), never by the price
+ * snapshots. The build embeds that payload on every page rendering <App />, and
+ * static-entry/main.tsx seeds it before hydrateRoot, so this subtree renders
+ * identically on the server and on the client for every route.
+ */
 function MegaMenuSections({
   groupId,
   onSelect,
@@ -20,24 +22,19 @@ function MegaMenuSections({
   groupId: ProductGroupId;
   onSelect: SelectView;
 }) {
-  const state = useCatalogData(loadGroupCatalog, groupId);
+  const state = useCatalogData(loadMenuGroup, groupId);
 
   if (state.status !== "ready") {
     return <CatalogLoadMessage status={state.status} subject="فهرست این گروه" />;
   }
 
-  const catalog = state.data;
-  const initialCategory =
-    catalog.categories.find(
-      (category) => category.id === catalog.initialCategoryId,
-    ) ?? catalog.categories[0];
-  if (!initialCategory) return null;
+  const group = state.data;
 
   return (
     <>
       <section className="mega-rebar-types">
-        <p className="mega-group-label">انواع {catalog.label}</p>
-        {catalog.categories.map((category) => (
+        <p className="mega-group-label">انواع {group.label}</p>
+        {group.categories.map((category) => (
           <a
             href={`/${groupId}/${category.id}/`}
             key={category.id}
@@ -55,41 +52,37 @@ function MegaMenuSections({
 
       <section className="mega-rebar-factories">
         <p className="mega-group-label">
-          {initialCategory.groupingLabel}‌های {catalog.label}
+          {group.groupingLabel}‌های {group.label}
         </p>
         <div>
-          {initialCategory.filters.factories
-            .slice(0, MAX_MENU_ENTRIES)
-            .map((factory) => (
-              <button
-                type="button"
-                key={factory}
-                onClick={() =>
-                  onSelect({ categoryId: initialCategory.id, factory })
-                }
-              >
-                {catalog.label} {factory}
-              </button>
-            ))}
+          {group.factories.map((factory) => (
+            <button
+              type="button"
+              key={factory}
+              onClick={() =>
+                onSelect({ categoryId: group.initialCategoryId, factory })
+              }
+            >
+              {group.label} {factory}
+            </button>
+          ))}
         </div>
       </section>
 
       <section className="mega-rebar-sizes">
-        <p className="mega-group-label">سایزهای {catalog.label}</p>
+        <p className="mega-group-label">سایزهای {group.label}</p>
         <div>
-          {initialCategory.filters.sizes
-            .slice(0, MAX_MENU_ENTRIES)
-            .map((size) => (
-              <button
-                type="button"
-                key={size}
-                onClick={() =>
-                  onSelect({ categoryId: initialCategory.id, size })
-                }
-              >
-                {catalog.label} {localizeCatalogValue(size)}
-              </button>
-            ))}
+          {group.sizes.map((size) => (
+            <button
+              type="button"
+              key={size}
+              onClick={() =>
+                onSelect({ categoryId: group.initialCategoryId, size })
+              }
+            >
+              {group.label} {localizeCatalogValue(size)}
+            </button>
+          ))}
         </div>
       </section>
     </>

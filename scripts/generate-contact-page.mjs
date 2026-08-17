@@ -52,15 +52,22 @@ function buildPageHtml(
     );
   }
 
-  // Remove homepage initial-overview-data if inherited from dist/index.html
+  // Remove homepage payloads inherited from dist/index.html. These pages render
+  // ContactPage/InfoPage, neither of which mounts the catalog or the mega menu.
   html = html.replace(
     /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
     "",
   );
-
-  // Remove homepage hero image preload on non-hero info pages
   html = html.replace(
-    /\s*<link id="hero-image-preload"[\s\S]*?\/>/,
+    /\s*<script id="initial-menu-data"[\s\S]*?<\/script>/,
+    "",
+  );
+
+  // Remove homepage hero image preload on non-hero info pages. The tag is
+  // pretty-printed across several lines in index.html, so the attribute is not
+  // separated from `<link` by a single space -- match whitespace, not " ".
+  html = html.replace(
+    /\s*<link\s+id="hero-image-preload"[\s\S]*?\/>/,
     "",
   );
 
@@ -71,8 +78,15 @@ function buildPageHtml(
   html = replaceTagContent(html, 'name="twitter:title"', title);
   html = replaceTagContent(html, 'name="twitter:description"', description);
 
+  /*
+   * generate-category-pages.mjs has already rewritten dist/index.html with the
+   * prerendered homepage by the time this script reads it, so #root holds a
+   * deep tree of nested <div>s. The match has to be greedy to the LAST </div>
+   * in the document: a lazy match stops at the first inner closing tag and
+   * leaves the rest of the homepage stranded after this page's own content.
+   */
   html = html.replace(
-    /<div id="root"[\s\S]*?<\/div>/,
+    /<div id="root"[\s\S]*<\/div>/,
     `<div id="root" data-page="${page}">${renderedContentHtml}</div>`,
   );
 

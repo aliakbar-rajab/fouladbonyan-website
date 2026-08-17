@@ -13,13 +13,13 @@
         "prices:update:products": "node scripts/fetch-product-prices.mjs",
         "prices:update": "npm run prices:update:rebar && npm run prices:update:beam && npm run prices:update:products && npm run prices:validate",
         "prices:validate": "node scripts/validate-price-data.mjs",
-        "build": "npm run prices:validate && vite build && node --import tsx scripts/generate-category-pages.mjs && node --import tsx scripts/generate-contact-page.mjs",
+        "build": "npm run prices:validate && vite build && node --import tsx scripts/generate-category-pages.mjs && node --import tsx scripts/generate-contact-page.mjs && node --import tsx scripts/generate-guide-pages.mjs",
         "preview": "vite preview",
         "images:optimize": "node scripts/optimize-images.mjs",
         "lint": "eslint .",
         "typecheck": "tsc --noEmit --incremental false",
-        "test": "node --import tsx --test tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/palette-contrast.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs",
-        "test:build": "node --test tests/built-site.test.mjs",
+        "test": "node --import tsx --test tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/palette-contrast.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs tests/steel-reference.test.mjs tests/guide-page-ui.test.mjs",
+        "test:build": "node --test tests/built-site.test.mjs tests/hydration.test.mjs",
         "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:build"
     },
     "dependencies": {

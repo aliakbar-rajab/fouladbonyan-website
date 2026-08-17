@@ -1,0 +1,179 @@
+/*
+ * Reference tables for the /guide/ pages. They sit on the same light
+ * content-card surface the info pages already use, so only the table itself
+ * needs styling. Every table scrolls inside its own container rather than
+ * widening the page -- a weight chart with one column per mill is wider than a
+ * phone no matter how tightly it is set.
+ */
+/*
+ * .info-content is a grid, and a grid item's default min-width:auto lets a
+ * wide table stretch its card past the viewport instead of scrolling inside
+ * it. Scoped to the guide pages so the info pages keep their current sizing.
+ */
+.guide-content > * {
+  min-width: 0;
+}
+
+.guide-table-wrap {
+  max-width: 100%;
+  margin-block: 1.25rem;
+  overflow-x: auto;
+  border: 1px solid #dddde1;
+  border-radius: 10px;
+}
+
+.guide-table-wrap:last-child {
+  margin-bottom: 0;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  text-align: start;
+}
+
+.guide-table caption {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid #dddde1;
+  background: #f1f1f4;
+  color: #3d3d43;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: start;
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #e6e6ea;
+  color: #4f4f55;
+  text-align: start;
+  vertical-align: top;
+}
+
+.guide-table thead th {
+  background: #2e2e33;
+  color: var(--white);
+  font-size: 0.88rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.guide-table tbody tr:last-child th,
+.guide-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.guide-table tbody tr:nth-child(even) {
+  background: #f3f3f6;
+}
+
+.guide-table tbody th {
+  color: #252529;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.guide-table td b {
+  color: #252529;
+}
+
+/*
+ * Per-mill weights inside one cell. Each chip keeps the mill name and its
+ * number together so the row stays readable when it wraps.
+ */
+.guide-mill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-mill-list li {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid #dcdce1;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.guide-note {
+  margin: 1rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #dddde1;
+  color: #5b5b61;
+  font-size: 0.9rem;
+  line-height: 2;
+}
+
+.guide-formula {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 1rem 1.15rem;
+  border-inline-start: 5px solid var(--brand-yellow);
+  border-radius: 8px;
+  background: #f1f1f4;
+  color: #252529;
+  font-size: clamp(1rem, 2.4vw, 1.2rem);
+  font-weight: 800;
+  line-height: 2;
+}
+
+/* The guide index: one card per reference page. */
+.guide-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-card-list li {
+  display: flex;
+}
+
+.guide-card-list a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.25rem;
+  border: 1px solid #d7d7dc;
+  border-radius: var(--radius);
+  background: #f8f8fa;
+  color: #4f4f55;
+}
+
+.guide-card-list a:hover {
+  border-color: #c18e00;
+  background: #fff;
+}
+
+.guide-card-list a strong {
+  color: #252529;
+  font-size: 1.08rem;
+}
+
+.guide-card-list a span {
+  font-size: 0.92rem;
+  line-height: 1.95;
+}
+
+.guide-card-list a em {
+  color: #6f5200;
+  font-size: 0.85rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+@media (max-width: 600px) {
+  .guide-table th,
+  .guide-table td {
+    padding: 0.6rem 0.7rem;
+  }
+}

@@ -13,6 +13,7 @@ const quickAccessLinks = [
 ] as const;
 
 const infoPageLinks = [
+  { href: "/guide/", label: "راهنمای فنی و جدول وزن" },
   { href: "/about/", label: "درباره ما" },
   { href: "/shipping-delivery/", label: "ارسال و تحویل" },
   { href: "/terms/", label: "شرایط استفاده" },
