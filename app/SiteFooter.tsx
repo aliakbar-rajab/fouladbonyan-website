@@ -225,7 +225,7 @@ export function SiteFooter({
 
           <div className="footer-base-legal">
             <span className="footer-copyright">
-              © ۲۰۲۰ بنیان فولاد داریا · کلیه حقوق محفوظ است.
+              © {new Date().getFullYear().toLocaleString("fa-IR", { useGrouping: false })} {siteConfig.brand.name} · کلیه حقوق محفوظ است.
             </span>
             <a href="/privacy/">حریم خصوصی</a>
             <a href="/terms/">شرایط استفاده</a>

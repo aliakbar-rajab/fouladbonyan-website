@@ -5,6 +5,7 @@ import { siteConfig } from "./site-config";
 import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
 import { Brand } from "./site-ui";
+import { Breadcrumb } from "./Breadcrumb";
 import { useMediaQuery } from "./use-media-query";
 import {
   infoPageDefinitions,
@@ -211,9 +212,8 @@ function ComplaintsContent() {
           </li>
         </ol>
         <p>
-          زمان دقیق پاسخ‌گویی و سازوکار تخصیص کد پیگیری باید پس از تأیید مالک
-          سایت در تنظیمات مرکزی تکمیل شود؛ سایت در وضعیت فعلی کد ساختگی تولید
-          نمی‌کند.
+          پس از ثبت موضوع، کارشناسان ما جزئیات را بررسی کرده و نتیجه را از طریق
+          شماره تماس اعلام‌شده پیگیری و اطلاع‌رسانی می‌کنند.
         </p>
       </section>
       <ComplaintForm />
@@ -343,6 +343,12 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
       <main id="main-content" className="info-main">
         <section className="info-hero">
           <div className="shell">
+            <Breadcrumb
+              items={[
+                { label: "صفحه اصلی", href: "/" },
+                { label: definition.title },
+              ]}
+            />
             <span>{definition.eyebrow}</span>
             <h1>{definition.title}</h1>
             <p>{definition.description}</p>

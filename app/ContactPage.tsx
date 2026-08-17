@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Brand } from "./site-ui";
+import { Breadcrumb } from "./Breadcrumb";
 import { WhatsAppIcon } from "./icons";
 import { useMediaQuery } from "./use-media-query";
 import { localizeCatalogValue } from "./catalog-utils";
@@ -110,6 +111,12 @@ export default function ContactPage() {
       <main id="main-content" className="contact-main">
         <section className="contact-hero">
           <div className="shell">
+            <Breadcrumb
+              items={[
+                { label: "صفحه اصلی", href: "/" },
+                { label: "تماس با ما" },
+              ]}
+            />
             <span className="contact-hero-eyebrow">بنیان فولاد داریا</span>
             <h1 className="contact-hero-title">تماس با ما</h1>
           </div>
@@ -180,10 +187,13 @@ export default function ContactPage() {
                 </span>
                 <div>
                   <h2>ساعات کاری</h2>
-                  <p className="pending-owner-info">
-                    {siteConfig.contact.workingHours ??
-                      "پس از اعلام و تأیید مالک سایت درج می‌شود."}
-                  </p>
+                  {siteConfig.contact.workingHours ? (
+                    <p>{siteConfig.contact.workingHours}</p>
+                  ) : (
+                    <p className="pending-owner-info">
+                      پس از اعلام و تأیید مالک سایت درج می‌شود.
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -229,7 +229,29 @@
   }
 
   .rebar-contact-card {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    text-align: start;
+    align-content: center;
+  }
+
+  .rebar-contact-card > span {
     display: none;
+  }
+
+  .rebar-contact-card strong {
+    font-size: 0.85rem;
+  }
+
+  .rebar-contact-card p {
+    display: none;
+  }
+
+  .rebar-contact-card a {
+    min-height: 2.2rem;
+    margin-top: 0.25rem;
+    font-size: 0.76rem;
   }
 
   .rebar-stats {
@@ -244,9 +266,93 @@
   .rebar-stats article:nth-child(4) {
     border-top: 1px solid #e1e1e6;
   }
+
+  .steel-price-overview {
+    padding: 1.25rem;
+  }
 }
 
 @media (max-width: 640px) {
+  .overview-table-wrapper {
+    display: none;
+  }
+
+  .overview-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .overview-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background: #2b2b2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .overview-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .overview-card-thumb {
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .overview-card-header h4 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .overview-card-header h4 a {
+    color: var(--brand-yellow);
+  }
+
+  .overview-card-header p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #a0a1a8;
+  }
+
+  .overview-card-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .overview-card-price small {
+    display: block;
+    font-size: 0.75rem;
+    color: #8c8d94;
+  }
+
+  .overview-card-price strong {
+    color: #fff;
+    font-size: 0.92rem;
+  }
+
+  .overview-card-price span {
+    font-size: 0.75rem;
+    color: #8c8d94;
+    margin-inline-start: 0.25rem;
+  }
+
+  .overview-card-btn {
+    display: inline-flex;
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(246, 181, 0, 0.15);
+    color: var(--brand-yellow);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
   :root {
     --shell-gutter: 1.25rem;
     --hero-bevel: 11px;
@@ -395,7 +501,35 @@
   }
 
   .price-source-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .price-source-card p {
     display: none;
+  }
+
+  .price-source-card a {
+    min-height: 2.2rem;
+    padding-inline: 0.75rem;
+  }
+
+  .rebar-contact-card {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    text-align: start;
+  }
+
+  .rebar-contact-card a {
+    min-height: 2.2rem;
+    padding-inline: 1rem;
+    margin-top: 0;
   }
 
   .rebar-summary {

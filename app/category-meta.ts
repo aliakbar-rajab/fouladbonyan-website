@@ -19,6 +19,9 @@ export type ProductGroup = {
   image: string;
   heroImage?: string;
   description: string;
+  h1: string;
+  intro: string;
+  subTypes: string;
   rows: ProductRow[];
   /** <title> for this category's landing page (scripts/generate-category-pages.mjs). */
   seoTitle: string;
@@ -54,6 +57,10 @@ export const productGroups: ProductGroup[] = [
     image: "/categories/01-rebar.jpg",
     heroImage: "/categories/hero-rebar-1680.jpg",
     description: "میلگرد آجدار و ساده برای پروژه‌های ساختمانی و صنعتی",
+    h1: "قیمت روز میلگرد آجدار و ساده",
+    intro:
+      "میلگرد آجدار و ساده در گریدهای A1، A2، A3 و A4 از سایز ۸ تا ۴۰ میلی‌متر، تولید کارخانه‌های معتبر کشور (ذوب‌آهن، میانه، نیشابور، فایکو و...). قیمت‌ها بر حسب کیلوگرم محاسبه شده و تحویل به‌صورت شاخه ۱۲ متری یا کلاف انجام می‌شود. هنگام استعلام، سایز، گرید و کارخانه مورد نظر را اعلام فرمایید.",
+    subTypes: "میلگرد آجدار، ساده، کلاف ساختمانی",
     rows: [],
     seoTitle: "قیمت میلگرد آجدار و ساده امروز | بنیان فولاد داریا",
     seoDescription:
@@ -66,6 +73,10 @@ export const productGroups: ProductGroup[] = [
     image: "/categories/02-ibeam.jpg",
     heroImage: "/categories/hero-beam-1680.jpg",
     description: "تیرآهن IPE، هاش و مقاطع سازه‌ای",
+    h1: "قیمت روز تیرآهن IPE و هاش",
+    intro:
+      "تیرآهن معمولی IPE، هاش سبک (HEA) و هاش سنگین (HEB) در سایزهای ۱۲ تا ۳۰ از کارخانه‌های ذوب‌آهن اصفهان، فایکو، یزد و... . فروش تیرآهن به‌صورت شاخه‌ای یا برمبنای وزن نهایی باسکول بر حسب کیلوگرم انجام می‌شود. برای سفارش شاخه‌های سنگین و هاش، نوع استاندارد و طول شاخه را مشخص کنید.",
+    subTypes: "تیرآهن IPE، هاش سبک و هاش سنگین",
     rows: [],
     seoTitle: "قیمت تیرآهن IPE و هاش امروز | بنیان فولاد داریا",
     seoDescription:
@@ -78,6 +89,10 @@ export const productGroups: ProductGroup[] = [
     image: "/categories/03-sheet-coil.jpg",
     heroImage: "/categories/hero-sheet-1680.jpg",
     description: "ورق سیاه، گالوانیزه، روغنی و رنگی",
+    h1: "قیمت روز انواع ورق فولادی",
+    intro:
+      "انواع ورق سیاه (ST37 و ST52)، ورق روغنی (نورد سرد)، گالوانیزه، رنگی و اسیدشویی در ضخامت‌های مختلف از کارخانه‌های فولاد مبارکه، اکسین، کاویان و هفت‌الماس. عرضه به‌صورت رول (کلاف) و شیت (برش‌خورده و فابریک) بر حسب کیلوگرم محاسبه می‌شود.",
+    subTypes: "ورق سیاه، گالوانیزه، روغنی و رنگی",
     rows: [],
     seoTitle: "قیمت ورق سیاه، گالوانیزه و رنگی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -89,6 +104,10 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "پروفیل",
     image: "/categories/04-profile.jpg",
     description: "پروفیل ساختمانی و صنعتی در ابعاد گوناگون",
+    h1: "قیمت روز قوطی و پروفیل ساختمانی و صنعتی",
+    intro:
+      "پروفیل‌های قوطی مربعی و مستطیلی، پروفیل‌های درب و پنجره، پروفیل زد (Z) و مقاطع صنعتی با ضخامت‌های مختلف از فولاد مبارکه و نورد لوله. فروش بر پایه وزن (کیلوگرم) در شاخه‌های ۶ متری صورت می‌گیرد. در استعلام قیمت، ضخامت ورق و ابعاد مقطع را قید کنید.",
+    subTypes: "قوطی ساختمانی، پروفیل Z و مقاطع صنعتی",
     rows: [],
     seoTitle: "قیمت پروفیل و قوطی ساختمانی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -100,6 +119,10 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "لوله",
     image: "/categories/05-pipe.jpg",
     description: "لوله صنعتی، گازی و داربستی",
+    h1: "قیمت روز لوله فولادی صنعتی، گازی و داربستی",
+    intro:
+      "انواع لوله داربستی، لوله صنعتی، لوله گازی (روکار و توکار) و لوله‌های بدون درز (مانیسمان) در رده‌های مختلف از کارخانه‌های معتبر نظیر سپاهان و اهواز. قیمت‌گذاری بر اساس شاخه ۶ متری یا کیلوگرم انجام می‌گیرد.",
+    subTypes: "لوله داربستی، مانیسمان، گازی و صنعتی",
     rows: [],
     seoTitle: "قیمت لوله فولادی صنعتی و گازی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -111,6 +134,10 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "نبشی",
     image: "/categories/06-angle.jpg",
     description: "نبشی بال مساوی و بال نامساوی",
+    h1: "قیمت روز نبشی بال مساوی و نامساوی",
+    intro:
+      "نبشی‌های بال مساوی و بال نامساوی از سایز ۳ تا ۲۰ سانتیمتر و ضخامت‌های گوناگون ساخت کارخانه‌های ناب تبریز، ظفر بناب، اصفهان و شکفته. طول شاخه‌ها عموماً ۶ و ۱۲ متری بوده و قیمت‌ها به‌ازای هر کیلوگرم محاسبه می‌شود.",
+    subTypes: "نبشی بال مساوی و بال نامساوی ساختمانی",
     rows: [],
     seoTitle: "قیمت نبشی فولادی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -122,6 +149,10 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "ناودانی",
     image: "/categories/07-channel.jpg",
     description: "ناودانی سبک و سنگین برای مصارف سازه‌ای",
+    h1: "قیمت روز ناودانی سبک و سنگین",
+    intro:
+      "ناودانی‌های سبک (طرح اروپایی/ایرانی) و ناودانی‌های سنگین ساختمانی و صنعتی در سایزهای ۶ تا ۳۰ از کارخانه‌های فایکو، شکفته مشهد و ناب تبریز. محاسبه قیمت بر حسب کیلوگرم است؛ هنگام خرید نوع سبک یا سنگین (UNP) و استاندارد را مشخص فرمایید.",
+    subTypes: "ناودانی سبک و سنگین UNP سازه‌ای",
     rows: [],
     seoTitle: "قیمت ناودانی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -133,6 +164,10 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "مفتول",
     image: "/categories/08-wire.jpg",
     description: "مفتول سیاه، گالوانیزه و محصولات سیمی",
+    h1: "قیمت روز مفتول سیاه و محصولات سیمی",
+    intro:
+      "انواع مفتول سیاه (آرماتوربندی و قالب‌بندی)، مفتول گالوانیزه سفید، توری حصاری، توری مرغی و سیم رابیتس‌بندی. محصولات مفتولی به‌صورت کلاف و بر حسب کیلوگرم با قطرهای متنوع عرضه می‌شوند.",
+    subTypes: "مفتول سیاه، گالوانیزه، توری و سیم آرماتور",
     rows: [],
     seoTitle: "قیمت مفتول و سیم فولادی امروز | بنیان فولاد داریا",
     seoDescription:
@@ -151,4 +186,8 @@ export function getInitialCategory(): ProductGroupId {
   const requested = document.getElementById("root")?.dataset.initialCategory;
   const match = requested && productGroups.find((group) => group.id === requested);
   return match ? match.id : productGroups[0].id;
+}
+
+export function getCategoryById(id: string): ProductGroup | undefined {
+  return productGroups.find((group) => group.id === id);
 }

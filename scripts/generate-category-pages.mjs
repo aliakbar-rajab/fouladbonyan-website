@@ -1,88 +1,37 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { productGroups } from "../app/category-meta.ts";
-import { getCategoryPricingState } from "../app/catalog-behavior.mjs";
 
 const SITE_URL = "https://fouladbonyan.com";
 const distDir = resolve(import.meta.dirname, "..", "dist");
 const dataDir = resolve(import.meta.dirname, "..", "app", "data");
 
-// Prices in app/data/*.json are quoted in Toman, but schema.org's
-// priceCurrency is an ISO 4217 code and Iran's is IRR (rial) -- 1 Toman
-// equals 10 Rials, so amounts are converted before going into JSON-LD.
-const TOMAN_TO_RIAL = 10;
-
 const readJson = (path) => readFile(path, "utf8").then(JSON.parse);
 
-async function loadPriceRanges() {
+async function loadPriceFreshness() {
   const [rebar, beam, products] = await Promise.all([
     readJson(resolve(dataDir, "rebar-prices.json")),
     readJson(resolve(dataDir, "beam-prices.json")),
     readJson(resolve(dataDir, "product-prices.json")),
   ]);
 
-  // Each group covers several sub-categories that can be wildly different
-  // products (e.g. rebar's "stainless" sub-category costs ~20x plain rebar),
-  // so a min/max across all of them would be a misleadingly huge range.
-  // Only the one sub-category the page actually opens on by default is used.
-  const ranges = new Map();
-  const addRange = (id, category) => {
-    const summary = category?.summary;
-    if (!summary || summary.max <= 0) return;
-    // Rows within one sub-category aren't always priced in the same unit
-    // (e.g. beam's "beam" id mixes per-kilogram and per-bar rows); the UI
-    // itself only trusts a category's min/max when it has exactly one unit
-    // (RebarPrices.tsx's pricingState.units check), and this needs the same
-    // guard or it'll quote a range spanning two incompatible units.
-    if (getCategoryPricingState(category).units.length !== 1) return;
-    const rowCount =
-      category.factories?.reduce(
-        (total, factory) => total + (factory.rows?.length ?? 0),
-        0,
-      ) || 1;
-    ranges.set(id, {
-      lowPrice: summary.min,
-      highPrice: summary.max,
-      offerCount: rowCount,
-    });
-  };
+  const dates = new Map();
+  dates.set("rebar", rebar.fetchedAt.slice(0, 10));
+  dates.set("beam", beam.fetchedAt.slice(0, 10));
 
-  addRange(
-    "rebar",
-    rebar.categories.find((category) => category.id === "ribbed"),
-  );
-  addRange(
-    "beam",
-    beam.categories.find((category) => category.id === "beam"),
-  );
-  for (const catalog of products.catalogs) {
-    addRange(
-      catalog.id,
-      catalog.categories.find(
-        (category) => category.id === catalog.initialCategoryId,
-      ),
-    );
+  const productDate = products.fetchedAt.slice(0, 10);
+  for (const group of productGroups) {
+    if (!dates.has(group.id)) {
+      dates.set(group.id, productDate);
+    }
   }
-  return ranges;
-}
 
-function buildProductJsonLd(group, range) {
-  if (!range) return "";
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: group.label,
-    description: group.description,
-    offers: {
-      "@type": "AggregateOffer",
-      priceCurrency: "IRR",
-      lowPrice: range.lowPrice * TOMAN_TO_RIAL,
-      highPrice: range.highPrice * TOMAN_TO_RIAL,
-      offerCount: range.offerCount,
-      availability: "https://schema.org/InStock",
-    },
-  };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
+  const latestDate = [rebar.fetchedAt, beam.fetchedAt, products.fetchedAt]
+    .sort()
+    .at(-1)
+    .slice(0, 10);
+
+  return { dates, latestDate };
 }
 
 function buildBreadcrumbJsonLd(group) {
@@ -90,7 +39,7 @@ function buildBreadcrumbJsonLd(group) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "خانه", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 1, name: "صفحه اصلی", item: `${SITE_URL}/` },
       {
         "@type": "ListItem",
         position: 2,
@@ -108,7 +57,7 @@ const replaceTagContent = (html, attrMatcher, value) =>
     `$1${value}$2`,
   );
 
-function buildCategoryHtml(baseHtml, group, priceRange) {
+function buildCategoryHtml(baseHtml, group) {
   const pageUrl = `${SITE_URL}/${group.id}/`;
 
   let html = baseHtml
@@ -116,6 +65,10 @@ function buildCategoryHtml(baseHtml, group, priceRange) {
     .replace(
       /(<link rel="canonical" href=")[^"]*(")/,
       `$1${pageUrl}$2`,
+    )
+    .replace(
+      /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
+      "",
     );
 
   html = replaceTagContent(html, 'name="description"', group.seoDescription);
@@ -140,36 +93,35 @@ function buildCategoryHtml(baseHtml, group, priceRange) {
 
   return html.replace(
     "</head>",
-    `${buildProductJsonLd(group, priceRange)}${buildBreadcrumbJsonLd(group)}\n  </head>`,
+    `${buildBreadcrumbJsonLd(group)}\n  </head>`,
   );
 }
 
-async function addCategoryUrlsToSitemap() {
+async function updateSitemapWithCategories(freshnessMap, latestRootDate) {
   const sitemapPath = resolve(distDir, "sitemap.xml");
   const sitemap = await readFile(sitemapPath, "utf8");
-  const today = new Date().toISOString().slice(0, 10);
+
+  // Update root URL lastmod with latest price data date and clean priority/changefreq
+  let updatedSitemap = sitemap.replace(
+    /<url>\s*<loc>https:\/\/fouladbonyan\.com\/<\/loc>[\s\S]*?<\/url>/,
+    `  <url>\n    <loc>${SITE_URL}/</loc>\n    <lastmod>${latestRootDate}</lastmod>\n  </url>`,
+  );
 
   const entries = productGroups
-    .map(
-      (group) => `  <url>
-    <loc>${SITE_URL}/${group.id}/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>`,
-    )
+    .map((group) => {
+      const lastmod = freshnessMap.get(group.id) || latestRootDate;
+      return `  <url>\n    <loc>${SITE_URL}/${group.id}/</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`;
+    })
     .join("\n");
 
-  await writeFile(
-    sitemapPath,
-    sitemap.replace("</urlset>", `${entries}\n</urlset>`),
-    "utf8",
-  );
+  updatedSitemap = updatedSitemap.replace("</urlset>", `${entries}\n</urlset>`);
+
+  await writeFile(sitemapPath, updatedSitemap, "utf8");
 }
 
-const [baseHtml, priceRanges] = await Promise.all([
+const [baseHtml, { dates: freshnessDates, latestDate }] = await Promise.all([
   readFile(resolve(distDir, "index.html"), "utf8"),
-  loadPriceRanges(),
+  loadPriceFreshness(),
 ]);
 
 await Promise.all(
@@ -178,13 +130,13 @@ await Promise.all(
     await mkdir(outDir, { recursive: true });
     await writeFile(
       resolve(outDir, "index.html"),
-      buildCategoryHtml(baseHtml, group, priceRanges.get(group.id)),
+      buildCategoryHtml(baseHtml, group),
       "utf8",
     );
   }),
 );
 
-await addCategoryUrlsToSitemap();
+await updateSitemapWithCategories(freshnessDates, latestDate);
 
 console.log(
   `تولید ${productGroups.length} صفحه‌ی فرود دسته‌بندی محصولات و بروزرسانی sitemap با موفقیت انجام شد.`,

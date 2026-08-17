@@ -68,6 +68,20 @@ test("a direct category route activates its tab and scrolls to prices", async ()
     screen.getByRole("tab", { name: "تیرآهن" }).getAttribute("aria-selected"),
     "true",
   );
+  // Verify category H1, intro, and breadcrumb
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "قیمت روز تیرآهن IPE و هاش",
+  );
+  assert.match(
+    document.body.textContent,
+    /تیرآهن معمولی IPE، هاش سبک/,
+  );
+  const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
+  assert.ok(breadcrumb);
+  assert.equal(breadcrumb.querySelector("a")?.getAttribute("href"), "/");
+  assert.equal(breadcrumb.querySelector("a")?.textContent, "صفحه اصلی");
+
   await waitFor(() => {
     assert.deepEqual(scrollCalls, [
       {
@@ -89,6 +103,32 @@ test("the homepage keeps its default tab and does not auto-scroll", async () => 
     "true",
   );
   assert.deepEqual(scrollCalls, []);
+
+  // Verify homepage H1 targets general steel price intent
+  assert.match(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    /قیمت روز آهن و فولاد/,
+  );
+
+  // Verify overview table is present and has crawlable links to all 8 category pages
+  const overviewTable = document.getElementById("overview-table");
+  assert.ok(overviewTable, "Overview table must be present on homepage");
+
+  const expectedCategories = [
+    "rebar",
+    "beam",
+    "sheet",
+    "profile",
+    "pipe",
+    "angle",
+    "channel",
+    "wire",
+  ];
+  for (const catId of expectedCategories) {
+    const link = overviewTable.querySelector(`a[href="/${catId}/"]`);
+    assert.ok(link, `Homepage overview must have crawlable link to /${catId}/`);
+  }
+
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
 });
 
@@ -97,6 +137,12 @@ test("a direct category route respects reduced-motion scrolling", async () => {
   addRoot("rebar");
   render(React.createElement(App));
   await settle();
+
+  // Verify rebar H1 is distinct
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "قیمت روز میلگرد آجدار و ساده",
+  );
 
   await waitFor(() => {
     assert.deepEqual(scrollCalls, [
@@ -108,3 +154,20 @@ test("a direct category route respects reduced-motion scrolling", async () => {
   });
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
 });
+
+test("all category routes produce distinct H1 headings", async () => {
+  const { productGroups } = await import("../app/category-meta.ts");
+  const h1s = new Set();
+
+  for (const group of productGroups) {
+    assert.ok(group.h1, `${group.id} must have an h1 defined`);
+    assert.ok(!h1s.has(group.h1), `Duplicate h1 found: ${group.h1}`);
+    h1s.add(group.h1);
+  }
+
+  // Also assert homepage H1 is distinct from all category H1s
+  const homeH1 = "قیمت روز آهن و فولاد؛ بنیان فولاد داریا";
+  assert.ok(!h1s.has(homeH1), "Homepage H1 must be distinct from category H1s");
+  assert.equal(h1s.size, 8, "Expected 8 unique category H1s");
+});
+

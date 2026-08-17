@@ -27,7 +27,7 @@ export function CategoryGrid({ onSelectGroup }: CategoryGridProps) {
             >
               <img
                 src={group.image}
-                alt=""
+                alt={`انواع ${group.label}`}
                 width="480"
                 height="320"
                 loading="lazy"

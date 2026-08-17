@@ -4,10 +4,7 @@ import App from "../app/App";
 import ContactPage from "../app/ContactPage";
 import InfoPage from "../app/InfoPage";
 import { type InfoPageKey } from "../app/info-page-data";
-import {
-  buildOrganizationStructuredData,
-  siteConfig,
-} from "../app/site-config";
+import { buildOrganizationStructuredData } from "../app/site-config";
 import "../app/globals.css";
 
 document.documentElement.lang = "fa";
@@ -19,21 +16,24 @@ if (!root) {
   throw new Error("React root element was not found.");
 }
 
-const organizationJsonLd = document.getElementById(
-  "organization-structured-data",
-);
-if (organizationJsonLd) {
-  organizationJsonLd.textContent = JSON.stringify(
-    buildOrganizationStructuredData(
-      new URL(window.location.pathname, siteConfig.siteUrl).toString(),
-    ),
-  );
-}
-
 const pageFromPath = window.location.pathname
   .replace(/^\/|\/$/g, "")
   .toLowerCase();
 const pageName = root.dataset.page || pageFromPath;
+const isOrganizationPage = !pageName || pageName === "about";
+
+const organizationJsonLd = document.getElementById(
+  "organization-structured-data",
+);
+if (organizationJsonLd) {
+  if (isOrganizationPage) {
+    organizationJsonLd.textContent = JSON.stringify(
+      buildOrganizationStructuredData(),
+    );
+  } else {
+    organizationJsonLd.remove();
+  }
+}
 const infoPages = new Set<InfoPageKey>([
   "about",
   "terms",

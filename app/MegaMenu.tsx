@@ -147,7 +147,7 @@ export function MegaMenu({
         aria-label="فهرست اصلی"
         hidden={isMobile && !mobileOpen}
       >
-        <a href="#top" onClick={onMobileClose}>
+        <a href="/" onClick={onMobileClose}>
           صفحه اصلی
         </a>
         <div className="products-menu" ref={productMenuRef}>
@@ -174,14 +174,18 @@ export function MegaMenu({
                 <p className="mega-group-label">گروه محصولات</p>
                 <div>
                   {productGroups.map((group) => (
-                    <button
-                      type="button"
+                    <a
+                      href={`/${group.id}/`}
                       key={group.id}
+                      className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
                       aria-pressed={megaProduct === group.id}
-                      onClick={() => setMegaProduct(group.id)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        setMegaProduct(group.id);
+                      }}
                     >
                       قیمت {group.label}
-                    </button>
+                    </a>
                   ))}
                 </div>
               </section>

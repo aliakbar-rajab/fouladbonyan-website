@@ -6,7 +6,7 @@
   min-height: 60vh;
   background:
     linear-gradient(rgb(31 32 35 / 96%), rgb(31 32 35 / 96%)),
-    url("/textures/dark-chequered-plate.png");
+    url("/textures/dark-chequered-plate.webp");
 }
 
 .info-hero {

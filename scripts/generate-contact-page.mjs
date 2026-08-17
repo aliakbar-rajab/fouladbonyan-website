@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
 import {
@@ -25,7 +25,7 @@ function buildBreadcrumbJsonLd(label, pageUrl) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "خانه", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 1, name: "صفحه اصلی", item: `${SITE_URL}/` },
       { "@type": "ListItem", position: 2, name: label, item: pageUrl },
     ],
   };
@@ -39,6 +39,13 @@ function buildPageHtml(
   let html = baseHtml
     .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
     .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${pageUrl}$2`);
+
+  if (page !== "about") {
+    html = html.replace(
+      /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
+      "",
+    );
+  }
 
   html = replaceTagContent(html, 'name="description"', description);
   html = replaceTagContent(html, 'property="og:title"', title);
@@ -61,16 +68,13 @@ function buildPageHtml(
 async function addInformationUrlsToSitemap(pageEntries) {
   const sitemapPath = resolve(distDir, "sitemap.xml");
   const sitemap = await readFile(sitemapPath, "utf8");
-  const today = new Date().toISOString().slice(0, 10);
 
   const entries = pageEntries
     .filter(({ pageUrl }) => !sitemap.includes(`<loc>${pageUrl}</loc>`))
     .map(
-      ({ pageUrl }) => `  <url>
+      ({ pageUrl, lastmod }) => `  <url>
     <loc>${pageUrl}</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <lastmod>${lastmod}</lastmod>
   </url>`,
     )
     .join("\n");
@@ -82,29 +86,25 @@ async function addInformationUrlsToSitemap(pageEntries) {
   );
 }
 
-async function injectOrganizationData(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
-  await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = resolve(directory, entry.name);
-      if (entry.isDirectory()) {
-        await injectOrganizationData(entryPath);
-        return;
-      }
-      if (entry.name !== "index.html") return;
+async function injectOrganizationData() {
+  const payload = JSON.stringify(buildOrganizationStructuredData());
+  const targetFiles = [
+    resolve(distDir, "index.html"),
+    resolve(distDir, "about", "index.html"),
+  ];
 
-      const html = await readFile(entryPath, "utf8");
-      const relativePath = entryPath
-        .slice(distDir.length)
-        .replaceAll("\\", "/")
-        .replace(/index\.html$/, "");
-      const pageUrl = new URL(relativePath || "/", `${SITE_URL}/`).toString();
-      const payload = JSON.stringify(buildOrganizationStructuredData(pageUrl));
-      const updated = html.replace(
-        /(<script id="organization-structured-data" type="application\/ld\+json">)[\s\S]*?(<\/script>)/,
-        `$1${payload}$2`,
-      );
-      await writeFile(entryPath, updated, "utf8");
+  await Promise.all(
+    targetFiles.map(async (entryPath) => {
+      try {
+        const html = await readFile(entryPath, "utf8");
+        const updated = html.replace(
+          /(<script id="organization-structured-data" type="application\/ld\+json">)[\s\S]*?(<\/script>)/,
+          `$1${payload}$2`,
+        );
+        await writeFile(entryPath, updated, "utf8");
+      } catch {
+        // File may not exist yet if skipped
+      }
     }),
   );
 }
@@ -117,6 +117,7 @@ const pageEntries = [
     description: DESCRIPTION,
     pageUrl: PAGE_URL,
     breadcrumbLabel: "تماس با ما",
+    lastmod: "2026-08-11",
   },
   ...Object.entries(infoPageDefinitions).map(([page, definition]) => ({
     page,
@@ -124,6 +125,7 @@ const pageEntries = [
     description: definition.seoDescription,
     pageUrl: `${SITE_URL}/${page}/`,
     breadcrumbLabel: definition.title,
+    lastmod: definition.lastmod,
   })),
 ];
 
@@ -140,7 +142,7 @@ await Promise.all(
 );
 
 await addInformationUrlsToSitemap(pageEntries);
-await injectOrganizationData(distDir);
+await injectOrganizationData();
 
 console.log(
   `تولید ${pageEntries.length.toLocaleString("fa-IR")} صفحه اطلاعاتی و بروزرسانی sitemap با موفقیت انجام شد.`,

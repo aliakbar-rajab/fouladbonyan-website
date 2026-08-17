@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { productGroups } from "./category-meta";
+import { productGroups, type ProductGroup } from "./category-meta";
+import { Breadcrumb } from "./Breadcrumb";
 
 const heroSlides = productGroups.slice(0, 3);
 const HERO_SLIDE_INTERVAL_MS = 1_700;
@@ -7,22 +8,77 @@ const HERO_SLIDE_INTERVAL_MS = 1_700;
 type HeroCarouselProps = {
   reduceMotion: boolean;
   onGoToPrices: () => void;
+  categoryGroup?: ProductGroup | null;
 };
 
 export function HeroCarousel({
   reduceMotion,
   onGoToPrices,
+  categoryGroup,
 }: HeroCarouselProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
 
+  const isCategory = Boolean(categoryGroup);
+
   useEffect(() => {
-    if (reduceMotion || carouselPaused) return undefined;
+    if (isCategory || reduceMotion || carouselPaused) return undefined;
     const timer = window.setInterval(() => {
       setActiveSlide((current) => (current + 1) % heroSlides.length);
     }, HERO_SLIDE_INTERVAL_MS);
     return () => window.clearInterval(timer);
-  }, [carouselPaused, reduceMotion]);
+  }, [carouselPaused, isCategory, reduceMotion]);
+
+  if (categoryGroup) {
+    const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
+    return (
+      <div className="hero-frame hero-frame-category">
+        <section
+          className="hero hero-category"
+          aria-label={`معرفی و قیمت روز ${categoryGroup.label}`}
+        >
+          <img
+            className="hero-image is-active"
+            src={heroImg}
+            alt={categoryGroup.label}
+            width="1672"
+            height="941"
+            decoding="async"
+            fetchPriority="high"
+          />
+          <div className="hero-overlay" />
+          <div className="shell hero-content">
+            <Breadcrumb
+              items={[
+                { label: "صفحه اصلی", href: "/" },
+                { label: categoryGroup.label },
+              ]}
+            />
+            <p className="hero-kicker">
+              تأمین و استعلام مقاطع فولادی — بنیان فولاد داریا
+            </p>
+            <h1>
+              <span>{categoryGroup.h1}</span>
+            </h1>
+            <p className="hero-category-intro">{categoryGroup.intro}</p>
+            <div className="hero-actions">
+              <a href="/quote-process/#quote-form">
+                درخواست پیش‌فاکتور {categoryGroup.label}
+              </a>
+              <button
+                className="hero-price-jump"
+                type="button"
+                onClick={onGoToPrices}
+              >
+                مشاهده جدول قیمت {categoryGroup.label}
+              </button>
+              <a href="#products">سایر گروه‌های محصول</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const slide = heroSlides[activeSlide];
 
@@ -59,14 +115,12 @@ export function HeroCarousel({
         <div className="shell hero-content">
           <p className="hero-kicker">تأمین و استعلام مقاطع فولادی</p>
           <h1>
-            <span>بنیان فولاد داریا؛</span>
-            <span>همراه مطمئن استعلام آهن و فولاد</span>
+            <span>قیمت روز آهن و فولاد؛</span>
+            <span>بنیان فولاد داریا</span>
           </h1>
           <p>{slide.description}</p>
           <div className="hero-actions">
-            <a href="/quote-process/#quote-form">
-              درخواست پیش‌فاکتور {slide.label}
-            </a>
+            <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
             <button
               className="hero-price-jump"
               type="button"

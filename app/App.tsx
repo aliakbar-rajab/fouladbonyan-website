@@ -13,9 +13,11 @@ import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
 import RebarPrices from "./RebarPrices";
 import BeamPrices from "./BeamPrices";
 import ProductPrices from "./ProductPrices";
+import { SteelPriceOverview } from "./SteelPriceOverview";
 import { loadProductPricePayload } from "./product-price-data";
 import { initialCategoryIdOf } from "./group-catalog";
 import {
+  getCategoryById,
   getInitialCategory,
   isProductCatalogId,
   productGroups,
@@ -66,20 +68,29 @@ export default function App() {
     "(max-width: 900px) and (hover: none) and (pointer: coarse)",
   );
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const contactHref = isDirectCallDevice ? siteConfig.contact.phones[0].href : "#phone-numbers";
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const contactHref = isDirectCallDevice
+    ? siteConfig.contact.phones[0].href
+    : "#phone-numbers";
+  const tabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const didAutoScrollCategoryRoute = useRef(false);
-  const initialCategoryRoute = productGroups.some(
-    (group) =>
-      group.id ===
-      document.getElementById("root")?.dataset.initialCategory,
+
+  const initialCategorySlug =
+    typeof document !== "undefined"
+      ? document.getElementById("root")?.dataset.initialCategory
+      : undefined;
+  const isCategoryRoute = Boolean(
+    initialCategorySlug &&
+      productGroups.some((group) => group.id === initialCategorySlug),
   );
+  const categoryGroup = isCategoryRoute && initialCategorySlug
+    ? getCategoryById(initialCategorySlug) ?? null
+    : null;
 
   useEffect(() => {
-    if (!initialCategoryRoute || didAutoScrollCategoryRoute.current) return;
+    if (!isCategoryRoute || didAutoScrollCategoryRoute.current) return;
     didAutoScrollCategoryRoute.current = true;
     scrollToPrices(reduceMotion);
-  }, [initialCategoryRoute, reduceMotion]);
+  }, [isCategoryRoute, reduceMotion]);
 
   const filteredGroups = useMemo(
     () => filterProductGroups(searchGroups ?? productGroups, committedSearch),
@@ -150,7 +161,9 @@ export default function App() {
           size: firstRow.size,
         }));
         const count = results.reduce((sum, group) => sum + group.rows.length, 0);
-        setSearchMessage(`${count.toLocaleString("fa-IR")} نتیجه برای «${query}» پیدا شد.`);
+        setSearchMessage(
+          `${count.toLocaleString("fa-IR")} نتیجه برای «${query}» پیدا شد.`,
+        );
       } else {
         setSearchMessage(`نتیجه‌ای برای «${query}» پیدا نشد.`);
       }
@@ -160,7 +173,7 @@ export default function App() {
   };
 
   const moveTabFocus = (
-    event: ReactKeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLElement>,
     currentIndex: number,
   ) => {
     let target: number;
@@ -208,7 +221,7 @@ export default function App() {
         <LightPillar />
 
         <div className="shell header-main">
-          <Brand headerLogo />
+          <Brand headerLogo href={isCategoryRoute ? "/" : "#top"} />
 
           <form className="site-search" role="search" onSubmit={submitSearch}>
             <label className="sr-only" htmlFor="site-search">
@@ -262,6 +275,7 @@ export default function App() {
         <HeroCarousel
           reduceMotion={reduceMotion}
           onGoToPrices={() => scrollToPrices(reduceMotion)}
+          categoryGroup={categoryGroup}
         />
 
         <CategoryGrid onSelectGroup={navigateToCatalog} />
@@ -271,9 +285,17 @@ export default function App() {
         <section className="prices section" id="prices">
           <div className="shell">
             <SectionTitle
-              eyebrow="قیمت روز بازار"
-              title="قیمت روز آهن و فولاد"
-              description="قیمت همه محصولات از مرجع بازار بروزرسانی می‌شود؛ قیمت قطعی، موجودی و زمان تحویل را با واحد فروش تأیید کنید."
+              eyebrow={isCategoryRoute ? "جدول قیمت و مشخصات" : "قیمت روز بازار"}
+              title={
+                isCategoryRoute
+                  ? `قیمت روز ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"}`
+                  : "قیمت روز آهن‌آلات و مقاطع فولادی"
+              }
+              description={
+                isCategoryRoute
+                  ? `قیمت روز و مشخصات فنی انواع ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
+                  : "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید."
+              }
             />
 
             <p className="search-status" role="status" aria-live="polite">
@@ -289,16 +311,23 @@ export default function App() {
             </p>
 
             <div className="product-tabs-viewport">
-              <div className="product-tabs" role="tablist" aria-label="گروه محصولات">
+              <div
+                className="product-tabs"
+                role="tablist"
+                aria-label="گروه محصولات"
+              >
                 {productGroups.map((group, index) => {
-                  const selected = visibleGroup?.id === group.id;
-                  // When a search leaves no group visible, every tab would
-                  // otherwise get tabIndex -1 and the whole tablist would drop
-                  // out of the tab order. Keep the first tab reachable instead.
-                  const focusable = selected || (!visibleGroup && index === 0);
+                  const selected = isCategoryRoute
+                    ? (visibleGroup?.id === group.id)
+                    : (!committedSearch && group.id === "rebar") ||
+                      (committedSearch ? visibleGroup?.id === group.id : false);
+                  const focusable =
+                    selected ||
+                    (!visibleGroup && index === 0) ||
+                    (!isCategoryRoute && index === 0);
                   return (
-                    <button
-                      type="button"
+                    <a
+                      href={`/${group.id}/`}
                       role="tab"
                       id={`tab-${group.id}`}
                       aria-selected={selected}
@@ -309,52 +338,59 @@ export default function App() {
                         tabRefs.current[index] = node;
                       }}
                       onKeyDown={(event) => moveTabFocus(event, index)}
-                      onClick={() => navigateToCatalog(group.id)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        navigateToCatalog(group.id);
+                      }}
                     >
                       {group.shortLabel}
-                    </button>
+                    </a>
                   );
                 })}
               </div>
             </div>
 
-            {visibleGroup ? (
-              <div
-                className="product-panel"
-                role="tabpanel"
-                id={`panel-${visibleGroup.id}`}
-                aria-labelledby={`tab-${visibleGroup.id}`}
-                tabIndex={0}
-              >
-                {visibleGroup.id === "rebar" ? (
-                  <RebarPrices
-                    key={activeViewRequest.requestId}
-                    phoneHref={contactHref}
-                    requestedView={activeViewRequest}
-                  />
-                ) : visibleGroup.id === "beam" ? (
-                  <BeamPrices
-                    key={activeViewRequest.requestId}
-                    phoneHref={contactHref}
-                    requestedView={activeViewRequest}
-                  />
-                ) : isProductCatalogId(visibleGroup.id) ? (
-                  <ProductPrices
-                    key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
-                    catalogId={visibleGroup.id}
-                    phoneHref={contactHref}
-                    requestedView={activeViewRequest}
-                  />
-                ) : null}
-              </div>
+            {isCategoryRoute || committedSearch ? (
+              visibleGroup ? (
+                <div
+                  className="product-panel"
+                  role="tabpanel"
+                  id={`panel-${visibleGroup.id}`}
+                  aria-labelledby={`tab-${visibleGroup.id}`}
+                  tabIndex={0}
+                >
+                  {visibleGroup.id === "rebar" ? (
+                    <RebarPrices
+                      key={activeViewRequest.requestId}
+                      phoneHref={contactHref}
+                      requestedView={activeViewRequest}
+                    />
+                  ) : visibleGroup.id === "beam" ? (
+                    <BeamPrices
+                      key={activeViewRequest.requestId}
+                      phoneHref={contactHref}
+                      requestedView={activeViewRequest}
+                    />
+                  ) : isProductCatalogId(visibleGroup.id) ? (
+                    <ProductPrices
+                      key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
+                      catalogId={visibleGroup.id}
+                      phoneHref={contactHref}
+                      requestedView={activeViewRequest}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <div className="empty-state" role="status">
+                  <h3>محصولی پیدا نشد</h3>
+                  <p>عبارت دیگری جست‌وجو کنید یا با واحد فروش تماس بگیرید.</p>
+                  <a href={siteConfig.contact.phones[0].href} dir="ltr">
+                    {siteConfig.contact.phones[0].label}
+                  </a>
+                </div>
+              )
             ) : (
-              <div className="empty-state" role="status">
-                <h3>محصولی پیدا نشد</h3>
-                <p>عبارت دیگری جست‌وجو کنید یا با واحد فروش تماس بگیرید.</p>
-                <a href={siteConfig.contact.phones[0].href} dir="ltr">
-                  {siteConfig.contact.phones[0].label}
-                </a>
-              </div>
+              <SteelPriceOverview phoneHref={contactHref} />
             )}
           </div>
         </section>
@@ -370,15 +406,23 @@ export default function App() {
               <ul className="feature-list">
                 <li>
                   <strong>استعلام شفاف</strong>
-                  <span>قیمت نهایی پس از مشخص‌شدن نوع، ابعاد، مقدار و محل تحویل اعلام می‌شود.</span>
+                  <span>
+                    قیمت نهایی پس از مشخص‌شدن نوع، ابعاد، مقدار و محل تحویل
+                    اعلام می‌شود.
+                  </span>
                 </li>
                 <li>
                   <strong>راهنمایی پیش از درخواست</strong>
-                  <span>مشخصات محصول پیش از صدور پیش‌فاکتور با متقاضی مرور می‌شود.</span>
+                  <span>
+                    مشخصات محصول پیش از صدور پیش‌فاکتور با متقاضی مرور می‌شود.
+                  </span>
                 </li>
                 <li>
                   <strong>پیگیری هماهنگ</strong>
-                  <span>هماهنگی موجودی و تحویل پس از استعلام از طریق واحد فروش انجام می‌شود.</span>
+                  <span>
+                    هماهنگی موجودی و تحویل پس از استعلام از طریق واحد فروش انجام
+                    می‌شود.
+                  </span>
                 </li>
               </ul>
               <a className="about-more-link" href="/about/">
@@ -388,7 +432,10 @@ export default function App() {
           </div>
         </section>
 
-        <section className="quote-section section" aria-labelledby="quote-heading">
+        <section
+          className="quote-section section"
+          aria-labelledby="quote-heading"
+        >
           <div className="shell quote-inner">
             <div>
               <span>درخواست پیش‌فاکتور</span>

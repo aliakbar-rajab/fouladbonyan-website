@@ -94,16 +94,15 @@ export const missingOwnerInformation = [
   },
 ] as const;
 
-export function buildOrganizationStructuredData(
-  pageUrl: string = siteConfig.siteUrl,
-) {
+export function buildOrganizationStructuredData() {
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${siteConfig.siteUrl}/#organization`,
     name: siteConfig.brand.name,
     alternateName: siteConfig.brand.alternateName,
-    url: pageUrl,
-    logo: `${siteConfig.siteUrl}/og.png`,
+    url: `${siteConfig.siteUrl}/`,
+    logo: `${siteConfig.siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
     telephone: siteConfig.contact.phones.map((phone) =>
       phone.href.replace("tel:", ""),
     ),

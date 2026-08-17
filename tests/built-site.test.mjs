@@ -52,26 +52,42 @@ test("category landing pages have unique metadata, a CSP-safe initial tab, and s
     // from a plain data attribute instead (see category-meta.ts).
     assert.doesNotMatch(html, /<script>window\./);
 
+    const breadcrumbLdMatch = html.match(
+      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
+    )?.[1];
+    assert.ok(
+      breadcrumbLdMatch,
+      `${category.id} should emit BreadcrumbList structured data`,
+    );
+    const breadcrumbLd = JSON.parse(breadcrumbLdMatch);
+    assert.equal(
+      breadcrumbLd.itemListElement[0]?.name,
+      "صفحه اصلی",
+      `${category.id} breadcrumb item 1 must be صفحه اصلی`,
+    );
+
     const productLd = html.match(
       /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"Product".*?)<\/script>/,
     )?.[1];
-    if (category.id === "beam") {
-      // beam's default "beam" sub-category mixes per-kilogram and per-bar
-      // rows, so its min/max would span two incompatible units -- the
-      // generator skips the schema entirely rather than publish a bogus
-      // range, matching RebarPrices.tsx's own units.length !== 1 guard.
-      assert.equal(productLd, undefined);
-      continue;
-    }
-    assert.ok(productLd, `${category.id} is missing its Product JSON-LD`);
-    const product = JSON.parse(productLd);
-    assert.equal(product.offers.priceCurrency, "IRR");
-    assert.ok(product.offers.lowPrice > 0);
-    assert.ok(product.offers.highPrice >= product.offers.lowPrice);
-    assert.ok(product.offers.offerCount > 0);
+    assert.equal(
+      productLd,
+      undefined,
+      `${category.id} should not emit Product structured data on category landing pages`,
+    );
+
+    const catOrgLdMatch = html.match(
+      /<script id="organization-structured-data"/,
+    );
+    assert.equal(
+      catOrgLdMatch,
+      null,
+      `${category.id} should not emit Organization JSON-LD on category pages`,
+    );
   }
 
   const sitemap = await readDist("sitemap.xml");
+  assert.doesNotMatch(sitemap, /<changefreq>/);
+  assert.doesNotMatch(sitemap, /<priority>/);
   for (const category of categories) {
     assert.match(
       sitemap,
@@ -84,9 +100,49 @@ test("built HTML uses root-safe assets and production metadata", async () => {
   const html = await readDist("index.html");
   assert.match(html, /lang="fa" dir="rtl"/);
   assert.match(html, /https:\/\/fouladbonyan\.com\//);
+  assert.match(html, /<title>قیمت روز آهن و فولاد \| بنیان فولاد داریا<\/title>/);
   assert.match(html, /\/assets\/[^"]+\.js/);
   assert.match(html, /\/preloader\/fb-preloader\.js/);
   assert.doesNotMatch(html, /localhost|pages-dist|_next/);
+
+  // Organization JSON-LD is emitted on the homepage and /about/ only
+  const homeOrgMatch = html.match(
+    /<script id="organization-structured-data" type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  )?.[1];
+  assert.ok(homeOrgMatch, "Homepage is missing Organization JSON-LD");
+  const homeOrg = JSON.parse(homeOrgMatch);
+  assert.equal(homeOrg["@type"], "Organization");
+  assert.equal(homeOrg["@id"], "https://fouladbonyan.com/#organization");
+  assert.equal(homeOrg.url, "https://fouladbonyan.com/");
+  assert.equal(
+    homeOrg.logo,
+    "https://fouladbonyan.com/brand/bonyan-foulad-daria-logo.webp",
+  );
+
+  const aboutHtml = await readDist("about/index.html");
+  const aboutOrgMatch = aboutHtml.match(
+    /<script id="organization-structured-data" type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  )?.[1];
+  assert.ok(aboutOrgMatch, "/about/ is missing Organization JSON-LD");
+  const aboutOrg = JSON.parse(aboutOrgMatch);
+  assert.equal(aboutOrg["@id"], "https://fouladbonyan.com/#organization");
+  assert.equal(aboutOrg.url, "https://fouladbonyan.com/");
+
+  // Non-organization pages must NOT emit the block, but must emit BreadcrumbList with صفحه اصلی
+  for (const page of ["contact", "terms", "privacy", "quote-process"]) {
+    const pageHtml = await readDist(`${page}/index.html`);
+    assert.doesNotMatch(
+      pageHtml,
+      /<script id="organization-structured-data"/,
+      `${page} must not emit Organization JSON-LD`,
+    );
+    const pageBcMatch = pageHtml.match(
+      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
+    )?.[1];
+    assert.ok(pageBcMatch, `${page} must emit BreadcrumbList JSON-LD`);
+    const pageBc = JSON.parse(pageBcMatch);
+    assert.equal(pageBc.itemListElement[0]?.name, "صفحه اصلی");
+  }
 });
 
 test("built JavaScript has no external image or fake form dependency", async () => {
