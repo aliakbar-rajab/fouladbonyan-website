@@ -3,9 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      Cloudflare Pages injects its Web Analytics beacon at the foot of every
+      page, so static.cloudflareinsights.com is the one script origin besides
+      our own. connect-src stays 'self': the beacon posts to a relative
+      /cdn-cgi/rum whenever its data-cf-beacon carries a version (the
+      automatic-injection case), and the Cloudflare edge answers that on our
+      own origin. No unsafe-inline anywhere — GlassSurface and LightPillar
+      take their styling from the stylesheet for exactly that reason.
+
+      Keep closing tag names out of this comment: the page generators splice
+      their payloads in at the first literal closing body tag they find.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
     <meta
       name="description"

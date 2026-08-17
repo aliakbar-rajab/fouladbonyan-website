@@ -311,12 +311,10 @@ export function LightPillar() {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="light-pillar-container"
-      style={{ pointerEvents: "none" }}
-      aria-hidden="true"
-    />
+    /* `pointer-events: none` lives in `.light-pillar-container`, not in a style
+       attribute: the prerendered markup is served under `style-src 'self'`,
+       which blocks inline styles outright. */
+    <div ref={containerRef} className="light-pillar-container" aria-hidden="true" />
   );
 }
 

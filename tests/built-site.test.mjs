@@ -839,6 +839,217 @@ test("F10: guide content is real reference material linked into the product tree
   }
 });
 
+/*
+ * F14 — the catalog used to render `filteredFactories.slice(0, 6)`, so a
+ * subcategory with more factory groups than that never put the rest into the
+ * DOM at all: they appeared only after a click on `.show-more-factories`.
+ * "Google Search does not interact with your page", so on /rebar/ribbed/ that
+ * left 204 of 265 rows out of the served HTML. Every row now renders and the
+ * overflow is hidden with CSS instead. Assert against the built pages, because
+ * the whole point is what a crawler receives before any JavaScript runs.
+ */
+const countRows = (html) => (html.match(/class="rebar-row-group/g) ?? []).length;
+const countFactoryCards = (html) =>
+  (html.match(/class="factory-price-card[ "]/g) ?? []).length;
+
+async function loadCatalogSubcategories() {
+  const readJson = (path) =>
+    readFile(new URL(`../app/data/${path}`, import.meta.url), "utf8").then(
+      JSON.parse,
+    );
+  const [rebar, beam, products] = await Promise.all([
+    readJson("rebar-prices.json"),
+    readJson("beam-prices.json"),
+    readJson("product-prices.json"),
+  ]);
+
+  const byGroup = new Map([
+    ["rebar", rebar.categories],
+    ["beam", beam.categories],
+    ...products.catalogs.map((catalog) => [catalog.id, catalog.categories]),
+  ]);
+
+  return [...byGroup].map(([groupId, categories]) => ({
+    groupId,
+    categories: categories.map((category) => ({
+      id: category.id,
+      label: category.label,
+      factories: category.factories.length,
+      rows: category.factories.reduce(
+        (total, factory) => total + factory.rows.length,
+        0,
+      ),
+    })),
+  }));
+}
+
+test("F14: every row of a subcategory reaches the prerendered HTML", async () => {
+  const groups = await loadCatalogSubcategories();
+  let truncatedBefore = 0;
+
+  for (const { groupId, categories } of groups) {
+    for (const sub of categories) {
+      const html = await readDist(`${groupId}/${sub.id}/index.html`);
+      const page = `${groupId}/${sub.id}`;
+
+      assert.equal(
+        countRows(html),
+        sub.rows,
+        `${page} must prerender all ${sub.rows} rows, found ${countRows(html)}`,
+      );
+      assert.equal(
+        countFactoryCards(html),
+        sub.factories,
+        `${page} must prerender all ${sub.factories} factory groups`,
+      );
+
+      // The rows the old slice(0, 6) dropped. Any of these still missing means
+      // the truncation came back.
+      if (sub.factories > 6) {
+        truncatedBefore += 1;
+        assert.ok(
+          countRows(html) > 0,
+          `${page} renders no rows at all`,
+        );
+        assert.match(
+          html,
+          /class="factory-price-card is-collapsed"/,
+          `${page} overflow must be rendered-and-hidden, not unrendered`,
+        );
+      } else {
+        assert.doesNotMatch(
+          html,
+          /is-collapsed/,
+          `${page} fits on screen and must not collapse anything`,
+        );
+      }
+    }
+
+    // A category landing page prerenders its default subcategory in full; the
+    // siblings live on their own URLs, linked from the tabs.
+    const landingHtml = await readDist(`${groupId}/index.html`);
+    assert.ok(
+      categories.some((sub) => sub.rows === countRows(landingHtml)),
+      `${groupId}/ must prerender one full subcategory, found ${countRows(landingHtml)} rows`,
+    );
+    for (const sub of categories) {
+      assert.match(
+        landingHtml,
+        new RegExp(`href="/${groupId}/${sub.id}/"`),
+        `${groupId}/ must link to its ${sub.id} subcategory rather than hide it behind a tab click`,
+      );
+    }
+  }
+
+  assert.ok(
+    truncatedBefore >= 1,
+    "expected at least one subcategory with more factory groups than fit on screen",
+  );
+});
+
+test("F14: collapsed factory groups carry their rows and need no click to exist", async () => {
+  // /rebar/ribbed/ is the case the audit measured: 27 factory groups, 265 rows,
+  // 61 of which used to be the entire page. Row counts move with every price
+  // refresh, so read the expected shape from the snapshot rather than pinning
+  // the numbers the audit happened to see.
+  const ribbed = (
+    await loadCatalogSubcategories()
+  )
+    .find((group) => group.groupId === "rebar")
+    .categories.find((sub) => sub.id === "ribbed");
+  assert.ok(
+    ribbed.factories > 6,
+    "میلگرد آجدار is stocked by far more than six mills; this test is pointless otherwise",
+  );
+
+  const html = await readDist("rebar/ribbed/index.html");
+
+  const cards = html.split('<section class="factory-price-card');
+  assert.equal(
+    cards.length - 1,
+    ribbed.factories,
+    `all ${ribbed.factories} factory groups must be present`,
+  );
+
+  const collapsed = cards.filter((card) => card.startsWith(' is-collapsed"'));
+  assert.equal(
+    collapsed.length,
+    ribbed.factories - 6,
+    "every group past the six visible ones must be rendered-then-hidden",
+  );
+  for (const card of collapsed) {
+    assert.match(
+      card,
+      /class="rebar-row-group/,
+      "a collapsed factory group must still contain its price rows",
+    );
+    assert.match(card, /تومان|تماس بگیرید/, "and their prices");
+  }
+
+  assert.equal(countRows(html), ribbed.rows);
+
+  // The control is a visibility toggle over content that is already here.
+  assert.match(html, /class="show-more-factories"[^>]*aria-expanded="false"/);
+  const listId = html.match(/class="factory-price-list" id="([^"]+)"/)?.[1];
+  assert.ok(listId, "the factory list must be addressable");
+  assert.match(
+    html,
+    new RegExp(`aria-controls="${listId}"`),
+    "the toggle must point at the list it expands",
+  );
+
+  // No JavaScript-only escape hatch: nothing in the served markup defers rows.
+  assert.doesNotMatch(html, /data-rows-pending|<template/);
+});
+
+test("F14: widening row coverage creates no factory or size URLs", async () => {
+  const groups = await loadCatalogSubcategories();
+  const entries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+    withFileTypes: true,
+  });
+  const directories = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) =>
+      `${entry.parentPath ?? entry.path}/${entry.name}`
+        .split("\\")
+        .join("/")
+        .split("/dist/")
+        .at(-1),
+    );
+
+  for (const { groupId, categories } of groups) {
+    const allowed = new Set(categories.map((sub) => sub.id));
+    const under = directories.filter((dir) => dir.startsWith(`${groupId}/`));
+    for (const dir of under) {
+      const segments = dir.split("/");
+      assert.equal(
+        segments.length,
+        2,
+        `${dir} is deeper than /group/subcategory/ — no per-factory or per-size tier may be generated`,
+      );
+      assert.ok(
+        allowed.has(segments[1]),
+        `${dir} is not a catalog subcategory`,
+      );
+    }
+    assert.equal(under.length, allowed.size);
+  }
+
+  const sitemap = await readDist("sitemap.xml");
+  const locs = (sitemap.match(/<loc>([^<]+)<\/loc>/g) ?? []).map((loc) =>
+    loc.replace(/<\/?loc>/g, ""),
+  );
+  assert.equal(locs.length, 68, "the sitemap must not grow");
+  for (const loc of locs) {
+    const depth = loc
+      .replace("https://fouladbonyan.com/", "")
+      .split("/")
+      .filter(Boolean).length;
+    assert.ok(depth <= 2, `${loc} is deeper than the two-tier product IA`);
+  }
+});
+
 test("F5: MegaMenu contains crawlable links for all product groups and subcategories", async () => {
   const homeHtml = await readDist("index.html");
 
@@ -866,3 +1077,126 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
 
 
 
+
+/*
+ * F18. The site's CSP is a `<meta>` tag in `index.html` that every generator
+ * clones, and it is the only copy — `public/_headers` sets no CSP. Two things
+ * used to break against it, silently and in opposite directions: Cloudflare
+ * Pages injects its Web Analytics beacon before `</body>` and `script-src`
+ * had no origin for it, and every prerendered `GlassSurface`/`LightPillar`
+ * shipped a `style` attribute that `style-src 'self'` refused to apply — which
+ * dropped the panes' radius, frost and, fatally, their `--filter-id`, so the
+ * refractive material never rendered in production at all.
+ */
+const EXPECTED_CSP =
+  "default-src 'self'; " +
+  "script-src 'self' https://static.cloudflareinsights.com; " +
+  "style-src 'self'; " +
+  "img-src 'self' data:; " +
+  "font-src 'self'; " +
+  "media-src 'self'; " +
+  "connect-src 'self'; " +
+  "object-src 'none'; " +
+  "base-uri 'self'; " +
+  "form-action 'none'";
+
+test("F18: every generated page carries the exact CSP, with the analytics beacon origin and nothing looser", async () => {
+  const entries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  const pages = entries
+    .filter((entry) => entry.endsWith("index.html"))
+    .map((entry) => entry.split("\\").join("/"));
+  assert.equal(pages.length, 68, `expected the full page set, got ${pages.length}`);
+
+  for (const page of pages) {
+    const html = await readDist(page);
+
+    const csp = html.match(
+      /<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]+)"/,
+    )?.[1];
+    assert.equal(csp, EXPECTED_CSP, `${page} must ship the site CSP verbatim`);
+
+    // The beacon loads from static.cloudflareinsights.com and reports to a
+    // relative /cdn-cgi/rum, which the Cloudflare edge answers on our own
+    // origin -- so connect-src stays 'self' and no other origin is allowed.
+    assert.doesNotMatch(csp, /\*/, `${page} CSP must name no wildcard origin`);
+    assert.doesNotMatch(
+      csp,
+      /'unsafe-inline'|'unsafe-eval'|'unsafe-hashes'/,
+      `${page} CSP must not relax script or style execution`,
+    );
+  }
+});
+
+test("F18: no prerendered element carries a style attribute the CSP would refuse", async () => {
+  const entries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  const pages = entries
+    .filter((entry) => entry.endsWith("index.html"))
+    .map((entry) => entry.split("\\").join("/"));
+
+  for (const page of pages) {
+    const html = await readDist(page);
+    const inlineStyles = html.match(/<[a-zA-Z][^>]*\sstyle="[^"]*"/g) ?? [];
+    assert.deepEqual(
+      inlineStyles,
+      [],
+      `${page} would emit ${inlineStyles.length} blocked inline style(s): ${inlineStyles.join(" | ")}`,
+    );
+  }
+});
+
+test("F18: the glass panes get their box and material from the stylesheet, not from a style attribute", async () => {
+  const cssName = (await readdir(new URL("../dist/assets", import.meta.url)))
+    .find((file) => file.endsWith(".css"));
+  const css = await readDist(`assets/${cssName}`);
+
+  // Every declaration the minifier left on a rule whose selector list names
+  // exactly this class. The minifier drops leading zeroes, so compare numbers
+  // rather than the literal text it emitted.
+  const declarationsFor = (className) => {
+    const found = [];
+    for (const [, selectors, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (selectors.split(",").some((one) => one.trim() === className)) {
+        found.push(...body.split(";"));
+      }
+    }
+    return new Map(
+      found
+        .map((declaration) => declaration.split(":"))
+        .filter((pair) => pair.length === 2)
+        .map(([property, value]) => [property.trim(), value.trim()]),
+    );
+  };
+
+  // GlassSurface reads the applied radius back out of the cascade to corner
+  // its displacement map, so a missing rule here silently squares the glass.
+  for (const [className, radius, frost, saturation] of [
+    [".fg-glass", 18, 0.03, 0.92],
+    [".fg-pill", 13, 0.02, 0.94],
+    [".fg-chip", 11, 0.02, 0.94],
+  ]) {
+    const declarations = declarationsFor(className);
+    assert.ok(
+      declarations.size > 0,
+      `${className} must have a rule carrying the pane's box and material`,
+    );
+    assert.equal(
+      declarations.get("border-radius"),
+      `${radius}px`,
+      `${className} radius must come from the stylesheet`,
+    );
+    assert.equal(
+      Number(declarations.get("--glass-frost")),
+      frost,
+      `${className} frost must come from the stylesheet`,
+    );
+    assert.equal(
+      Number(declarations.get("--glass-saturation")),
+      saturation,
+      `${className} saturation must come from the stylesheet`,
+    );
+  }
+});

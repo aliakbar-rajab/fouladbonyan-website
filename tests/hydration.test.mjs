@@ -22,7 +22,8 @@ const ROUTES = [
   "rebar", // category whose snapshot IS embedded
   "sheet", // category whose snapshot is NOT the menu's default group
   "beam",
-  "rebar/ribbed", // subcategory, menu default group
+  "rebar/ribbed", // subcategory, menu default group — 27 collapsed factory groups
+  "profile/box-profile", // largest collapsed set in the product catalog
   "wire/chicken-mesh", // subcategory, different catalog
   "contact",
   "about",

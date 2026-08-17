@@ -212,6 +212,34 @@
    each one its readability scrim, and describe how it answers a hover.
    -------------------------------------------------------------------------- */
 
+/*
+ * Two tunings of the same material, and the box each one sits in. These are
+ * rules rather than props because the footer is prerendered and served under
+ * `style-src 'self'`, which blocks style attributes outright — `GlassSurface`
+ * reads the radius back out of the cascade to corner its displacement map, so
+ * this is the single source of truth for both the pane and its refraction.
+ * Large panes refract hard enough to bend a light pillar visibly around their
+ * rim; small objects frost less and saturate a touch more so a 2.6rem pill
+ * does not read as a lens.
+ */
+.fg-glass {
+  border-radius: 18px;
+  --glass-frost: 0.03;
+  --glass-saturation: 0.92;
+}
+
+.fg-pill {
+  border-radius: 13px;
+  --glass-frost: 0.02;
+  --glass-saturation: 0.94;
+}
+
+.fg-chip {
+  border-radius: 11px;
+  --glass-frost: 0.02;
+  --glass-saturation: 0.94;
+}
+
 /* Large panes: ~10% centre darkening, fading to nothing at the refracting rim. */
 .fg-glass::after {
   background: radial-gradient(

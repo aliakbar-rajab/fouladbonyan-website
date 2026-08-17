@@ -22,6 +22,16 @@ import { localizeCatalogValue, toPersianDigits } from "./catalog-utils";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 
+/*
+ * How many factory cards stay on screen before the "show more" control. The
+ * overflow is collapsed with CSS rather than left unrendered: the prerendered
+ * HTML for a subcategory page is that subcategory's only unique content, and
+ * "Google Search does not interact with your page", so anything conditionally
+ * rendered behind this button would never be crawled. Keep every row in the
+ * DOM; hide the overflow visually.
+ */
+const INITIAL_FACTORY_COUNT = 6;
+
 export type PriceCatalogConfig = {
   groupId: ProductGroupId;
   productLabel: string;
@@ -151,6 +161,7 @@ export function PriceCatalog({
   }
   const factorySelectId = useId();
   const sizeSelectId = useId();
+  const factoryListId = useId().replaceAll(":", "");
   const tabsId = useId().replaceAll(":", "");
   const categoryTabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const [categoryId, setCategoryId] = useState(
@@ -188,11 +199,8 @@ export function PriceCatalog({
     [category, factoryFilter, sizeFilter],
   );
 
-  const visibleFactories = showAllFactories
-    ? filteredFactories
-    : filteredFactories.slice(0, 6);
-  const remainingFactories = Math.max(
-    filteredFactories.length - visibleFactories.length,
+  const collapsedFactories = Math.max(
+    filteredFactories.length - INITIAL_FACTORY_COUNT,
     0,
   );
   const activeFilterCount = Number(Boolean(factoryFilter)) + Number(Boolean(sizeFilter));
@@ -384,9 +392,16 @@ export function PriceCatalog({
               : "برای این فیلتر قیمتی پیدا نشد."}
           </p>
 
-          <div className="factory-price-list">
-            {visibleFactories.map((factory) => (
-              <section className="factory-price-card" key={factory.name}>
+          <div className="factory-price-list" id={factoryListId}>
+            {filteredFactories.map((factory, factoryIndex) => (
+              <section
+                className={
+                  !showAllFactories && factoryIndex >= INITIAL_FACTORY_COUNT
+                    ? "factory-price-card is-collapsed"
+                    : "factory-price-card"
+                }
+                key={factory.name}
+              >
                 <header>
                   <TaxSwitch
                     checked={taxIncluded}
@@ -518,24 +533,25 @@ export function PriceCatalog({
             ))}
           </div>
 
-          {remainingFactories > 0 ? (
+          {collapsedFactories > 0 ? (
             <button
               className="show-more-factories"
               type="button"
-              onClick={() => setShowAllFactories(true)}
+              aria-expanded={showAllFactories}
+              aria-controls={factoryListId}
+              onClick={() => setShowAllFactories((current) => !current)}
             >
-              نمایش {formatNumber(remainingFactories)}{" "}
-              {category.groupingLabel} دیگر
-              <span aria-hidden="true">↓</span>
-            </button>
-          ) : null}
-          {showAllFactories && filteredFactories.length > 6 ? (
-            <button
-              className="show-more-factories"
-              type="button"
-              onClick={() => setShowAllFactories(false)}
-            >
-              نمایش کمتر <span aria-hidden="true">↑</span>
+              {showAllFactories ? (
+                <>
+                  نمایش کمتر <span aria-hidden="true">↑</span>
+                </>
+              ) : (
+                <>
+                  نمایش {formatNumber(collapsedFactories)}{" "}
+                  {category.groupingLabel} دیگر
+                  <span aria-hidden="true">↓</span>
+                </>
+              )}
             </button>
           ) : null}
 

@@ -111,6 +111,86 @@ const config = {
   showWeightCalculator: true,
 };
 
+/*
+ * A category with more factory groups than the "show more" control keeps on
+ * screen. Nine groups, one row each, so the row count is unambiguous.
+ */
+const wideCategory = () => {
+  const names = Array.from({ length: 9 }, (_, index) => `کارخانه ${index + 1}`);
+  return {
+    ...category("wide", "پرتعداد", row(1, "up", 1)),
+    id: "wide",
+    filters: { sizes: ["16"], factories: names },
+    factories: names.map((name, index) => ({
+      name,
+      updatedAt: 1_700_000_000,
+      updatedDate: "۱۴۰۲/۰۸/۲۳",
+      rows: [{ ...row(index + 1, "up", 1), factory: name }],
+    })),
+  };
+};
+
+const renderWide = () =>
+  render(
+    React.createElement(PriceCatalog, {
+      priceData: { ...priceData, categories: [wideCategory()] },
+      config: {
+        ...config,
+        initialCategoryId: "wide",
+        categoryIcons: { wide: "۱" },
+      },
+      phoneHref: "tel:+982100000000",
+    }),
+  );
+
+test("F14: every row is in the DOM before anything is clicked", () => {
+  renderWide();
+
+  // All nine factory groups render, not the six that stay visible.
+  const cards = document.querySelectorAll(".factory-price-card");
+  assert.equal(cards.length, 9);
+  assert.equal(document.querySelectorAll("tbody tr.rebar-row-group").length, 9);
+
+  // The overflow is present but marked collapsed, and still carries its rows.
+  const collapsed = document.querySelectorAll(".factory-price-card.is-collapsed");
+  assert.equal(collapsed.length, 3);
+  for (const card of collapsed) {
+    assert.equal(card.querySelectorAll("tbody tr.rebar-row-group").length, 1);
+  }
+  for (const card of [...cards].slice(0, 6)) {
+    assert.equal(card.classList.contains("is-collapsed"), false);
+  }
+});
+
+test("F14: the show-more control toggles visibility, it does not create rows", async () => {
+  const user = userEvent.setup({ document });
+  renderWide();
+
+  const rowCount = () =>
+    document.querySelectorAll("tbody tr.rebar-row-group").length;
+  const collapsedCount = () =>
+    document.querySelectorAll(".factory-price-card.is-collapsed").length;
+
+  assert.equal(rowCount(), 9);
+  const toggle = screen.getByRole("button", { name: /کارخانه دیگر/ });
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(
+    toggle.getAttribute("aria-controls"),
+    document.querySelector(".factory-price-list").id,
+  );
+
+  await user.click(toggle);
+  // Same rows, now all visible.
+  assert.equal(rowCount(), 9);
+  assert.equal(collapsedCount(), 0);
+  const collapse = screen.getByRole("button", { name: /نمایش کمتر/ });
+  assert.equal(collapse.getAttribute("aria-expanded"), "true");
+
+  await user.click(collapse);
+  assert.equal(rowCount(), 9);
+  assert.equal(collapsedCount(), 3);
+});
+
 test("catalog tabs use roving focus and connected tabpanels", async () => {
   const user = userEvent.setup({ document });
   render(

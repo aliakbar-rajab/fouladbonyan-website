@@ -22,13 +22,13 @@ const infoPageLinks = [
 ] as const;
 
 /*
- * Two tunings of the same material. Large panes refract hard enough to bend a
+ * Two tunings of the same material — the refraction half. Large panes bend a
  * light pillar visibly around their rim; small objects use a shallower scale so
- * a 2.6rem pill does not read as a lens.
+ * a 2.6rem pill does not read as a lens. The pane's box and its frost/saturation
+ * are rules in `globals/footer.css`, not props: a style attribute would be
+ * blocked by the site's `style-src 'self'`.
  */
 const largeGlass = {
-  backgroundOpacity: 0.03,
-  saturation: 0.92,
   distortionScale: -48,
   redOffset: 0,
   greenOffset: 0.6,
@@ -38,8 +38,6 @@ const largeGlass = {
 } satisfies Partial<GlassSurfaceProps>;
 
 const smallGlass = {
-  backgroundOpacity: 0.02,
-  saturation: 0.94,
   distortionScale: -15,
   redOffset: 0,
   greenOffset: 0.2,
@@ -67,7 +65,6 @@ export function SiteFooter({
         <div className="footer-primary">
           <GlassSurface
             className="fg-glass fg-glass--brand"
-            borderRadius={18}
             {...largeGlass}
           >
             <section className="footer-card footer-card--brand">
@@ -94,7 +91,6 @@ export function SiteFooter({
 
           <GlassSurface
             className="fg-glass fg-glass--nav"
-            borderRadius={18}
             {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-quick">
@@ -113,7 +109,6 @@ export function SiteFooter({
 
           <GlassSurface
             className="fg-glass fg-glass--nav"
-            borderRadius={18}
             {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-info">
@@ -132,7 +127,6 @@ export function SiteFooter({
 
           <GlassSurface
             className="fg-glass fg-glass--cta"
-            borderRadius={18}
             {...largeGlass}
           >
             <section className="footer-card footer-card--cta">
@@ -168,7 +162,7 @@ export function SiteFooter({
           <ul className="footer-lines-list">
             {siteConfig.contact.phones.map((phone) => (
               <li key={phone.href}>
-                <GlassSurface className="fg-pill" borderRadius={13} {...smallGlass}>
+                <GlassSurface className="fg-pill" {...smallGlass}>
                   <a className="fg-pill-link" href={phone.href} dir="ltr">
                     {phone.label}
                   </a>
@@ -179,7 +173,6 @@ export function SiteFooter({
               <li className="footer-line-item--named" key={contact.href}>
                 <GlassSurface
                   className="fg-pill fg-pill--named"
-                  borderRadius={13}
                   {...smallGlass}
                 >
                   <a className="fg-pill-link" href={contact.href}>
@@ -197,8 +190,6 @@ export function SiteFooter({
             {siteConfig.contact.officialEmail ? (
               <GlassSurface
                 className="fg-chip fg-chip--link"
-                width="auto"
-                borderRadius={11}
                 {...smallGlass}
               >
                 <a
@@ -213,8 +204,6 @@ export function SiteFooter({
             ) : null}
             <GlassSurface
               className="fg-chip"
-              width="auto"
-              borderRadius={11}
               {...smallGlass}
             >
               <address className="fg-chip-content">

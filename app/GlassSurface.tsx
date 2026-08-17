@@ -3,7 +3,6 @@ import {
   useId,
   useRef,
   useSyncExternalStore,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 
@@ -24,16 +23,21 @@ const getSvgServerSnapshot = () => false;
  *
  * The map depends on the element's pixel size, so it is regenerated from a
  * ResizeObserver rather than authored once in CSS.
+ *
+ * The pane carries no `style` attribute. Every page here is prerendered and
+ * served under `style-src 'self'`, which blocks inline styles outright — the
+ * whole material used to arrive dead in production for exactly that reason.
+ * So the pane's box (size, radius) and its material tuning (`--glass-frost`,
+ * `--glass-saturation`) are the stylesheet's job, keyed off the caller's
+ * class; the rounded rect below reads the applied radius back out of the
+ * cascade so the two can never drift. Only `--filter-id` is genuinely
+ * per-instance, and it is set through CSSOM, which CSP does not police.
  */
 
 type ChannelSelector = "R" | "G" | "B" | "A";
 
 export type GlassSurfaceProps = {
   children?: ReactNode;
-  /** CSS width. `auto` lets the pane shrink-wrap its content (chips, pills in a flex row). */
-  width?: number | string;
-  height?: number | string;
-  borderRadius?: number;
   /** Width of the refracting rim, as a fraction of the pane's shorter side. */
   borderWidth?: number;
   brightness?: number;
@@ -42,8 +46,6 @@ export type GlassSurfaceProps = {
   blur?: number;
   /** Gaussian blur applied to the refracted result. 0 keeps the glass optically clear. */
   displace?: number;
-  backgroundOpacity?: number;
-  saturation?: number;
   distortionScale?: number;
   redOffset?: number;
   greenOffset?: number;
@@ -52,7 +54,6 @@ export type GlassSurfaceProps = {
   yChannel?: ChannelSelector;
   mixBlendMode?: string;
   className?: string;
-  style?: CSSProperties;
 };
 
 /*
@@ -88,16 +89,11 @@ function supportsSVGFilters(): boolean {
 
 export default function GlassSurface({
   children,
-  width = "100%",
-  height = "auto",
-  borderRadius = 16,
   borderWidth = 0.07,
   brightness = 50,
   opacity = 0.93,
   blur = 6,
   displace = 0,
-  backgroundOpacity = 0.04,
-  saturation = 0.92,
   distortionScale = -48,
   redOffset = 0,
   greenOffset = 0.6,
@@ -106,7 +102,6 @@ export default function GlassSurface({
   yChannel = "G",
   mixBlendMode = "difference",
   className = "",
-  style = {},
 }: GlassSurfaceProps) {
   const uniqueId = useId().replace(/:/g, "-");
   const filterId = `glass-filter-${uniqueId}`;
@@ -132,11 +127,22 @@ export default function GlassSurface({
     const container = containerRef.current;
     if (!container) return;
 
+    /* CSSOM writes are exempt from `style-src`, so this is the one channel a
+       per-instance value can reach the pane through. Nothing paints with it
+       until `.glass-surface--svg` lands, which is client-only anyway. */
+    container.style.setProperty("--filter-id", `url(#${filterId})`);
+
     const apply = () => {
       const rect = container.getBoundingClientRect();
       const actualWidth = Math.max(Math.round(rect.width || 400), 10);
       const actualHeight = Math.max(Math.round(rect.height || 200), 10);
       const edgeSize = Math.min(actualWidth, actualHeight) * (borderWidth * 0.5);
+      /* Whatever radius the stylesheet gave this pane — read per pass so a
+         responsive rule cannot leave the map cornered differently. */
+      const borderRadius =
+        Number.parseFloat(
+          getComputedStyle(container).borderTopLeftRadius || "0",
+        ) || 0;
 
       const svgContent = `
         <svg viewBox="0 0 ${actualWidth} ${actualHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -196,9 +202,6 @@ export default function GlassSurface({
       observer.disconnect();
     };
   }, [
-    width,
-    height,
-    borderRadius,
     borderWidth,
     brightness,
     opacity,
@@ -211,25 +214,15 @@ export default function GlassSurface({
     xChannel,
     yChannel,
     mixBlendMode,
+    filterId,
     redGradId,
     blueGradId,
   ]);
-
-  const containerStyle = {
-    ...style,
-    width: typeof width === "number" ? `${width}px` : width,
-    height: typeof height === "number" ? `${height}px` : height,
-    borderRadius: `${borderRadius}px`,
-    "--glass-frost": backgroundOpacity,
-    "--glass-saturation": saturation,
-    "--filter-id": `url(#${filterId})`,
-  } as CSSProperties;
 
   return (
     <div
       ref={containerRef}
       className={`glass-surface ${svgSupported ? "glass-surface--svg" : "glass-surface--fallback"} ${className}`.trim()}
-      style={containerStyle}
     >
       <svg className="glass-surface__filter" xmlns="http://www.w3.org/2000/svg">
         <defs>
