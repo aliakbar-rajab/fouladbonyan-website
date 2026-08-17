@@ -17,7 +17,8 @@
   grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
 }
 
-.rebar-kind-tabs button {
+.rebar-kind-tabs button,
+.rebar-kind-tabs a {
   min-height: 3.75rem;
   display: flex;
   align-items: center;
@@ -29,27 +30,32 @@
   background: var(--white);
   color: #4b4d5b;
   font-weight: 900;
+  text-decoration: none;
   cursor: pointer;
   box-shadow: 0 6px 18px rgb(24 26 36 / 4%);
 }
 
-.rebar-kind-tabs button > span {
+.rebar-kind-tabs button > span,
+.rebar-kind-tabs a > span {
   color: var(--brand-yellow);
   font-family: Arial, sans-serif;
   font-size: 1.15rem;
   font-weight: 900;
 }
 
-.rebar-kind-tabs button:hover {
+.rebar-kind-tabs button:hover,
+.rebar-kind-tabs a:hover {
   border-color: #aaaab4;
 }
 
-.rebar-kind-tabs button[aria-selected="true"] {
+.rebar-kind-tabs button[aria-selected="true"],
+.rebar-kind-tabs a[aria-selected="true"] {
   border-color: var(--brand-dark);
   background: var(--brand-dark);
   color: var(--white);
   box-shadow: 0 8px 22px rgb(28 28 32 / 16%);
 }
+
 
 .rebar-layout {
   display: grid;

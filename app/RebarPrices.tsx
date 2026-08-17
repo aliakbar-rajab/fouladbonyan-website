@@ -17,17 +17,20 @@ import type {
   CatalogRow,
   CatalogViewRequest,
 } from "./catalog-types";
+import type { ProductGroupId } from "./category-meta";
 import { localizeCatalogValue, toPersianDigits } from "./catalog-utils";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 
 export type PriceCatalogConfig = {
+  groupId: ProductGroupId;
   productLabel: string;
   initialCategoryId: string;
   categoryIcons: Record<string, string>;
   tabClassName?: string;
   showWeightCalculator?: boolean;
 };
+
 
 // Percent change is passed maximumFractionDigits: 2, matching the precision the
 // source publishes. At 0 any move under half a percent renders as "۰٪" next to
@@ -149,7 +152,7 @@ export function PriceCatalog({
   const factorySelectId = useId();
   const sizeSelectId = useId();
   const tabsId = useId().replaceAll(":", "");
-  const categoryTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const categoryTabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const [categoryId, setCategoryId] = useState(
     requestedView?.categoryId ?? initialCategory.id,
   );
@@ -221,7 +224,7 @@ export function PriceCatalog({
   };
 
   const moveCategoryTabFocus = (
-    event: ReactKeyboardEvent<HTMLButtonElement>,
+    event: ReactKeyboardEvent<HTMLElement>,
     currentIndex: number,
   ) => {
     let targetIndex: number;
@@ -269,8 +272,8 @@ export function PriceCatalog({
         aria-label={`نوع ${config.productLabel}`}
       >
         {priceData.categories.map((item, index) => (
-          <button
-            type="button"
+          <a
+            href={`/${config.groupId}/${item.id}/`}
             role="tab"
             id={`${tabsId}-tab-${item.id}`}
             aria-selected={item.id === category.id}
@@ -280,14 +283,19 @@ export function PriceCatalog({
             ref={(node) => {
               categoryTabRefs.current[index] = node;
             }}
-            onClick={() => changeCategory(item.id)}
+            onClick={(event) => {
+              event.preventDefault();
+              changeCategory(item.id);
+            }}
             onKeyDown={(event) => moveCategoryTabFocus(event, index)}
           >
             <span aria-hidden="true">{config.categoryIcons[item.id] ?? "◆"}</span>
-            قیمت {item.label}
-          </button>
+            {`قیمت ${item.label}`}
+          </a>
+
         ))}
       </div>
+
 
       <div
         role="tabpanel"
@@ -693,6 +701,7 @@ export function PriceCatalog({
 }
 
 const rebarConfig: PriceCatalogConfig = {
+  groupId: "rebar",
   productLabel: "میلگرد",
   initialCategoryId: "ribbed",
   categoryIcons: {
@@ -703,6 +712,7 @@ const rebarConfig: PriceCatalogConfig = {
   },
   showWeightCalculator: true,
 };
+
 
 export default function RebarPrices({
   phoneHref,

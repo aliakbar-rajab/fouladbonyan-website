@@ -1,5 +1,10 @@
 import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
-import { loadProductPriceCatalog } from "./product-price-data";
+import {
+  loadProductPriceCatalog,
+  loadProductPricePayload,
+  type ProductPriceCatalog,
+} from "./product-price-data";
+
 import {
   isProductCatalogId,
   productGroups,
@@ -42,3 +47,30 @@ export async function loadGroupCatalog(
     categories,
   };
 }
+
+loadGroupCatalog.getCached = (
+  groupId?: ProductGroupId,
+): GroupCatalog | undefined => {
+  if (!groupId) return undefined;
+  if (isProductCatalogId(groupId)) {
+    const payload = loadProductPricePayload.getCached();
+    if (!payload) return undefined;
+    const catalog = payload.catalogs.find(
+      (item: ProductPriceCatalog) => item.id === groupId,
+    );
+    if (!catalog) return undefined;
+    return catalog;
+
+  }
+  const snapshot = ownSnapshots[groupId as keyof typeof ownSnapshots];
+  if (!snapshot) return undefined;
+  const data = snapshot.load.getCached?.();
+  if (!data) return undefined;
+  const group = productGroups.find((item) => item.id === groupId);
+  return {
+    label: group?.label ?? groupId,
+    initialCategoryId: snapshot.initialCategoryId,
+    categories: data.categories,
+  };
+};
+

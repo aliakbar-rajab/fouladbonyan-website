@@ -6,16 +6,23 @@ import { getHeroImageSources } from "./image-utils";
 const heroSlides = productGroups.slice(0, 3);
 const HERO_SLIDE_INTERVAL_MS = 1_700;
 
+export type SubcategoryHeroInfo = {
+  id: string;
+  label: string;
+};
+
 type HeroCarouselProps = {
   reduceMotion: boolean;
   onGoToPrices: () => void;
   categoryGroup?: ProductGroup | null;
+  subcategory?: SubcategoryHeroInfo | null;
 };
 
 export function HeroCarousel({
   reduceMotion,
   onGoToPrices,
   categoryGroup,
+  subcategory,
 }: HeroCarouselProps) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
@@ -33,11 +40,28 @@ export function HeroCarousel({
   if (categoryGroup) {
     const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
     const heroSources = getHeroImageSources(heroImg);
+    const displayLabel = subcategory ? subcategory.label : categoryGroup.label;
+    const displayH1 = subcategory ? `قیمت روز ${subcategory.label}` : categoryGroup.h1;
+    const displayIntro = subcategory
+      ? `استعلام قیمت روز ${subcategory.label} از کارخانه‌های معتبر کشور. برای دریافت پیش‌فاکتور، استعلام موجودی و مشاوره تخصصی خرید ${subcategory.label} با واحد فروش بنیان فولاد داریا تماس بگیرید.`
+      : categoryGroup.intro;
+
+    const breadcrumbItems = subcategory
+      ? [
+          { label: "صفحه اصلی", href: "/" },
+          { label: categoryGroup.label, href: `/${categoryGroup.id}/` },
+          { label: subcategory.label },
+        ]
+      : [
+          { label: "صفحه اصلی", href: "/" },
+          { label: categoryGroup.label },
+        ];
+
     return (
       <div className="hero-frame hero-frame-category">
         <section
           className="hero hero-category"
-          aria-label={`معرفی و قیمت روز ${categoryGroup.label}`}
+          aria-label={`معرفی و قیمت روز ${displayLabel}`}
         >
           <picture className="hero-image is-active">
             <source
@@ -54,7 +78,7 @@ export function HeroCarousel({
               src={heroSources.fallbackSrc}
               srcSet={heroSources.jpgSrcSet}
               sizes={heroSources.sizes}
-              alt={categoryGroup.label}
+              alt={displayLabel}
               width={heroSources.width}
               height={heroSources.height}
               decoding="async"
@@ -64,37 +88,39 @@ export function HeroCarousel({
           </picture>
           <div className="hero-overlay" />
           <div className="shell hero-content">
-            <Breadcrumb
-              items={[
-                { label: "صفحه اصلی", href: "/" },
-                { label: categoryGroup.label },
-              ]}
-            />
+            <Breadcrumb items={breadcrumbItems} />
             <p className="hero-kicker">
               تأمین و استعلام مقاطع فولادی — بنیان فولاد داریا
             </p>
             <h1>
-              <span>{categoryGroup.h1}</span>
+              <span>{displayH1}</span>
             </h1>
-            <p className="hero-category-intro">{categoryGroup.intro}</p>
+            <p className="hero-category-intro">{displayIntro}</p>
             <div className="hero-actions">
               <a href="/quote-process/#quote-form">
-                درخواست پیش‌فاکتور {categoryGroup.label}
+                درخواست پیش‌فاکتور {displayLabel}
               </a>
               <button
                 className="hero-price-jump"
                 type="button"
                 onClick={onGoToPrices}
               >
-                مشاهده جدول قیمت {categoryGroup.label}
+                مشاهده جدول قیمت {displayLabel}
               </button>
-              <a href="#products">سایر گروه‌های محصول</a>
+              {subcategory ? (
+                <a href={`/${categoryGroup.id}/`}>
+                  سایر انواع {categoryGroup.label}
+                </a>
+              ) : (
+                <a href="#products">سایر گروه‌های محصول</a>
+              )}
             </div>
           </div>
         </section>
       </div>
     );
   }
+
 
   const slide = heroSlides[activeSlide];
 

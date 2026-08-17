@@ -54,8 +54,12 @@ function scrollToPrices(reduceMotion: boolean) {
 
 export default function App({
   initialCategory,
+  initialSubcategory,
+  initialSubcategoryLabel,
 }: {
   initialCategory?: ProductGroupId;
+  initialSubcategory?: string;
+  initialSubcategoryLabel?: string;
 } = {}) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const initialCategorySlug =
@@ -65,6 +69,17 @@ export default function App({
           | ProductGroupId
           | undefined)
       : undefined);
+  const initialSubcategorySlug =
+    initialSubcategory ??
+    (typeof document !== "undefined"
+      ? document.getElementById("root")?.dataset.initialSubcategory
+      : undefined);
+  const initialSubcategoryLabelVal =
+    initialSubcategoryLabel ??
+    (typeof document !== "undefined"
+      ? document.getElementById("root")?.dataset.initialSubcategoryLabel
+      : undefined);
+
   const isCategoryRoute = Boolean(
     initialCategorySlug &&
       productGroups.some((group) => group.id === initialCategorySlug),
@@ -79,9 +94,12 @@ export default function App({
   const [searchMessage, setSearchMessage] = useState("");
   const [searchGroups, setSearchGroups] = useState<ProductGroup[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>({
+  const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>(() => ({
     requestId: 0,
-  });
+    categoryId:
+      initialSubcategorySlug ??
+      (initialCategorySlug ? initialCategoryIdOf(initialCategorySlug) : undefined),
+  }));
 
   const isDirectCallDevice = useMediaQuery(
     "(max-width: 900px) and (hover: none) and (pointer: coarse)",
@@ -96,6 +114,14 @@ export default function App({
   const categoryGroup = isCategoryRoute && initialCategorySlug
     ? getCategoryById(initialCategorySlug) ?? null
     : null;
+
+  const subcategoryInfo = initialSubcategorySlug
+    ? {
+        id: initialSubcategorySlug,
+        label: initialSubcategoryLabelVal || initialSubcategorySlug,
+      }
+    : null;
+
 
   useEffect(() => {
     if (!isCategoryRoute || didAutoScrollCategoryRoute.current) return;
@@ -288,6 +314,7 @@ export default function App({
           reduceMotion={reduceMotion}
           onGoToPrices={() => scrollToPrices(reduceMotion)}
           categoryGroup={categoryGroup}
+          subcategory={subcategoryInfo}
         />
 
         <CategoryGrid onSelectGroup={navigateToCatalog} />
@@ -297,18 +324,29 @@ export default function App({
         <section className="prices section" id="prices">
           <div className="shell">
             <SectionTitle
-              eyebrow={isCategoryRoute ? "جدول قیمت و مشخصات" : "قیمت روز بازار"}
+              eyebrow={
+                subcategoryInfo
+                  ? `جدول قیمت ${subcategoryInfo.label}`
+                  : isCategoryRoute
+                    ? "جدول قیمت و مشخصات"
+                    : "قیمت روز بازار"
+              }
               title={
-                isCategoryRoute
-                  ? `قیمت روز ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"}`
-                  : "قیمت روز آهن‌آلات و مقاطع فولادی"
+                subcategoryInfo
+                  ? `قیمت روز ${subcategoryInfo.label}`
+                  : isCategoryRoute
+                    ? `قیمت روز ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"}`
+                    : "قیمت روز آهن‌آلات و مقاطع فولادی"
               }
               description={
-                isCategoryRoute
-                  ? `قیمت روز و مشخصات فنی انواع ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
-                  : "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید."
+                subcategoryInfo
+                  ? `قیمت روز و مشخصات فنی ${subcategoryInfo.label} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
+                  : isCategoryRoute
+                    ? `قیمت روز و مشخصات فنی انواع ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
+                    : "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید."
               }
             />
+
 
             <p className="search-status" role="status" aria-live="polite">
               {searchMessage}

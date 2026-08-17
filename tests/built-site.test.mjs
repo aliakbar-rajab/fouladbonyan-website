@@ -409,4 +409,192 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
   );
 });
 
+test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs, SSG prerendered rows, and sitemap entries", async () => {
+  const readJson = (path) =>
+    readFile(new URL(`../app/data/${path}`, import.meta.url), "utf8").then(
+      JSON.parse,
+    );
+  const [rebar, beam, products] = await Promise.all([
+    readJson("rebar-prices.json"),
+    readJson("beam-prices.json"),
+    readJson("product-prices.json"),
+  ]);
+
+  const subcategoryList = [];
+  for (const sub of rebar.categories) {
+    subcategoryList.push({
+      groupId: "rebar",
+      groupLabel: "میلگرد",
+      id: sub.id,
+      label: sub.label,
+    });
+  }
+  for (const sub of beam.categories) {
+    subcategoryList.push({
+      groupId: "beam",
+      groupLabel: "تیرآهن",
+      id: sub.id,
+      label: sub.label,
+    });
+  }
+  for (const cat of products.catalogs) {
+    const group = productGroups.find((g) => g.id === cat.id);
+    for (const sub of cat.categories) {
+      subcategoryList.push({
+        groupId: cat.id,
+        groupLabel: group?.label ?? cat.id,
+        id: sub.id,
+        label: sub.label,
+      });
+    }
+  }
+
+  assert.equal(subcategoryList.length, 46, "Expected exactly 46 product subcategories");
+
+  const titles = new Set();
+  const h1s = new Set();
+  const canonicals = new Set();
+  const sitemap = await readDist("sitemap.xml");
+
+  for (const sub of subcategoryList) {
+    const pagePath = `${sub.groupId}/${sub.id}/index.html`;
+    const html = await readDist(pagePath);
+    const expectedCanonical = `https://fouladbonyan.com/${sub.groupId}/${sub.id}/`;
+
+    // Title
+    const titleMatch = html.match(/<title>([^<]+)<\/title>/)?.[1];
+    assert.ok(titleMatch, `${pagePath} must have a title`);
+    assert.match(titleMatch, new RegExp(`قیمت ${sub.label}`));
+    titles.add(titleMatch);
+
+    // Canonical
+    assert.match(
+      html,
+      new RegExp(`<link rel="canonical" href="${expectedCanonical}" />`),
+      `${pagePath} must have self-referential canonical`,
+    );
+    canonicals.add(expectedCanonical);
+
+    // Initial dataset attributes
+    assert.match(
+      html,
+      new RegExp(`data-initial-category="${sub.groupId}"`),
+      `${pagePath} must set data-initial-category`,
+    );
+    assert.match(
+      html,
+      new RegExp(`data-initial-subcategory="${sub.id}"`),
+      `${pagePath} must set data-initial-subcategory`,
+    );
+
+    // H1
+    const h1Match = html.match(/<h1><span>(قیمت روز [^<]+)<\/span><\/h1>/)?.[1];
+    assert.ok(h1Match, `${pagePath} must have subcategory H1`);
+    assert.match(h1Match, new RegExp(sub.label));
+    h1s.add(h1Match);
+
+    // Visual Breadcrumb (3 levels)
+    assert.match(
+      html,
+      /class="breadcrumb-nav"/,
+      `${pagePath} must contain visual breadcrumb navigation`,
+    );
+    assert.match(
+      html,
+      new RegExp(`href="/${sub.groupId}/"`),
+      `${pagePath} visual breadcrumb must link upward to category`,
+    );
+
+    // JSON-LD BreadcrumbList (3 items)
+    const breadcrumbLdMatch = html.match(
+      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
+    )?.[1];
+    assert.ok(breadcrumbLdMatch, `${pagePath} must have BreadcrumbList JSON-LD`);
+    const breadcrumbLd = JSON.parse(breadcrumbLdMatch);
+    assert.equal(
+      breadcrumbLd.itemListElement.length,
+      3,
+      `${pagePath} breadcrumb must have 3 items`,
+    );
+    assert.equal(breadcrumbLd.itemListElement[0]?.name, "صفحه اصلی");
+    assert.equal(breadcrumbLd.itemListElement[1]?.name, sub.groupLabel);
+    assert.equal(
+      breadcrumbLd.itemListElement[1]?.item,
+      `https://fouladbonyan.com/${sub.groupId}/`,
+    );
+    assert.equal(breadcrumbLd.itemListElement[2]?.name, sub.label);
+    assert.equal(breadcrumbLd.itemListElement[2]?.item, expectedCanonical);
+
+    // Meaningful prerendered price / table content
+    assert.match(
+      html,
+      /تومان|تماس بگیرید/,
+      `${pagePath} must have prerendered table / price content before JS`,
+    );
+
+    // initial-page-data embedded
+    assert.match(
+      html,
+      /<script id="initial-page-data" type="application\/json">/,
+      `${pagePath} must embed initial-page-data for fast hydration`,
+    );
+
+    // Sitemap entry
+    assert.match(
+      sitemap,
+      new RegExp(`<loc>${expectedCanonical}</loc>`),
+      `${pagePath} must be present in sitemap.xml`,
+    );
+  }
+
+  // Check pairwise uniqueness
+  assert.equal(titles.size, 46, "All 46 subcategory titles must be distinct");
+  assert.equal(h1s.size, 46, "All 46 subcategory H1s must be distinct");
+  assert.equal(canonicals.size, 46, "All 46 subcategory canonicals must be distinct");
+
+  // Sitemap total count: 1 home + 8 category + 46 subcategory + 1 contact + 6 info = 62
+  const allLocs = sitemap.match(/<loc>[^<]+<\/loc>/g) ?? [];
+  assert.equal(allLocs.length, 62, "Sitemap must contain exactly 62 URLs");
+
+  // Verify NO factory, size, or filter URLs exist in dist
+  const distEntries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  const htmlFiles = distEntries.filter(
+    (f) => f.endsWith("index.html") || f.endsWith(".html"),
+  );
+  // Expected html files: index.html (1) + 404.html (1) + 8 categories + 46 subcategories + contact (1) + 6 info = 63 html files
+  assert.equal(
+    htmlFiles.length,
+    63,
+    `Expected exactly 63 HTML files across dist, found ${htmlFiles.length}`,
+  );
+});
+
+test("F5: MegaMenu contains crawlable links for all product groups and subcategories", async () => {
+  const homeHtml = await readDist("index.html");
+
+  // All 8 category links exist in mega menu
+  for (const group of productGroups) {
+    assert.match(
+      homeHtml,
+      new RegExp(`<a href="/${group.id}/"[^>]*>قیمت ${group.label}</a>`),
+      `MegaMenu must contain crawlable anchor link for category ${group.id}`,
+    );
+  }
+
+  // Check subcategory links in prerendered HTML
+  assert.match(
+    homeHtml,
+    /<a href="\/rebar\/ribbed\/"[^>]*>قیمت میلگرد آجدار<\/a>/,
+    "MegaMenu must contain crawlable link for rebar/ribbed",
+  );
+  assert.match(
+    homeHtml,
+    /<a href="\/rebar\/simple\/"[^>]*>قیمت میلگرد ساده<\/a>/,
+    "MegaMenu must contain crawlable link for rebar/simple",
+  );
+});
+
+
 

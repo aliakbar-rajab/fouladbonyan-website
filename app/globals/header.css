@@ -359,7 +359,8 @@
   font-size: 0.9rem;
 }
 
-.rebar-mega-menu button {
+.rebar-mega-menu button,
+.rebar-mega-menu a {
   width: 100%;
   min-height: 2.5rem;
   position: relative;
@@ -372,12 +373,15 @@
   color: #4d4e57;
   font-size: 0.78rem;
   text-align: start;
+  text-decoration: none;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .rebar-mega-menu button:hover,
-.rebar-mega-menu button:focus-visible {
+.rebar-mega-menu button:focus-visible,
+.rebar-mega-menu a:hover,
+.rebar-mega-menu a:focus-visible {
   background: rgba(246, 181, 0, 0.14);
   color: #1f2025;
 }
@@ -386,7 +390,8 @@
   grid-area: types;
 }
 
-.mega-rebar-types button {
+.mega-rebar-types button,
+.mega-rebar-types a {
   color: #30313a;
   font-weight: 900;
 }
@@ -421,10 +426,13 @@
   gap: 0.12rem;
 }
 
-.mega-other-products button[aria-pressed="true"] {
+.mega-other-products button[aria-pressed="true"],
+.mega-other-products a[aria-pressed="true"],
+.mega-other-products a.is-active {
   box-shadow: inset 3px 0 var(--brand-yellow);
   background: #fff3cf;
   color: #292a30;
   font-weight: 900;
 }
+
 

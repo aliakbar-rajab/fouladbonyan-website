@@ -56,6 +56,7 @@ export default function ProductPrices({
     categories: catalog.categories,
   };
   const config: PriceCatalogConfig = {
+    groupId: catalogId,
     productLabel: catalog.label,
     initialCategoryId: catalog.initialCategoryId,
     categoryIcons: Object.fromEntries(
@@ -66,6 +67,7 @@ export default function ProductPrices({
     ),
     tabClassName: "product-kind-tabs",
   };
+
 
   return (
     <PriceCatalog

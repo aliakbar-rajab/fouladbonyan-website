@@ -38,15 +38,20 @@ function MegaMenuSections({
       <section className="mega-rebar-types">
         <p className="mega-group-label">انواع {catalog.label}</p>
         {catalog.categories.map((category) => (
-          <button
-            type="button"
+          <a
+            href={`/${groupId}/${category.id}/`}
             key={category.id}
-            onClick={() => onSelect({ categoryId: category.id })}
+            onClick={(event) => {
+              event.preventDefault();
+              onSelect({ categoryId: category.id });
+            }}
           >
-            قیمت {category.label}
-          </button>
+            {`قیمت ${category.label}`}
+          </a>
+
         ))}
       </section>
+
 
       <section className="mega-rebar-factories">
         <p className="mega-group-label">
@@ -163,34 +168,35 @@ export function MegaMenu({
           >
             قیمت روز محصولات <span aria-hidden="true">⌄</span>
           </button>
-          {productsOpen ? (
-            <div
-              id="product-navigation"
-              className="product-dropdown rebar-mega-menu"
-            >
-              <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
+          <div
+            id="product-navigation"
+            className="product-dropdown rebar-mega-menu"
+            hidden={!productsOpen}
+          >
+            <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
 
-              <section className="mega-other-products">
-                <p className="mega-group-label">گروه محصولات</p>
-                <div>
-                  {productGroups.map((group) => (
-                    <a
-                      href={`/${group.id}/`}
-                      key={group.id}
-                      className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
-                      aria-pressed={megaProduct === group.id}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        setMegaProduct(group.id);
-                      }}
-                    >
-                      قیمت {group.label}
-                    </a>
-                  ))}
-                </div>
-              </section>
-            </div>
-          ) : null}
+            <section className="mega-other-products">
+              <p className="mega-group-label">گروه محصولات</p>
+              <div>
+                {productGroups.map((group) => (
+                  <a
+                    href={`/${group.id}/`}
+                    key={group.id}
+                    className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
+                    aria-pressed={megaProduct === group.id}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setMegaProduct(group.id);
+                    }}
+                  >
+                    {`قیمت ${group.label}`}
+                  </a>
+
+                ))}
+              </div>
+            </section>
+          </div>
+
         </div>
         <a href="#prices" onClick={onMobileClose}>
           راهنمای استعلام

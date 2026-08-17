@@ -5,6 +5,7 @@ import { PriceCatalog, type PriceCatalogConfig } from "./RebarPrices";
 import type { CatalogViewRequest } from "./catalog-types";
 
 const beamConfig: PriceCatalogConfig = {
+  groupId: "beam",
   productLabel: "تیرآهن",
   initialCategoryId: "beam",
   categoryIcons: {
@@ -13,6 +14,7 @@ const beamConfig: PriceCatalogConfig = {
   },
   tabClassName: "beam-kind-tabs",
 };
+
 
 export default function BeamPrices({
   phoneHref,

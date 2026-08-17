@@ -200,7 +200,15 @@ export function getInitialCategory(fallback?: ProductGroupId): ProductGroupId {
   return match ? match.id : (fallback ?? productGroups[0].id);
 }
 
+export function getInitialSubcategory(fallback?: string): string | undefined {
+  if (typeof document === "undefined") {
+    return fallback;
+  }
+  return document.getElementById("root")?.dataset.initialSubcategory || fallback;
+}
+
 export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
 }
+
 

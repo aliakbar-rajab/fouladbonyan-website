@@ -45,12 +45,16 @@ const settle = () =>
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
-const addRoot = (initialCategory) => {
+const addRoot = (initialCategory, initialSubcategory, initialSubcategoryLabel) => {
   const root = document.createElement("div");
   root.id = "root";
   if (initialCategory) root.dataset.initialCategory = initialCategory;
+  if (initialSubcategory) root.dataset.initialSubcategory = initialSubcategory;
+  if (initialSubcategoryLabel)
+    root.dataset.initialSubcategoryLabel = initialSubcategoryLabel;
   document.body.append(root);
 };
+
 
 afterEach(() => {
   cleanup();
@@ -170,4 +174,40 @@ test("all category routes produce distinct H1 headings", async () => {
   assert.ok(!h1s.has(homeH1), "Homepage H1 must be distinct from category H1s");
   assert.equal(h1s.size, 8, "Expected 8 unique category H1s");
 });
+
+test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and subcategory H1", async () => {
+  addRoot("rebar", "simple", "میلگرد ساده");
+  render(React.createElement(App));
+  await settle();
+
+  // Verify subcategory tab is active
+  assert.equal(
+    screen.getByRole("tab", { name: /میلگرد ساده/ }).getAttribute("aria-selected"),
+    "true",
+  );
+  // Verify subcategory H1
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "قیمت روز میلگرد ساده",
+  );
+  // Verify 3-level breadcrumb
+  const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
+  assert.ok(breadcrumb);
+  const links = breadcrumb.querySelectorAll("a");
+  assert.equal(links.length, 2);
+  assert.equal(links[0].getAttribute("href"), "/");
+  assert.equal(links[0].textContent, "صفحه اصلی");
+  assert.equal(links[1].getAttribute("href"), "/rebar/");
+  assert.equal(links[1].textContent, "میلگرد");
+
+  await waitFor(() => {
+    assert.deepEqual(scrollCalls, [
+      {
+        id: "prices",
+        options: { behavior: "smooth", block: "start" },
+      },
+    ]);
+  });
+});
+
 
