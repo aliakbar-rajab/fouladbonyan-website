@@ -80,23 +80,24 @@ export function InnerPageLayout({
             <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
             <span className="sr-only">فهرست اصلی</span>
           </button>
-        </div>
-        <div className="nav-wrap">
-          <nav
-            className="shell primary-nav"
-            id="primary-navigation"
-            aria-label="فهرست اصلی"
-            hidden={isMobile && !mobileNavOpen}
-          >
-            <a href="/">صفحه اصلی</a>
-            <a href="/#products">محصولات</a>
-            <a href="/#prices">قیمت‌های اطلاع‌رسانی</a>
-            <a href="/about/">درباره ما</a>
-            <a href="/contact/">تماس با ما</a>
-            <a className="nav-quote" href="/quote-process/#quote-form">
-              درخواست پیش‌فاکتور
-            </a>
-          </nav>
+
+          <div className="nav-wrap">
+            <nav
+              className="primary-nav"
+              id="primary-navigation"
+              aria-label="فهرست اصلی"
+              hidden={isMobile && !mobileNavOpen}
+            >
+              <a href="/">صفحه اصلی</a>
+              <a href="/#products">محصولات</a>
+              <a href="/#prices">قیمت‌های اطلاع‌رسانی</a>
+              <a href="/about/">درباره ما</a>
+              <a href="/contact/">تماس با ما</a>
+              <a className="nav-quote" href="/quote-process/#quote-form">
+                درخواست پیش‌فاکتور
+              </a>
+            </nav>
+          </div>
         </div>
       </header>
       <main id="main-content" className="info-main">

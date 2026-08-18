@@ -299,14 +299,14 @@ export default function App({
             <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
             <span className="sr-only">فهرست اصلی</span>
           </button>
-        </div>
 
-        <MegaMenu
-          mobileOpen={mobileNavOpen}
-          onMobileClose={closeMobileNav}
-          activeGroup={activeGroup}
-          onNavigate={navigateToCatalog}
-        />
+          <MegaMenu
+            mobileOpen={mobileNavOpen}
+            onMobileClose={closeMobileNav}
+            activeGroup={activeGroup}
+            onNavigate={navigateToCatalog}
+          />
+        </div>
       </header>
 
       <main id="main-content">

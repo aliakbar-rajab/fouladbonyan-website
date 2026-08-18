@@ -153,7 +153,7 @@ export function MegaMenu({
   return (
     <div className="nav-wrap">
       <nav
-        className="shell primary-nav"
+        className="primary-nav"
         id="primary-navigation"
         aria-label="فهرست اصلی"
         hidden={isMobile && !mobileOpen}

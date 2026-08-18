@@ -79,34 +79,34 @@ export default function ContactPage() {
             <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
             <span className="sr-only">فهرست اصلی</span>
           </button>
-        </div>
 
-        <div className="nav-wrap">
-          <nav
-            className="shell primary-nav"
-            id="primary-navigation"
-            aria-label="فهرست اصلی"
-            hidden={isMobile && !mobileNavOpen}
-          >
-            <a href="/" onClick={() => setMobileNavOpen(false)}>
-              صفحه اصلی
-            </a>
-            <a href="/#products" onClick={() => setMobileNavOpen(false)}>
-              قیمت روز محصولات
-            </a>
-            <a href="/#prices" onClick={() => setMobileNavOpen(false)}>
-              راهنمای استعلام
-            </a>
-            <a href="/about/" onClick={() => setMobileNavOpen(false)}>
-              درباره ما
-            </a>
-            <a href="/contact/" aria-current="page">
-              تماس با ما
-            </a>
-            <a className="nav-quote" href="/quote-process/#quote-form">
-              درخواست پیش‌فاکتور
-            </a>
-          </nav>
+          <div className="nav-wrap">
+            <nav
+              className="primary-nav"
+              id="primary-navigation"
+              aria-label="فهرست اصلی"
+              hidden={isMobile && !mobileNavOpen}
+            >
+              <a href="/" onClick={() => setMobileNavOpen(false)}>
+                صفحه اصلی
+              </a>
+              <a href="/#products" onClick={() => setMobileNavOpen(false)}>
+                قیمت روز محصولات
+              </a>
+              <a href="/#prices" onClick={() => setMobileNavOpen(false)}>
+                راهنمای استعلام
+              </a>
+              <a href="/about/" onClick={() => setMobileNavOpen(false)}>
+                درباره ما
+              </a>
+              <a href="/contact/" aria-current="page">
+                تماس با ما
+              </a>
+              <a className="nav-quote" href="/quote-process/#quote-form">
+                درخواست پیش‌فاکتور
+              </a>
+            </nav>
+          </div>
         </div>
       </header>
 
