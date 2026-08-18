@@ -1,4 +1,4 @@
-export type RetryableLoader<T> = {
+type RetryableLoader<T> = {
   (): Promise<T>;
   getCached: () => T | undefined;
   setCached: (value: T) => void;

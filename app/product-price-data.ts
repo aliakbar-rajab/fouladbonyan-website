@@ -1,9 +1,5 @@
 import { createRetryableLoader } from "./catalog-cache";
-import type {
-  CatalogCategory,
-  CatalogPriceData,
-  CatalogViewRequest,
-} from "./catalog-types";
+import type { CatalogCategory, CatalogPriceData } from "./catalog-types";
 
 export type ProductCatalogId =
   | "sheet"
@@ -12,8 +8,6 @@ export type ProductCatalogId =
   | "angle"
   | "channel"
   | "wire";
-
-export type ProductViewRequest = CatalogViewRequest;
 
 export type ProductPriceCatalog = {
   id: ProductCatalogId;

@@ -11,7 +11,11 @@ import {
 } from "../app/guide-page-data.ts";
 import { buildGuideReference } from "../app/steel-reference.ts";
 import { siteConfig } from "../app/site-config.ts";
-import { replaceTagContent } from "./html-template-utils.mjs";
+import {
+  appendSitemapUrls,
+  buildBreadcrumbJsonLd,
+  replaceSocialMeta,
+} from "./html-template-utils.mjs";
 
 const SITE_URL = siteConfig.siteUrl;
 const distDir = resolve(import.meta.dirname, "..", "dist");
@@ -31,20 +35,6 @@ const replaceRootContent = (html, attributes, content) =>
     `<div id="root"${attributes}>${content}</div>`,
   );
 
-function buildBreadcrumbJsonLd(items) {
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: items.map((item, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      name: item.name,
-      item: item.url,
-    })),
-  };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
-}
-
 function buildGuideHtml(baseHtml, entry, renderedHtml, reference) {
   const { title, description, pageUrl, rootAttributes, breadcrumbItems } = entry;
 
@@ -62,12 +52,7 @@ function buildGuideHtml(baseHtml, entry, renderedHtml, reference) {
     // pretty-printed across several lines -- match whitespace, not one space.
     .replace(/\s*<link\s+id="hero-image-preload"[\s\S]*?\/>/, "");
 
-  html = replaceTagContent(html, 'name="description"', description);
-  html = replaceTagContent(html, 'property="og:title"', title);
-  html = replaceTagContent(html, 'property="og:description"', description);
-  html = replaceTagContent(html, 'property="og:url"', pageUrl);
-  html = replaceTagContent(html, 'name="twitter:title"', title);
-  html = replaceTagContent(html, 'name="twitter:description"', description);
+  html = replaceSocialMeta(html, { title, description, pageUrl });
 
   html = replaceRootContent(html, rootAttributes, renderedHtml);
 
@@ -77,29 +62,6 @@ function buildGuideHtml(baseHtml, entry, renderedHtml, reference) {
   return html.replace(
     "</head>",
     `${buildBreadcrumbJsonLd(breadcrumbItems)}\n  </head>`,
-  );
-}
-
-async function addGuideUrlsToSitemap(entries) {
-  const sitemapPath = resolve(distDir, "sitemap.xml");
-  const sitemap = await readFile(sitemapPath, "utf8");
-
-  const additions = entries
-    .filter(({ pageUrl }) => !sitemap.includes(`<loc>${pageUrl}</loc>`))
-    .map(
-      ({ pageUrl, lastmod }) => `  <url>
-    <loc>${pageUrl}</loc>
-    <lastmod>${lastmod}</lastmod>
-  </url>`,
-    )
-    .join("\n");
-
-  if (!additions) return;
-
-  await writeFile(
-    sitemapPath,
-    sitemap.replace("</urlset>", `${additions}\n</urlset>`),
-    "utf8",
   );
 }
 
@@ -162,7 +124,7 @@ await Promise.all(
   }),
 );
 
-await addGuideUrlsToSitemap(entries);
+await appendSitemapUrls(resolve(distDir, "sitemap.xml"), entries);
 
 console.log(
   `تولید و پیش‌رندر ${entries.length.toLocaleString("fa-IR")} صفحه راهنمای فنی و بروزرسانی sitemap با موفقیت انجام شد.`,

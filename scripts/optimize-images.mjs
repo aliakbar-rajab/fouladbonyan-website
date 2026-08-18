@@ -79,10 +79,11 @@ async function main() {
   const files = await readdir(categoriesDir);
 
   for (const file of files) {
-    if (file.startsWith("hero-") && file.endsWith(".jpg") && !file.match(/-\d{3,4}\.jpg$/)) {
-      // hero file without size suffix if any
-      await processHeroImage(file);
-    } else if (file.startsWith("hero-") && file.endsWith("-1680.jpg")) {
+    if (
+      file.startsWith("hero-") &&
+      file.endsWith(".jpg") &&
+      (!/-\d{3,4}\.jpg$/.test(file) || file.endsWith("-1680.jpg"))
+    ) {
       await processHeroImage(file);
     } else if (file.match(/^0\d-.*\.jpg$/) && !file.match(/-\d{3}\.jpg$/)) {
       await processCategoryImage(file);

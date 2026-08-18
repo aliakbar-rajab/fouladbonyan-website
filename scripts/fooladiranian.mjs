@@ -1,6 +1,7 @@
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { deriveSummaryFromRows } from "../app/catalog-validation.mjs";
+import { toPersianDigits } from "../app/site-logic.mjs";
 
 // Every price snapshot comes from the same Next.js-rendered source, so the
 // scraping, shaping and writing live here once; each fetch script only
@@ -11,7 +12,7 @@ export const SOURCE_ENVELOPE = {
   taxRate: 0.1,
 };
 
-export const SOURCE_ROOT = "https://www.fooladiranian.com/productlist/";
+const SOURCE_ROOT = "https://www.fooladiranian.com/productlist/";
 
 /** Build a source URL from a Persian slug, keeping hyphens unescaped. */
 export function sourceUrl(slug) {
@@ -26,17 +27,7 @@ const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   timeZone: "Asia/Tehran",
 });
 
-export function toPersianDigits(value = "") {
-  return String(value)
-    .replace(/[0-9]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 1728),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 144),
-    );
-}
-
-export function metaValue(item, key) {
+function metaValue(item, key) {
   const directValue = item[`meta-${key}`];
   if (directValue !== undefined && directValue !== null) {
     return String(directValue);

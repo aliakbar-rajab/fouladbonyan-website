@@ -40,6 +40,27 @@ test("catalog numbers parse Persian slash decimals and reject non-values", () =>
   assert.equal(parseCatalogNumber("12 متری"), null);
 });
 
+/*
+ * parseCatalogNumber used to inline its own Persian/Arabic digit conversion
+ * (charCode - 1776 / - 1632) before it shared toAsciiDigits with the rest of
+ * the site. Pin every digit of both blocks so the shared helper can never
+ * silently diverge from the arithmetic it replaced.
+ */
+test("catalog numbers accept every Persian and Arabic-Indic digit", () => {
+  const persian = "۰۱۲۳۴۵۶۷۸۹";
+  const arabic = "٠١٢٣٤٥٦٧٨٩";
+
+  for (let digit = 1; digit <= 9; digit += 1) {
+    assert.equal(parseCatalogNumber(persian[digit]), digit, `Persian ${digit}`);
+    assert.equal(parseCatalogNumber(arabic[digit]), digit, `Arabic ${digit}`);
+  }
+
+  assert.equal(parseCatalogNumber(persian.slice(1)), 123456789);
+  assert.equal(parseCatalogNumber(arabic.slice(1)), 123456789);
+  // Mixed blocks in one value, which the two chained replaces also handled.
+  assert.equal(parseCatalogNumber("۱٢/٣"), 12.3);
+});
+
 test("rebar weight tables reuse the shipped weight formula and the catalog's own sizes", () => {
   const ids = reference.rebarTables.map((table) => table.id);
   assert.deepEqual(ids, ["ribbed", "simple"]);

@@ -1,6 +1,21 @@
+import type { Dispatch, SetStateAction } from "react";
 import { toAsciiDigits } from "./site-logic.mjs";
 
 export type FieldErrors = Record<string, string>;
+
+/**
+ * Re-validate one field, but only once it already carries an entry: a field the
+ * visitor has not submitted yet must not sprout an error while they type in it.
+ */
+export function setFieldError(
+  setErrors: Dispatch<SetStateAction<FieldErrors>>,
+  field: string,
+  message: string,
+) {
+  setErrors((current) =>
+    field in current ? { ...current, [field]: message } : current,
+  );
+}
 
 const iranianPhonePattern = /^(?:\+98|0098|98|0)?(?:9\d{9}|21\d{8})$/;
 

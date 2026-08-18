@@ -45,10 +45,6 @@
     window.setTimeout(() => overlay?.remove(), 260);
   }
 
-  function skipPreloader() {
-    storage.set();
-  }
-
   function showPlaybackPrompt() {
     if (!overlay || finished) return;
     window.clearTimeout(watchdog);
@@ -70,7 +66,7 @@
     storage.get() ||
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
-    skipPreloader();
+    storage.set();
     return;
   }
 

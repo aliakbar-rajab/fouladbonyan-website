@@ -191,13 +191,13 @@ export const productGroups: ProductGroup[] = [
  * script: the site's CSP is script-src 'self', which silently drops any
  * inline <script> with no matching nonce/hash.
  */
-export function getInitialCategory(fallback?: ProductGroupId): ProductGroupId {
+export function getInitialCategory(): ProductGroupId {
   if (typeof document === "undefined") {
-    return fallback ?? productGroups[0].id;
+    return productGroups[0].id;
   }
   const requested = document.getElementById("root")?.dataset.initialCategory;
   const match = requested && productGroups.find((group) => group.id === requested);
-  return match ? match.id : (fallback ?? productGroups[0].id);
+  return match ? match.id : productGroups[0].id;
 }
 
 export function getCategoryById(id: string): ProductGroup | undefined {

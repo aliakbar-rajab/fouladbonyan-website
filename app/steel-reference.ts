@@ -15,6 +15,7 @@
  * hydrate against exactly the bytes they were prerendered from.
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
+import { toAsciiDigits } from "./site-logic.mjs";
 import type { CatalogCategory, CatalogPriceData } from "./catalog-types";
 import type { ProductPricePayload } from "./product-price-data";
 
@@ -99,11 +100,7 @@ export type GuideReference = {
  */
 export function parseCatalogNumber(value: string | undefined): number | null {
   if (!value) return null;
-  const normalised = value
-    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 1776))
-    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 1632))
-    .replace("/", ".")
-    .trim();
+  const normalised = toAsciiDigits(value).replace("/", ".").trim();
   const parsed = Number(normalised);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }

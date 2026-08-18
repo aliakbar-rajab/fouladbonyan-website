@@ -1,15 +1,6 @@
-export function toPersianDigits(
-  value: string | number | null | undefined,
-): string {
-  if (value === null || value === undefined) return "";
-  return String(value)
-    .replace(/[0-9]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 1728),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 144),
-    );
-}
+import { toPersianDigits } from "./site-logic.mjs";
+
+export { toPersianDigits };
 
 export function localizeCatalogValue(value: string | null | undefined) {
   if (!value) return "—";

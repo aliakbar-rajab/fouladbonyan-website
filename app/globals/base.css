@@ -13,16 +13,12 @@
   --ink: #222226;
   --muted: #65656c;
   --line: #dedee2;
-  --surface: #f6f6f7;
   --white: #fff;
   --shadow: 0 18px 50px rgb(18 18 22 / 10%);
   --radius: 14px;
   --shell-gutter: 2rem;
 
   /* Liquid Glass System Tokens */
-  --glass-light-bg: rgba(255, 255, 255, 0.78);
-  --glass-light-border-subtle: rgba(0, 0, 0, 0.08);
-
   --glass-dark-bg: rgba(42, 43, 47, 0.78);
   --glass-dark-border: rgba(255, 255, 255, 0.12);
 

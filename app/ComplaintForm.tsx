@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import {
   FieldErrors,
+  setFieldError,
   validateFullName,
   validateMinimumText,
   validatePhone,
@@ -37,12 +38,6 @@ export function ComplaintForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const prepared = usePreparedRequest();
 
-  const updateFieldError = (field: string, message: string) => {
-    setErrors((current) =>
-      field in current ? { ...current, [field]: message } : current,
-    );
-  };
-
   const validateChangedField = (
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
     form: HTMLFormElement,
@@ -50,12 +45,14 @@ export function ComplaintForm() {
     const formData = new FormData(form);
     const requestType = String(formData.get("requestType") ?? "");
     if (element.name === "requestType" || element.name === "reference") {
-      updateFieldError(
+      setFieldError(
+        setErrors,
         "reference",
         validateComplaintField("reference", String(formData.get("reference") ?? ""), requestType),
       );
     } else {
-      updateFieldError(
+      setFieldError(
+        setErrors,
         element.name,
         validateComplaintField(element.name, element.value, requestType),
       );

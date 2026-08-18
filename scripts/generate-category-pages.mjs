@@ -8,7 +8,10 @@ import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data.ts";
 import { loadProductPricePayload } from "../app/product-price-data.ts";
 import { loadOverviewSummaries } from "../app/catalog-overview.ts";
 import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
-import { replaceTagContent } from "./html-template-utils.mjs";
+import {
+  buildBreadcrumbJsonLd,
+  replaceSocialMeta,
+} from "./html-template-utils.mjs";
 
 const SITE_URL = "https://fouladbonyan.com";
 const distDir = resolve(import.meta.dirname, "..", "dist");
@@ -40,89 +43,6 @@ async function loadPriceData() {
     .slice(0, 10);
 
   return { rebar, beam, products, dates, latestDate };
-}
-
-function computeOverviewSummaries(rebarData, beamData, productData) {
-  return productGroups.map((group) => {
-    const isRebar = group.id === "rebar";
-    const isBeam = group.id === "beam";
-    const isPipe = group.id === "pipe";
-
-    const categories = isRebar
-      ? rebarData.categories
-      : isBeam
-        ? beamData.categories
-        : productData.catalogs.find((c) => c.id === group.id)?.categories ?? [];
-
-    const unit = isBeam || isPipe ? "شاخه / کیلوگرم" : "کیلوگرم";
-
-    const minValues = categories
-      .map((c) => c.summary.min)
-      .filter((v) => typeof v === "number" && v > 0);
-    const maxValues = categories
-      .map((c) => c.summary.max)
-      .filter((v) => typeof v === "number" && v > 0);
-
-    const minPrice = minValues.length > 0 ? Math.min(...minValues) : null;
-    const maxPrice = maxValues.length > 0 ? Math.max(...maxValues) : null;
-    const firstSummary = categories[0]?.summary;
-
-    return {
-      id: group.id,
-      label: group.label,
-      shortLabel: group.shortLabel,
-      subTypes: group.subTypes,
-      image: group.image,
-      description: group.description,
-      minPrice,
-      maxPrice,
-      unit,
-      date: firstSummary?.date || "امروز",
-      status: firstSummary?.status || "steady",
-      percent: firstSummary?.percent || 0,
-    };
-  });
-}
-
-function buildBreadcrumbJsonLd(group) {
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "صفحه اصلی", item: `${SITE_URL}/` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: group.label,
-        item: `${SITE_URL}/${group.id}/`,
-      },
-    ],
-  };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
-}
-
-function buildSubcategoryBreadcrumbJsonLd(group, sub) {
-  const pageUrl = `${SITE_URL}/${group.id}/${sub.id}/`;
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "صفحه اصلی", item: `${SITE_URL}/` },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: group.label,
-        item: `${SITE_URL}/${group.id}/`,
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: sub.label,
-        item: pageUrl,
-      },
-    ],
-  };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
 }
 
 function buildHeroPreloadTag(group) {
@@ -175,20 +95,7 @@ function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
       `\n    ${buildHeroPreloadTag(group)}`,
     );
 
-  html = replaceTagContent(html, 'name="description"', group.seoDescription);
-  html = replaceTagContent(html, 'property="og:title"', group.seoTitle);
-  html = replaceTagContent(
-    html,
-    'property="og:description"',
-    group.seoDescription,
-  );
-  html = replaceTagContent(html, 'property="og:url"', pageUrl);
-  html = replaceTagContent(html, 'name="twitter:title"', group.seoTitle);
-  html = replaceTagContent(
-    html,
-    'name="twitter:description"',
-    group.seoDescription,
-  );
+  html = replaceSocialMeta(html, { title: group.seoTitle, description: group.seoDescription, pageUrl });
 
   html = html.replace(
     /<div id="root"[\s\S]*?<\/div>/,
@@ -203,7 +110,10 @@ function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
 
   return html.replace(
     "</head>",
-    `${buildBreadcrumbJsonLd(group)}\n  </head>`,
+    `${buildBreadcrumbJsonLd([
+      { name: "صفحه اصلی", url: `${SITE_URL}/` },
+      { name: group.label, url: `${SITE_URL}/${group.id}/` },
+    ])}\n  </head>`,
   );
 }
 
@@ -231,20 +141,7 @@ function buildSubcategoryHtml(baseHtml, group, sub, renderedAppHtml, dataPayload
       `\n    ${buildHeroPreloadTag(group)}`,
     );
 
-  html = replaceTagContent(html, 'name="description"', seoDescription);
-  html = replaceTagContent(html, 'property="og:title"', seoTitle);
-  html = replaceTagContent(
-    html,
-    'property="og:description"',
-    seoDescription,
-  );
-  html = replaceTagContent(html, 'property="og:url"', pageUrl);
-  html = replaceTagContent(html, 'name="twitter:title"', seoTitle);
-  html = replaceTagContent(
-    html,
-    'name="twitter:description"',
-    seoDescription,
-  );
+  html = replaceSocialMeta(html, { title: seoTitle, description: seoDescription, pageUrl });
 
   html = html.replace(
     /<div id="root"[\s\S]*?<\/div>/,
@@ -259,7 +156,11 @@ function buildSubcategoryHtml(baseHtml, group, sub, renderedAppHtml, dataPayload
 
   return html.replace(
     "</head>",
-    `${buildSubcategoryBreadcrumbJsonLd(group, sub)}\n  </head>`,
+    `${buildBreadcrumbJsonLd([
+      { name: "صفحه اصلی", url: `${SITE_URL}/` },
+      { name: group.label, url: `${SITE_URL}/${group.id}/` },
+      { name: sub.label, url: pageUrl },
+    ])}\n  </head>`,
   );
 }
 
@@ -318,8 +219,7 @@ setMenuCatalog(menuCatalog);
 const menuDataScript = `\n    <script id="initial-menu-data" type="application/json">${JSON.stringify(menuCatalog)}</script>`;
 
 // 1. Prerender the homepage (dist/index.html)
-const overviewSummaries = computeOverviewSummaries(rebarData, beamData, productData);
-loadOverviewSummaries.setCached(overviewSummaries);
+const overviewSummaries = await loadOverviewSummaries();
 const homeRenderedHtml = renderToString(React.createElement(App));
 
 

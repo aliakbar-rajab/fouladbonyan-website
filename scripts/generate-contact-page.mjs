@@ -9,7 +9,11 @@ import {
   buildOrganizationStructuredData,
   siteConfig,
 } from "../app/site-config.ts";
-import { replaceTagContent } from "./html-template-utils.mjs";
+import {
+  appendSitemapUrls,
+  buildBreadcrumbJsonLd,
+  replaceSocialMeta,
+} from "./html-template-utils.mjs";
 
 const SITE_URL = siteConfig.siteUrl;
 const PAGE_URL = `${SITE_URL}/contact/`;
@@ -18,18 +22,6 @@ const distDir = resolve(import.meta.dirname, "..", "dist");
 const TITLE = "تماس با ما و نشانی | بنیان فولاد داریا";
 const DESCRIPTION =
   "شماره‌های تماس، نشانی دفتر و مسیریابی روی نقشه برای بنیان فولاد داریا. تماس با واحد فروش و مدیریت برای استعلام قیمت آهن و فولاد.";
-
-function buildBreadcrumbJsonLd(label, pageUrl) {
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "صفحه اصلی", item: `${SITE_URL}/` },
-      { "@type": "ListItem", position: 2, name: label, item: pageUrl },
-    ],
-  };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
-}
 
 function buildPageHtml(
   baseHtml,
@@ -66,12 +58,7 @@ function buildPageHtml(
     "",
   );
 
-  html = replaceTagContent(html, 'name="description"', description);
-  html = replaceTagContent(html, 'property="og:title"', title);
-  html = replaceTagContent(html, 'property="og:description"', description);
-  html = replaceTagContent(html, 'property="og:url"', pageUrl);
-  html = replaceTagContent(html, 'name="twitter:title"', title);
-  html = replaceTagContent(html, 'name="twitter:description"', description);
+  html = replaceSocialMeta(html, { title, description, pageUrl });
 
   /*
    * generate-category-pages.mjs has already rewritten dist/index.html with the
@@ -87,28 +74,10 @@ function buildPageHtml(
 
   return html.replace(
     "</head>",
-    `${buildBreadcrumbJsonLd(breadcrumbLabel, pageUrl)}\n  </head>`,
-  );
-}
-
-async function addInformationUrlsToSitemap(pageEntries) {
-  const sitemapPath = resolve(distDir, "sitemap.xml");
-  const sitemap = await readFile(sitemapPath, "utf8");
-
-  const entries = pageEntries
-    .filter(({ pageUrl }) => !sitemap.includes(`<loc>${pageUrl}</loc>`))
-    .map(
-      ({ pageUrl, lastmod }) => `  <url>
-    <loc>${pageUrl}</loc>
-    <lastmod>${lastmod}</lastmod>
-  </url>`,
-    )
-    .join("\n");
-
-  await writeFile(
-    sitemapPath,
-    sitemap.replace("</urlset>", `${entries}\n</urlset>`),
-    "utf8",
+    `${buildBreadcrumbJsonLd([
+      { name: "صفحه اصلی", url: `${SITE_URL}/` },
+      { name: breadcrumbLabel, url: pageUrl },
+    ])}\n  </head>`,
   );
 }
 
@@ -172,7 +141,7 @@ await Promise.all(
   }),
 );
 
-await addInformationUrlsToSitemap(pageEntries);
+await appendSitemapUrls(resolve(distDir, "sitemap.xml"), pageEntries);
 await injectOrganizationData();
 
 console.log(

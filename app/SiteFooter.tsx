@@ -47,14 +47,10 @@ const smallGlass = {
 } satisfies Partial<GlassSurfaceProps>;
 
 type SiteFooterProps = {
-  homeHref?: string;
   topHref?: string;
 };
 
-export function SiteFooter({
-  homeHref = "/",
-  topHref = "#top",
-}: SiteFooterProps) {
+export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
   const workingHours = siteConfig.contact.workingHours;
 
   return (
@@ -70,7 +66,7 @@ export function SiteFooter({
             <section className="footer-card footer-card--brand">
               {/* The raster logo carries dark lettering, which is unreadable on
                   this base -- the text lockup is the legible one here. */}
-              <Brand href={homeHref} />
+              <Brand href="/" />
               <p className="footer-brand-desc">
                 تأمین تخصصی مقاطع فولادی ساختمانی و صنعتی با تضمین اصالت کالا و
                 مشاوره فنی.

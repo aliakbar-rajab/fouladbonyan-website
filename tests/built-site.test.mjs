@@ -13,6 +13,20 @@ import {
 const readDist = (path) =>
   readFile(new URL(`../dist/${path}`, import.meta.url), "utf8");
 
+const readJson = (path) =>
+  readFile(new URL(`../app/data/${path}`, import.meta.url), "utf8").then(
+    JSON.parse,
+  );
+
+/** The BreadcrumbList JSON-LD a generated page emits, parsed. */
+const parseBreadcrumbLd = (html, label) => {
+  const raw = html.match(
+    /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
+  )?.[1];
+  assert.ok(raw, label);
+  return JSON.parse(raw);
+};
+
 
 test("production output contains required GitHub Pages files", async () => {
   await Promise.all(
@@ -66,14 +80,10 @@ test("category landing pages have unique metadata, a CSP-safe initial tab, and s
     // from a plain data attribute instead (see category-meta.ts).
     assert.doesNotMatch(html, /<script>window\./);
 
-    const breadcrumbLdMatch = html.match(
-      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
-    )?.[1];
-    assert.ok(
-      breadcrumbLdMatch,
+    const breadcrumbLd = parseBreadcrumbLd(
+      html,
       `${category.id} should emit BreadcrumbList structured data`,
     );
-    const breadcrumbLd = JSON.parse(breadcrumbLdMatch);
     assert.equal(
       breadcrumbLd.itemListElement[0]?.name,
       "صفحه اصلی",
@@ -150,11 +160,10 @@ test("built HTML uses root-safe assets and production metadata", async () => {
       /<script id="organization-structured-data"/,
       `${page} must not emit Organization JSON-LD`,
     );
-    const pageBcMatch = pageHtml.match(
-      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
-    )?.[1];
-    assert.ok(pageBcMatch, `${page} must emit BreadcrumbList JSON-LD`);
-    const pageBc = JSON.parse(pageBcMatch);
+    const pageBc = parseBreadcrumbLd(
+      pageHtml,
+      `${page} must emit BreadcrumbList JSON-LD`,
+    );
     assert.equal(pageBc.itemListElement[0]?.name, "صفحه اصلی");
   }
 });
@@ -415,10 +424,6 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
 });
 
 test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs, SSG prerendered rows, and sitemap entries", async () => {
-  const readJson = (path) =>
-    readFile(new URL(`../app/data/${path}`, import.meta.url), "utf8").then(
-      JSON.parse,
-    );
   const [rebar, beam, products] = await Promise.all([
     readJson("rebar-prices.json"),
     readJson("beam-prices.json"),
@@ -511,11 +516,10 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     );
 
     // JSON-LD BreadcrumbList (3 items)
-    const breadcrumbLdMatch = html.match(
-      /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
-    )?.[1];
-    assert.ok(breadcrumbLdMatch, `${pagePath} must have BreadcrumbList JSON-LD`);
-    const breadcrumbLd = JSON.parse(breadcrumbLdMatch);
+    const breadcrumbLd = parseBreadcrumbLd(
+      html,
+      `${pagePath} must have BreadcrumbList JSON-LD`,
+    );
     assert.equal(
       breadcrumbLd.itemListElement.length,
       3,
@@ -720,10 +724,9 @@ test("F10: editorial guide pages exist with unique metadata, prerendered content
     );
 
     // BreadcrumbList JSON-LD matching the visible trail
-    const breadcrumbLd = JSON.parse(
-      html.match(
-        /<script type="application\/ld\+json">(\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList".*?)<\/script>/,
-      )?.[1],
+    const breadcrumbLd = parseBreadcrumbLd(
+      html,
+      `${page.path} must have BreadcrumbList JSON-LD`,
     );
     assert.equal(
       breadcrumbLd.itemListElement.length,
@@ -853,10 +856,6 @@ const countFactoryCards = (html) =>
   (html.match(/class="factory-price-card[ "]/g) ?? []).length;
 
 async function loadCatalogSubcategories() {
-  const readJson = (path) =>
-    readFile(new URL(`../app/data/${path}`, import.meta.url), "utf8").then(
-      JSON.parse,
-    );
   const [rebar, beam, products] = await Promise.all([
     readJson("rebar-prices.json"),
     readJson("beam-prices.json"),

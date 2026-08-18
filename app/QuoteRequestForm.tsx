@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   FieldErrors,
+  setFieldError,
   validateFullName,
   validatePhone,
   validateRequired,
@@ -26,7 +27,7 @@ const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
 // Products whose catalog has no per-piece data at all (only کیلوگرم rows) —
 // شاخه/عدد are hidden for these so the form never offers a unit it can't
 // price. میلگرد is handled separately via a real weight formula, so it keeps
-// its شاخه/عدد options even though it isn't in PRODUCTS_WITH_PIECE_OPTIONS.
+// its شاخه/عدد options even though its catalog publishes no pieceOptions.
 const PRODUCTS_WITHOUT_PIECE_UNITS: readonly QuoteProductName[] = [
   "هاش",
   "ورق فولادی",
@@ -123,9 +124,9 @@ type QuoteItem = {
   unit: "تن" | "کیلوگرم" | "شاخه" | "عدد";
   dimensions: string;
   rebarDiameterMm: string;
-  // Key of a real catalog item selected for products in
-  // PRODUCTS_WITH_PIECE_OPTIONS (e.g. a specific تیرآهن size or a specific
-  // رابیتس/توری product) — determines both the real unit and real price.
+  // Key of a real catalog item, for products whose estimate carries
+  // pieceOptions (e.g. a specific تیرآهن size or a specific رابیتس/توری
+  // product) — determines both the real unit and real price.
   pieceOptionKey: string;
 };
 
@@ -258,31 +259,25 @@ export function QuoteRequestForm() {
   const nextItemId = useRef(2);
   const prepared = usePreparedRequest();
 
-  const updateFieldError = (field: string, message: string) => {
-    setErrors((current) =>
-      field in current ? { ...current, [field]: message } : current,
-    );
-  };
-
   const validateChangedField = (
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => {
     const { name, value } = element;
     if (name === "fullName") {
-      updateFieldError(name, validateFullName(value));
+      setFieldError(setErrors, name, validateFullName(value));
       return;
     }
     if (name === "phone") {
-      updateFieldError(name, validatePhone(value));
+      setFieldError(setErrors, name, validatePhone(value));
       return;
     }
     if (name === "destination") {
-      updateFieldError(name, validateRequired(value, "شهر مقصد"));
+      setFieldError(setErrors, name, validateRequired(value, "شهر مقصد"));
       return;
     }
     if (name === "acceptDisclaimer") {
       const accepted = element instanceof HTMLInputElement && element.checked;
-      updateFieldError(name, accepted ? "" : disclaimerError);
+      setFieldError(setErrors, name, accepted ? "" : disclaimerError);
       return;
     }
 
@@ -291,7 +286,8 @@ export function QuoteRequestForm() {
       ? items.findIndex((item) => String(item.id) === match[2])
       : -1;
     if (index === -1 || !match) return;
-    updateFieldError(
+    setFieldError(
+      setErrors,
       name,
       match[1] === "Product"
         ? validateProduct(value, index)

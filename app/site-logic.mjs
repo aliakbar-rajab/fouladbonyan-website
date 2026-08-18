@@ -8,6 +8,21 @@ export function toAsciiDigits(value = "") {
   );
 }
 
+/**
+ * Convert ASCII and Arabic-Indic digits to Persian digits. Both target blocks
+ * run 0-9 in order, so each digit is a fixed offset from its source.
+ */
+export function toPersianDigits(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/[0-9]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 1728),
+    )
+    .replace(/[٠-٩]/g, (digit) =>
+      String.fromCharCode(digit.charCodeAt(0) + 144),
+    );
+}
+
 export function normalizeSearchText(value = "") {
   return toAsciiDigits(value)
     .trim()

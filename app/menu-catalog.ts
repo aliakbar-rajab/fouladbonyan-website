@@ -18,7 +18,7 @@ import { loadGroupCatalog, type GroupCatalog } from "./group-catalog";
 
 // Each group's own catalog supplies the menu's types, factories and sizes, so
 // nothing here is a second copy of the price data.
-export const MAX_MENU_ENTRIES = 16;
+const MAX_MENU_ENTRIES = 16;
 
 export type MenuGroup = {
   id: ProductGroupId;
@@ -74,10 +74,6 @@ let cachedMenuCatalog: MenuCatalog | null = null;
 
 export function setMenuCatalog(catalog: MenuCatalog) {
   cachedMenuCatalog = catalog;
-}
-
-export function getMenuCatalog(): MenuCatalog | null {
-  return cachedMenuCatalog;
 }
 
 /**

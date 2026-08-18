@@ -66,7 +66,7 @@ export function buildWazeUrl({ lat, lng }: typeof siteConfig.officeCoordinates) 
 }
 
 export function buildOrganizationStructuredData() {
-  const organization = {
+  return {
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${siteConfig.siteUrl}/#organization`,
@@ -92,6 +92,4 @@ export function buildOrganizationStructuredData() {
       ? { email: siteConfig.contact.officialEmail }
       : {}),
   };
-
-  return organization;
 }
