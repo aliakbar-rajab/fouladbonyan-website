@@ -100,7 +100,9 @@ export default function ContactPage() {
             <a href="/about/" onClick={() => setMobileNavOpen(false)}>
               درباره ما
             </a>
-            <a aria-current="page">تماس با ما</a>
+            <a href="/contact/" aria-current="page">
+              تماس با ما
+            </a>
             <a className="nav-quote" href="/quote-process/#quote-form">
               درخواست پیش‌فاکتور
             </a>

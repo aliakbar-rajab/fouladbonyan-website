@@ -57,7 +57,10 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
         {trend.amount ? <span>{formatPercent(trend.amount)}٪</span> : null}
       </p>
       <p className="market-price-updated">
-        بروزرسانی: <b>{formatUpdatedAt(item.updatedAt)}</b>
+        بروزرسانی:{" "}
+        <b>
+          <time dateTime={item.updatedAt}>{formatUpdatedAt(item.updatedAt)}</time>
+        </b>
       </p>
     </article>
   );
@@ -100,7 +103,11 @@ export function MarketPrices() {
             </div>
             <p className="market-prices-checked" role="status">
               نرخ‌ها هر ۵ دقیقه به‌روزرسانی می‌شوند · آخرین بررسی:{" "}
-              <b>{formatCheckedAt(state.data.fetchedAt)}</b>
+              <b>
+                <time dateTime={state.data.fetchedAt}>
+                  {formatCheckedAt(state.data.fetchedAt)}
+                </time>
+              </b>
             </p>
           </>
         ) : null}

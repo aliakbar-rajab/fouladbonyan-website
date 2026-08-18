@@ -32,7 +32,7 @@ function MegaMenuSections({
 
   return (
     <>
-      <section className="mega-rebar-types">
+      <section className="mega-rebar-types" aria-label={`انواع ${group.label}`}>
         <p className="mega-group-label">انواع {group.label}</p>
         {group.categories.map((category) => (
           <a
@@ -50,7 +50,10 @@ function MegaMenuSections({
       </section>
 
 
-      <section className="mega-rebar-factories">
+      <section
+        className="mega-rebar-factories"
+        aria-label={`${group.groupingLabel}‌های ${group.label}`}
+      >
         <p className="mega-group-label">
           {group.groupingLabel}‌های {group.label}
         </p>
@@ -69,7 +72,7 @@ function MegaMenuSections({
         </div>
       </section>
 
-      <section className="mega-rebar-sizes">
+      <section className="mega-rebar-sizes" aria-label={`سایزهای ${group.label}`}>
         <p className="mega-group-label">سایزهای {group.label}</p>
         <div>
           {group.sizes.map((size) => (
@@ -168,7 +171,7 @@ export function MegaMenu({
           >
             <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
 
-            <section className="mega-other-products">
+            <section className="mega-other-products" aria-label="گروه محصولات">
               <p className="mega-group-label">گروه محصولات</p>
               <div>
                 {productGroups.map((group) => (

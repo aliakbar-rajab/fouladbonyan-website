@@ -18,7 +18,11 @@ import type {
   CatalogViewRequest,
 } from "./catalog-types";
 import type { ProductGroupId } from "./category-meta";
-import { localizeCatalogValue, toPersianDigits } from "./catalog-utils";
+import {
+  localizeCatalogValue,
+  toPersianDigits,
+  unixSecondsToIso,
+} from "./catalog-utils";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 
@@ -98,7 +102,7 @@ function getRowDetails(
   row: CatalogRow,
   factoryName: string,
   groupingLabel: string,
-) {
+): { label: string; value: string; iso?: string }[] {
   if (row.specifications?.length) {
     return [
       { label: "نام محصول", value: row.title },
@@ -115,6 +119,7 @@ function getRowDetails(
       {
         label: "آخرین بروزرسانی",
         value: toPersianDigits(row.updatedDate) || "—",
+        iso: unixSecondsToIso(row.updatedAt),
       },
     ];
   }
@@ -137,7 +142,11 @@ function getRowDetails(
       label: groupingLabel,
       value: row.factory || factoryName || "—",
     },
-    { label: "آخرین بروزرسانی", value: toPersianDigits(row.updatedDate) || "—" },
+    {
+      label: "آخرین بروزرسانی",
+      value: toPersianDigits(row.updatedDate) || "—",
+      iso: unixSecondsToIso(row.updatedAt),
+    },
   ];
 }
 
@@ -332,7 +341,11 @@ export function PriceCatalog({
               </p>
             ) : (
               <p>
-                قیمت {category.label} امروز {toPersianDigits(category.summary.date)} در بازه‌ای
+                قیمت {category.label} امروز{" "}
+                <time dateTime={priceData.fetchedAt}>
+                  {toPersianDigits(category.summary.date)}
+                </time>{" "}
+                در بازه‌ای
                 بین <b>{summaryPrice(category.summary.min)}</b> تا{" "}
                 <b>{summaryPrice(category.summary.max)}</b> تومان
                 {taxIncluded
@@ -412,7 +425,11 @@ export function PriceCatalog({
                   </h4>
                   <p>
                     <span aria-hidden="true">▣</span> آخرین بروزرسانی:{" "}
-                    <b>{toPersianDigits(factory.updatedDate) || "—"}</b>
+                    <b>
+                      <time dateTime={unixSecondsToIso(factory.updatedAt)}>
+                        {toPersianDigits(factory.updatedDate) || "—"}
+                      </time>
+                    </b>
                   </p>
                 </header>
 
@@ -515,7 +532,13 @@ export function PriceCatalog({
                                     >
                                       <dt>{detail.label}</dt>
                                       <dd>
-                                        {localizeCatalogValue(detail.value)}
+                                        {detail.iso ? (
+                                          <time dateTime={detail.iso}>
+                                            {localizeCatalogValue(detail.value)}
+                                          </time>
+                                        ) : (
+                                          localizeCatalogValue(detail.value)
+                                        )}
                                       </dd>
                                     </div>
                                   ))}
@@ -691,7 +714,7 @@ export function PriceCatalog({
             </section>
           ) : null}
 
-          <section className="price-source-card">
+          <section className="price-source-card" aria-label="آخرین دریافت داده">
             <span>آخرین دریافت داده</span>
             <strong>{fetchedDate}</strong>
             <p>
@@ -703,7 +726,7 @@ export function PriceCatalog({
             </a>
           </section>
 
-          <section className="rebar-contact-card">
+          <section className="rebar-contact-card" aria-label="قیمت قطعی و موجودی">
             <span aria-hidden="true">☎</span>
             <strong>قیمت قطعی و موجودی</strong>
             <p>برای تأیید قیمت، تناژ و زمان تحویل با واحد فروش تماس بگیرید.</p>

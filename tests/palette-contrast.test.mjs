@@ -25,4 +25,7 @@ test("core palette combinations meet WCAG AA contrast", () => {
   assert.ok(ratio("#222226", "#F6B500") >= 4.5);
   assert.ok(ratio("#FFFFFF", "#3B3B3E") >= 4.5);
   assert.ok(ratio("#65656C", "#FFFFFF") >= 4.5);
+  // Currency/unit metadata beside every displayed price (rebar.css,
+  // market-prices.css) — previously #8a8b94-family greys at ~3.3:1.
+  assert.ok(ratio("#6B6C76", "#FFFFFF") >= 4.5);
 });

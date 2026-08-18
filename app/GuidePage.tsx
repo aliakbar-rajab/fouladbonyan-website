@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { InnerPageLayout } from "./InnerPageLayout";
 import { siteConfig } from "./site-config";
 import { toPersianDigits } from "./catalog-utils";
@@ -49,7 +50,7 @@ function ComparisonTable({
   columns,
   rows,
 }: {
-  caption: string;
+  caption: ReactNode;
   columns: string[];
   rows: { label: string; values: string[] }[];
 }) {
@@ -247,7 +248,10 @@ function BeamWeightGuide({ reference }: { reference: GuideReference }) {
           <table className="guide-table">
             <caption>
               وزن اعلامی کارخانه برای هر شاخه — {fa(beamTable.rows.length)} ردیف
-              سایز، برداشت‌شده از داده {reference.sourceDateLabel}
+              سایز، برداشت‌شده از داده{" "}
+              <time dateTime={reference.sourceDateIso}>
+                {reference.sourceDateLabel}
+              </time>
             </caption>
             <thead>
               <tr>
@@ -359,7 +363,14 @@ function RibbedVsPlainGuide({ reference }: { reference: GuideReference }) {
       <section className="content-card">
         <h2>مقایسه در جدول قیمت امروز</h2>
         <ComparisonTable
-          caption={`برداشت‌شده از داده قیمت ${reference.sourceDateLabel}`}
+          caption={
+            <>
+              برداشت‌شده از داده قیمت{" "}
+              <time dateTime={reference.sourceDateIso}>
+                {reference.sourceDateLabel}
+              </time>
+            </>
+          }
           columns={columns}
           rows={[
             profileRow("استانداردهای موجود", profiles, (profile) =>
@@ -442,7 +453,14 @@ function BeamTypesGuide({ reference }: { reference: GuideReference }) {
       <section className="content-card">
         <h2>آنچه امروز در کاتالوگ موجود است</h2>
         <ComparisonTable
-          caption={`برداشت‌شده از داده قیمت ${reference.sourceDateLabel}`}
+          caption={
+            <>
+              برداشت‌شده از داده قیمت{" "}
+              <time dateTime={reference.sourceDateIso}>
+                {reference.sourceDateLabel}
+              </time>
+            </>
+          }
           columns={columns}
           rows={[
             profileRow("استانداردها", profiles, (profile) =>
@@ -517,7 +535,10 @@ function UnitsGuide({ reference }: { reference: GuideReference }) {
         <div className="guide-table-wrap">
           <table className="guide-table">
             <caption>
-              برداشت‌شده از داده قیمت {reference.sourceDateLabel}
+              برداشت‌شده از داده قیمت{" "}
+              <time dateTime={reference.sourceDateIso}>
+                {reference.sourceDateLabel}
+              </time>
             </caption>
             <thead>
               <tr>

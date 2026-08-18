@@ -84,6 +84,8 @@ export type GuideReference = {
    * from, so the guides date themselves the same way the price tables do.
    */
   sourceDateLabel: string;
+  /** ISO timestamp for the same snapshot, for `<time dateTime>` markup. */
+  sourceDateIso: string;
   rebarTables: RebarWeightTable[];
   beamTable: BeamWeightTable;
   profiles: CatalogProfile[];
@@ -386,9 +388,11 @@ export function buildGuideReference(
     [...rebar.categories, ...beam.categories]
       .map((category) => category.summary.date)
       .find(Boolean) ?? "";
+  const sourceDateIso = rebar.fetchedAt || beam.fetchedAt;
 
   return {
     sourceDateLabel,
+    sourceDateIso,
     rebarTables: buildRebarTables(rebar),
     beamTable: buildBeamTable(beam),
     profiles: entries

@@ -53,6 +53,17 @@
     if (!overlay || finished) return;
     window.clearTimeout(watchdog);
     overlay.classList.add("needs-play");
+    // If autoplay was blocked and the visitor never notices the manual
+    // play button, the gate must not strand them on the overlay forever.
+    watchdog = window.setTimeout(finish, 6000);
+  }
+
+  if (window.location.pathname !== "/") {
+    // The brand intro has nothing to add on a page a visitor reached
+    // looking for a specific price or document — skip it without
+    // downloading the video, and without marking the session as seen so
+    // a later visit to "/" itself still shows it once.
+    return;
   }
 
   if (

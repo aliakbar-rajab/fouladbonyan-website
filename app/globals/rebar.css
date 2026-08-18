@@ -183,7 +183,7 @@
 }
 
 .rebar-stats small {
-  color: #8a8b94;
+  color: #6b6c76;
   font-size: 0.68rem;
 }
 
@@ -389,8 +389,8 @@
 }
 
 .row-expand-cell button {
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   display: grid;
   place-items: center;
   margin: auto;
@@ -421,7 +421,7 @@
 }
 
 .rebar-price-table .row-price small {
-  color: #8b8c95;
+  color: #6b6c76;
   font-size: 0.66rem;
   font-weight: 500;
 }
@@ -520,7 +520,7 @@
 }
 
 .rebar-row-detail dt {
-  color: #8a8b93;
+  color: #6b6c76;
   font-size: 0.68rem;
 }
 

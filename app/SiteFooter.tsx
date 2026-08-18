@@ -94,9 +94,9 @@ export function SiteFooter({
             {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-quick">
-              <h2 className="footer-card-title" id="footer-nav-quick">
+              <p className="footer-card-title" id="footer-nav-quick">
                 دسترسی سریع
-              </h2>
+              </p>
               <ul className="footer-link-list">
                 {quickAccessLinks.map((link) => (
                   <li key={link.href}>
@@ -112,9 +112,9 @@ export function SiteFooter({
             {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-info">
-              <h2 className="footer-card-title" id="footer-nav-info">
+              <p className="footer-card-title" id="footer-nav-info">
                 راهنما و قوانین
-              </h2>
+              </p>
               <ul className="footer-link-list">
                 {infoPageLinks.map((link) => (
                   <li key={link.href}>
@@ -131,7 +131,7 @@ export function SiteFooter({
           >
             <section className="footer-card footer-card--cta">
               <span className="footer-cta-tag">مشاوره و خرید</span>
-              <h2 className="footer-card-title">استعلام و پیش‌فاکتور</h2>
+              <p className="footer-card-title">استعلام و پیش‌فاکتور</p>
               <p className="footer-cta-desc">
                 کارشناسان فروش برای استعلام لحظه‌ای و صدور پیش‌فاکتور آماده‌اند.
               </p>
@@ -147,7 +147,7 @@ export function SiteFooter({
 
         <div className="footer-lines" id="phone-numbers">
           <div className="footer-lines-head">
-            <h2 className="footer-lines-title">خطوط ارتباطی واحد فروش</h2>
+            <p className="footer-lines-title">خطوط ارتباطی واحد فروش</p>
             {workingHours ? (
               <span className="footer-lines-hours">
                 <span aria-hidden="true">◷</span> ساعات کاری {workingHours}

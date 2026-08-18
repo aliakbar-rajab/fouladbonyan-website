@@ -19,3 +19,8 @@ export function localizeCatalogValue(value: string | null | undefined) {
   return toPersianDigits(value);
 }
 
+/** The source publishes `updatedAt` as Unix seconds, for `<time dateTime>` markup. */
+export function unixSecondsToIso(value: number): string {
+  return new Date(value * 1000).toISOString();
+}
+
