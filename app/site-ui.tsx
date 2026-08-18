@@ -15,8 +15,8 @@ export function Brand({
         <img
           src="/brand/bonyan-foulad-daria-logo.webp"
           alt=""
-          width="989"
-          height="877"
+          width="941"
+          height="829"
           decoding="async"
           fetchPriority="high"
         />

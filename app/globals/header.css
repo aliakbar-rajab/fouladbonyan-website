@@ -47,7 +47,8 @@
 .header-main {
   position: relative;
   z-index: 1;
-  min-height: 8.4rem;
+  min-height: 0;
+  padding-block: 0.35rem;
   display: grid;
   grid-template-columns: auto minmax(16rem, 1fr) auto;
   align-items: center;
@@ -63,11 +64,17 @@
 
 .brand-header-logo {
   min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .brand-header-logo img {
   width: 10.5rem;
-  height: 10.5rem;
+  height: auto;
+  aspect-ratio: 941 / 829;
   display: block;
   object-fit: contain;
   filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.45)) drop-shadow(0 0 18px rgba(246, 181, 0, 0.35)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));

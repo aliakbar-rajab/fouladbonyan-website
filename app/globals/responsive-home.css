@@ -50,7 +50,7 @@
   }
 
   .header-main {
-    min-height: 4.6rem;
+    min-height: 0;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.75rem;
     padding-block: 0.45rem;
@@ -61,9 +61,15 @@
     height: 2.65rem;
   }
 
+  .brand-header-logo {
+    justify-self: start;
+    width: fit-content;
+  }
+
   .brand-header-logo img {
     width: 8.25rem;
-    height: 8.25rem;
+    height: auto;
+    aspect-ratio: 941 / 829;
   }
 
   .brand-copy span {
@@ -375,7 +381,8 @@
 
   .brand-header-logo img {
     width: 7.5rem;
-    height: 7.5rem;
+    height: auto;
+    aspect-ratio: 941 / 829;
   }
 
   .site-search input {
