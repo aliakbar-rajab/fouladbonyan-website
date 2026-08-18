@@ -25,3 +25,6 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 *.pem
+
+# Claude Code local (personal) settings
+.claude/settings.local.json

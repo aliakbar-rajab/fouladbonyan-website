@@ -56,36 +56,28 @@
   Pages دیپلوی می‌شود.**
 - `npm run dev` دیگر CSP را نمی‌شکند (پلاگین `allowViteDevelopmentStyles`
   در `vite.config.ts` فقط در حالت dev متای CSP را حذف می‌کند).
-- **`main` روی گیت‌هاب branch protection دارد.** `git push origin main`
-  مستقیم رد می‌شود (`GH013: Changes must be made through a pull request`)
-  و چک وضعیت `build` اجباری است. مسیر همیشه: برنچ → PR → سبزشدن `build`
-  → squash-merge. کامیت خودکار رفرش قیمت (job `refresh`) از این قانون
-  مستثناست؛ push انسانی/ایجنت نیست.
-
-## Post-Merge Local Cleanup
-
-هر زمان کاربر اعلام کرد Pull Request مربوط به branch فعلی merge شده است:
-
-1. ابتدا git status --short را اجرا کن.
-2. اگر working tree تمیز نبود، هیچ فایل یا تغییری را حذف نکن و فقط وضعیت را گزارش کن.
-3. اگر working tree تمیز بود:
-   - git fetch origin --prune
-   - git switch main
-   - git pull --ff-only origin main
-4. فقط branch محلی مربوط به همان Pull Request مرج‌شده را با git branch -d حذف کن.
-5. هیچ‌وقت git reset --hard، git clean -fd یا force push اجرا نکن.
-6. در پایان git status، branch فعلی و آخرین commit را گزارش کن.
-7. برای مراحل معمول بالا از کاربر تأیید مرحله‌ای نگیر.
+- **`main` در حال حاضر branch protection ندارد** (بررسی‌شده ۲۰۲۶-۰۸-۱۸ با
+  `gh api repos/aliakbar-rajab/fouladbonyan-website/rules/branches/main` که
+  آرایه‌ی خالی برگرداند). مسیر پیش‌فرض: مستقیم روی `main` کار کن، اول
+  `npm run verify` را بزن و بعد `git push origin main`. برنچ و PR نساز مگر
+  کاربر برای همان کار صریحاً بخواهد.
+- اگر push مستقیم روزی رد شد (`GH013: Changes must be made through a pull
+  request`) یعنی protection دوباره اضافه شده — همان را به کاربر گزارش کن و
+  بپرس چطور ادامه دهد؛ خودسرانه به مسیر برنچ+PR برنگرد. (تا ۲۰۲۶-۰۷-۲۹ این
+  قانون فعال بود و بعداً برداشته شده است.)
+- **هیچ‌وقت `git reset --hard`، `git clean -fd` یا force push اجرا نکن.**
+  اگر working tree تمیز نبود، هیچ فایل یا تغییری را حذف نکن — فقط وضعیت را
+  با `git status --short` گزارش کن و منتظر تصمیم کاربر بمان.
 
 ## هشدار محیط لوکال
-این ریپو به‌خاطر کامیت خودکار دیتای قیمت هر ۴ ساعت و کار روی برنچ‌های
-موقت (`agent/*`) به‌سرعت stale می‌شود. قبل از هر ادعا درباره‌ی «وضعیت
-فعلی کد»:
+این ریپو به‌خاطر کامیت خودکار دیتای قیمت هر ۴ ساعت به‌سرعت stale می‌شود.
+قبل از هر ادعا درباره‌ی «وضعیت فعلی کد»:
 ```bash
 git fetch origin main
 git rev-parse main origin/main   # باید یکسان باشند
 ```
-اگر یکسان نبودند، برنچ جدید را از `origin/main` بساز، نه از `main` لوکال.
+اگر یکسان نبودند، اول `main` لوکال را با `git pull --ff-only origin main`
+جلو ببر و بعد کار را شروع کن — روی یک checkout قدیمی کامیت نکن.
 
 - **مخزن گیت‌هاب private است.** برای از‌بین‌بردن نسخه‌ی duplicate سایت روی
   `aliakbar-rajab.github.io` (که با وجود حذف job دیپلوی از ورک‌فلو، همچنان
