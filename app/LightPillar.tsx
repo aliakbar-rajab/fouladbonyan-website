@@ -210,18 +210,27 @@ export function LightPillar() {
       gl.viewport(0, 0, canvas.width, canvas.height);
     };
 
-    const render = (time: number) => {
+    let offsetLeft = 0;
+    let offsetBottom = 0;
+    let viewportWidth = 1;
+    let viewportHeight = 1;
+
+    // The shader positions the ribbon from the pane's place in the viewport.
+    // Measuring that inside the frame loop forced a layout on every frame, and
+    // there are two pillars per page (header and footer), so it is sampled only
+    // when it can actually have moved: scroll, viewport resize, and any layout
+    // change that shifts the pane.
+    const readGeometry = () => {
       const rect = container.getBoundingClientRect();
-      gl.uniform2f(
-        uCanvasOffset,
-        rect.left,
-        (window.innerHeight || 1) - rect.bottom,
-      );
-      gl.uniform2f(
-        uWindowResolution,
-        window.innerWidth || 1,
-        window.innerHeight || 1,
-      );
+      viewportWidth = window.innerWidth || 1;
+      viewportHeight = window.innerHeight || 1;
+      offsetLeft = rect.left;
+      offsetBottom = viewportHeight - rect.bottom;
+    };
+
+    const render = (time: number) => {
+      gl.uniform2f(uCanvasOffset, offsetLeft, offsetBottom);
+      gl.uniform2f(uWindowResolution, viewportWidth, viewportHeight);
       gl.uniform1f(uTime, time);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     };
@@ -261,9 +270,11 @@ export function LightPillar() {
 
     const onResize = () => {
       resize();
+      readGeometry();
       if (reducedMotion || !isVisible) render(3.4);
     };
     const onScroll = () => {
+      readGeometry();
       if (reducedMotion || !isVisible) render(3.4);
     };
     const onMotionChange = (event: MediaQueryListEvent) => {
@@ -272,19 +283,29 @@ export function LightPillar() {
     };
 
     resize();
+    readGeometry();
     startOrStopLoop();
 
     const resizeObserver =
       typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(onResize)
+        ? new ResizeObserver((entries) => {
+            // The pane's own box changing needs a new drawing buffer. The
+            // document box changing only moves the pane down or up the page --
+            // expanding a price table above the footer, say -- which the scroll
+            // listener would otherwise not catch while the user sits still.
+            if (entries.some((entry) => entry.target === container)) onResize();
+            else onScroll();
+          })
         : null;
     resizeObserver?.observe(container);
+    resizeObserver?.observe(document.documentElement);
 
     const intersectionObserver =
       typeof IntersectionObserver !== "undefined"
         ? new IntersectionObserver(
             (entries) => {
               isVisible = entries[0]?.isIntersecting ?? true;
+              readGeometry();
               startOrStopLoop();
             },
             { threshold: 0.01 },

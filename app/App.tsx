@@ -245,7 +245,7 @@ export default function App({
       <div className="utility-bar" id="top">
         <div className="shell utility-inner">
           <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
-          <div aria-label="شماره‌های تماس">
+          <div role="group" aria-label="شماره‌های تماس">
             {siteConfig.contact.phones.map((phone) => (
               <a href={phone.href} key={phone.href} dir="ltr">
                 {phone.label}
@@ -502,7 +502,7 @@ export default function App({
 
       <SiteFooter />
 
-      <div className="mobile-actions" aria-label="اقدام‌های سریع">
+      <div className="mobile-actions" role="group" aria-label="اقدام‌های سریع">
         <a href={contactHref}>
           <span aria-hidden="true">☎</span>
           تماس

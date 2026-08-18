@@ -144,7 +144,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
         </table>
       </div>
 
-      <div className="overview-mobile-cards" aria-label="فهرست خلاصه قیمت‌ها">
+      <div className="overview-mobile-cards" role="group" aria-label="فهرست خلاصه قیمت‌ها">
         {summaries.map((item) => {
           const thumbs = getThumbnailSources(item.image);
           return (

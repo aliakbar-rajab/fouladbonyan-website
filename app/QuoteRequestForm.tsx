@@ -589,6 +589,7 @@ export function QuoteRequestForm() {
             const quantityField = `itemQuantity-${item.id}`;
             const productErrorId = `quote-product-${item.id}-error`;
             const quantityErrorId = `quote-quantity-${item.id}-error`;
+            const priceHintId = `quote-price-${item.id}-hint`;
             const pricedItem = pricedItems[index];
 
             return (
@@ -653,8 +654,8 @@ export function QuoteRequestForm() {
                         aria-invalid={Boolean(errors[quantityField])}
                         aria-describedby={
                           errors[quantityField]
-                            ? quantityErrorId
-                            : undefined
+                            ? `${quantityErrorId} ${priceHintId}`
+                            : priceHintId
                         }
                       />
                       <select
@@ -743,7 +744,11 @@ export function QuoteRequestForm() {
                     </label>
                   ) : null}
                 </div>
-                <div className="quote-item-price" aria-live="polite">
+                {/* Described by the row's quantity field rather than announced:
+                    one live region per row meant up to MAX_QUOTE_ITEMS of them
+                    all re-announcing on every keystroke. The running total in
+                    .quote-price-summary stays live and covers the whole form. */}
+                <div className="quote-item-price" id={priceHintId}>
                   <ItemPriceHint
                     priced={pricedItem}
                     loading={!priceEstimates && !priceLoadError}

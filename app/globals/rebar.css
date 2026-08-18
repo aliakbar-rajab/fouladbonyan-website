@@ -210,7 +210,22 @@
   display: none;
 }
 
+/*
+ * A single category can run to ~300 price rows across its factory cards (the
+ * widest today is profile/box-profile), and they all have to stay in the
+ * prerendered HTML per the note above. Skipping the layout and paint of the
+ * cards that are off-screen costs nothing in markup and leaves find-in-page and
+ * anchor links working.
+ *
+ * 48rem is the median rendered height of the 141 factory cards this site
+ * actually displays, so the placeholder is roughly right before a card has ever
+ * been on screen; `auto` then has the browser remember each card's real height
+ * once it has, which is what keeps the scrollbar from drifting on the wide
+ * catalogs where a card runs to 2,700px.
+ */
 .factory-price-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48rem;
   overflow: hidden;
   border: 1px solid #dedfe5;
   border-radius: 10px;
@@ -634,7 +649,6 @@
   padding-inline: 0.75rem;
   border: 1px solid #d7d8de;
   border-radius: 8px;
-  outline: 0;
   background: #fafafa;
   color: #3e3f48;
   font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
@@ -738,7 +752,6 @@
   padding-inline: 0.7rem;
   border: 1px solid #d6d7dc;
   border-radius: 7px;
-  outline: 0;
   background: #fafafa;
 }
 

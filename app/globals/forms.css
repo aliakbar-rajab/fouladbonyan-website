@@ -65,7 +65,7 @@
 .quote-item-grid input:focus,
 .quote-item-grid select:focus,
 .prepared-request textarea:focus {
-  outline: 3px solid rgb(246 181 0 / 30%);
+  outline: 3px solid #946d00;
   border-color: #9b7200;
 }
 

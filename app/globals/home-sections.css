@@ -385,7 +385,7 @@
   font-weight: 800;
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .product-tabs a:hover,
@@ -616,7 +616,7 @@
   font-size: 0.84rem;
   font-weight: 800;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .overview-action-link:hover {
@@ -670,7 +670,7 @@
   border-radius: 8px;
   font-weight: 800;
   font-size: 0.88rem;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .overview-quote-btn {

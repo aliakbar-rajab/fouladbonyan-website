@@ -145,7 +145,7 @@
   font-weight: 900;
   white-space: nowrap;
   box-shadow: 0 6px 20px rgba(246, 181, 0, 0.35);
-  transition: all 0.22s ease;
+  transition: background 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease;
 }
 
 .quote-inner > a:hover {
@@ -795,7 +795,7 @@
   backdrop-filter: blur(8px);
   color: var(--white);
   font-weight: 800;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .about-more-link:hover {

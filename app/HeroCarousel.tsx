@@ -206,7 +206,7 @@ export function HeroCarousel({
           >
             →
           </button>
-          <div className="carousel-dots" aria-label="انتخاب اسلاید">
+          <div className="carousel-dots" role="group" aria-label="انتخاب اسلاید">
             {heroSlides.map((item, index) => (
               <button
                 type="button"

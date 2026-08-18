@@ -113,6 +113,7 @@ export function MegaMenu({
 
   const isMobile = useMediaQuery("(max-width: 900px)");
   const productMenuRef = useRef<HTMLDivElement>(null);
+  const productTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!productsOpen) return undefined;
@@ -123,7 +124,16 @@ export function MegaMenu({
       }
     };
     const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") setProductsOpen(false);
+      if (event.key !== "Escape") return;
+      // The panel is about to be hidden. If focus is still inside it, it would
+      // land on <body> and the keyboard user would lose their place, so hand it
+      // back to the trigger -- but only then, since this listener is on the
+      // document and Escape may well have been pressed somewhere else.
+      const focusWasInsideMenu = productMenuRef.current?.contains(
+        document.activeElement,
+      );
+      setProductsOpen(false);
+      if (focusWasInsideMenu) productTriggerRef.current?.focus();
     };
 
     document.addEventListener("pointerdown", closeOnOutsideClick);
@@ -154,6 +164,7 @@ export function MegaMenu({
         <div className="products-menu" ref={productMenuRef}>
           <button
             type="button"
+            ref={productTriggerRef}
             aria-expanded={productsOpen}
             aria-controls="product-navigation"
             onClick={() => {
@@ -179,7 +190,7 @@ export function MegaMenu({
                     href={`/${group.id}/`}
                     key={group.id}
                     className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
-                    aria-pressed={megaProduct === group.id}
+                    aria-current={megaProduct === group.id ? "true" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
                       setMegaProduct(group.id);
