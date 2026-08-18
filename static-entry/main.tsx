@@ -12,6 +12,7 @@ import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data";
 import { loadProductPricePayload } from "../app/product-price-data";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
+import { readJsonScript } from "../app/read-json-script";
 import "../app/globals.css";
 
 document.documentElement.lang = "fa";
@@ -23,54 +24,30 @@ if (!root) {
   throw new Error("React root element was not found.");
 }
 
-const initialDataEl = document.getElementById("initial-page-data");
-if (initialDataEl?.textContent) {
-  try {
-    const { type, data } = JSON.parse(initialDataEl.textContent);
-    if (type === "rebar") {
-      loadRebarPriceData.setCached(data);
-    } else if (type === "beam") {
-      loadBeamPriceData.setCached(data);
-    } else if (type === "product") {
-      loadProductPricePayload.setCached(data);
-    }
-  } catch {
-    // Ignore invalid JSON
-  }
+const pageData = readJsonScript("initial-page-data");
+if (pageData?.type === "rebar") {
+  loadRebarPriceData.setCached(pageData.data);
+} else if (pageData?.type === "beam") {
+  loadBeamPriceData.setCached(pageData.data);
+} else if (pageData?.type === "product") {
+  loadProductPricePayload.setCached(pageData.data);
 }
 
 // Derived reference tables for /guide/*, computed at build time so the page
 // hydrates against exactly the bytes it was prerendered from.
-let guideReference: GuideReference | null = null;
-const initialGuideEl = document.getElementById("initial-guide-data");
-if (initialGuideEl?.textContent) {
-  try {
-    guideReference = JSON.parse(initialGuideEl.textContent) as GuideReference;
-  } catch {
-    // Ignore invalid JSON
-  }
-}
+const guideReference: GuideReference | null = readJsonScript("initial-guide-data");
 
 // The mega menu renders from this, so it has to be seeded before hydrateRoot:
 // seeding it later would leave the client's first render showing the loading
 // state against a server-rendered menu, which is a hydration mismatch.
-const initialMenuEl = document.getElementById("initial-menu-data");
-if (initialMenuEl?.textContent) {
-  try {
-    setMenuCatalog(JSON.parse(initialMenuEl.textContent));
-  } catch {
-    // Ignore invalid JSON
-  }
+const menuCatalog = readJsonScript("initial-menu-data");
+if (menuCatalog) {
+  setMenuCatalog(menuCatalog);
 }
 
-const initialOverviewEl = document.getElementById("initial-overview-data");
-if (initialOverviewEl?.textContent) {
-  try {
-    const overviewData = JSON.parse(initialOverviewEl.textContent);
-    loadOverviewSummaries.setCached(overviewData);
-  } catch {
-    // Ignore invalid JSON
-  }
+const overviewData = readJsonScript("initial-overview-data");
+if (overviewData) {
+  loadOverviewSummaries.setCached(overviewData);
 }
 
 const pathSegments = window.location.pathname

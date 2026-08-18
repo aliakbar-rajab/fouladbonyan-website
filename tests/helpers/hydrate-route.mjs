@@ -81,19 +81,9 @@ const { setMenuCatalog } = await import("../../app/menu-catalog.ts");
 
 const root = document.getElementById("root");
 
-/*
- * Mirror static-entry/main.tsx exactly. If this drifts from the real entry the
- * test stops proving anything about production, so keep the two in step.
- */
-const readJsonScript = (id) => {
-  const element = document.getElementById(id);
-  if (!element?.textContent) return null;
-  try {
-    return JSON.parse(element.textContent);
-  } catch {
-    return null;
-  }
-};
+// Same helper static-entry/main.tsx uses to read its embedded payloads, so
+// this test can't drift from what production actually does.
+const { readJsonScript } = await import("../../app/read-json-script.ts");
 
 const menuCatalog = readJsonScript("initial-menu-data");
 if (menuCatalog) setMenuCatalog(menuCatalog);

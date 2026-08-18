@@ -1,39 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test, { afterEach } from "node:test";
-import { JSDOM } from "jsdom";
 import React from "react";
+import { setupDomEnv } from "./helpers/dom-env.mjs";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "https://example.test/guide/",
-  pretendToBeVisual: true,
-});
-globalThis.window = dom.window;
-globalThis.document = dom.window.document;
-Object.defineProperty(globalThis, "navigator", {
-  value: dom.window.navigator,
-  configurable: true,
-});
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.Node = dom.window.Node;
-globalThis.MutationObserver = dom.window.MutationObserver;
-globalThis.getComputedStyle = dom.window.getComputedStyle;
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+const dom = setupDomEnv({ url: "https://example.test/guide/", pretendToBeVisual: true });
 
-dom.window.Element.prototype.scrollIntoView = () => {};
 // LightPillar reaches for a WebGL context in an effect; jsdom has no canvas
 // backend, and the component already no-ops when the context is missing.
 dom.window.HTMLCanvasElement.prototype.getContext = () => null;
-dom.window.matchMedia = (query) => ({
-  media: query,
-  matches: false,
-  onchange: null,
-  addEventListener: () => {},
-  removeEventListener: () => {},
-  addListener: () => {},
-  removeListener: () => {},
-  dispatchEvent: () => false,
-});
 
 const { cleanup, render, within } = await import("@testing-library/react");
 const GuidePage = (await import("../app/GuidePage.tsx")).default;

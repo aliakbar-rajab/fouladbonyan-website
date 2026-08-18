@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { validateCatalogPriceData } from "../app/catalog-validation.mjs";
+import { beamSources } from "./price-catalog-config.mjs";
 import {
   SOURCE_ENVELOPE,
   fetchCategories,
@@ -15,10 +16,7 @@ const outputPath = resolve(
   "beam-prices.json",
 );
 
-const sources = [
-  { id: "beam", label: "تیرآهن", slug: "تیرآهن", minimumItems: 30 },
-  { id: "hash", label: "تیرآهن هاش", slug: "تیرآهن-هاش", minimumItems: 5 },
-].map((source) => ({ ...source, url: sourceUrl(source.slug) }));
+const sources = beamSources.map((source) => ({ ...source, url: sourceUrl(source.slug) }));
 
 const payload = {
   fetchedAt: new Date().toISOString(),

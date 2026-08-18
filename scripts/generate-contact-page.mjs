@@ -9,6 +9,7 @@ import {
   buildOrganizationStructuredData,
   siteConfig,
 } from "../app/site-config.ts";
+import { replaceTagContent } from "./html-template-utils.mjs";
 
 const SITE_URL = siteConfig.siteUrl;
 const PAGE_URL = `${SITE_URL}/contact/`;
@@ -17,12 +18,6 @@ const distDir = resolve(import.meta.dirname, "..", "dist");
 const TITLE = "تماس با ما و نشانی | بنیان فولاد داریا";
 const DESCRIPTION =
   "شماره‌های تماس، نشانی دفتر و مسیریابی روی نقشه برای بنیان فولاد داریا. تماس با واحد فروش و مدیریت برای استعلام قیمت آهن و فولاد.";
-
-const replaceTagContent = (html, attrMatcher, value) =>
-  html.replace(
-    new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
-    `$1${value}$2`,
-  );
 
 function buildBreadcrumbJsonLd(label, pageUrl) {
   const payload = {

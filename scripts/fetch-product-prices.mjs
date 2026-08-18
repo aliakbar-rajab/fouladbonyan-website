@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { validateProductPricePayload } from "../app/catalog-validation.mjs";
+import { productCatalogs, productDetailKeys } from "./price-catalog-config.mjs";
 import {
   SOURCE_ENVELOPE,
   fetchCategories,
@@ -15,116 +16,19 @@ const outputPath = resolve(
   "product-prices.json",
 );
 
-// Metas published per row on these pages, in the order they should be shown.
-const detailKeys = [
-  "عرض",
-  "ضخامت",
-  "طول",
-  "طول شاخه",
-  "حالت",
-  "استاندارد",
-  "گرید",
-  "رده",
-  "وزن تقریبی",
-  "چشمه",
-  "ستون",
-];
-
-const source = (
-  id,
-  label,
-  slug,
-  specificationKey = "ضخامت",
-  groupingLabel = "کارخانه",
-) => ({
-  id,
-  label,
-  url: sourceUrl(slug),
-  specificationKey,
-  groupingLabel,
-  detailKeys,
+const source = (raw) => ({
+  id: raw.id,
+  label: raw.label,
+  url: sourceUrl(raw.slug),
+  specificationKey: raw.specificationKey ?? "ضخامت",
+  groupingLabel: raw.groupingLabel ?? "کارخانه",
+  detailKeys: productDetailKeys,
 });
 
-const catalogs = [
-  {
-    id: "sheet",
-    label: "ورق فولادی",
-    initialCategoryId: "black-sheet",
-    sources: [
-      source("black-sheet", "ورق سیاه", "ورق-سیاه"),
-      source("sheet-st52", "ورق ST52", "ورق-st52"),
-      source("sheet-a283", "ورق A283", "ورق-a283"),
-      source("sheet-a285", "ورق A285", "ورق-a285"),
-      source("sheet-a516", "ورق A516", "ورق-a516"),
-      source("steel-strip", "تسمه آهنی", "تسمه-آهنی", "عرض"),
-      source("galvanized-sheet", "ورق گالوانیزه", "ورق-گالوانیزه"),
-      source("colored-sheet", "ورق رنگی", "ورق-رنگی"),
-      source("oily-sheet", "ورق روغنی", "ورق-روغنی"),
-      source("checkered-sheet", "ورق آجدار", "ورق-آجدار"),
-      source("pickled-sheet", "ورق اسیدشویی", "ورق-اسید-شویی"),
-      source("decking-sheet", "عرشه فولادی", "عرشه-فولادی"),
-      source("stainless-sheet", "ورق استیل", "ورق-استیل", "گرید", "گرید"),
-      source("wear-resistant-sheet", "ورق ضد سایش", "ورق-ضد-سایش", "گرید", "گرید"),
-      source("sheet-ck45", "ورق CK45", "ورق-ck45"),
-    ],
-  },
-  {
-    id: "profile",
-    label: "قوطی و پروفیل",
-    initialCategoryId: "box-profile",
-    sources: [
-      source("box-profile", "قوطی و پروفیل", "قوطی-و-پروفیل", "ضخامت", "گروه"),
-      source("building-profile", "پروفیل ساختمانی", "پروفیل-ساختمانی", "ضخامت", "گروه"),
-      source("industrial-profile", "پروفیل صنعتی", "پروفیل-صنعتی"),
-      source("stainless-profile", "پروفیل استیل", "پروفیل-استیل", "گرید", "گرید"),
-      source("furniture-profile", "پروفیل مبلی", "پروفیل-مبلی"),
-      source("galvanized-profile", "پروفیل گالوانیزه", "پروفیل-گالوانیزه"),
-      source("z-profile", "پروفیل Z", "پروفیل-زد"),
-    ],
-  },
-  {
-    id: "pipe",
-    label: "لوله فولادی",
-    initialCategoryId: "scaffold-pipe",
-    sources: [
-      source("scaffold-pipe", "لوله داربست", "لوله-داربست"),
-      source("galvanized-pipe", "لوله گالوانیزه", "لوله-گالوانیزه"),
-      source("stainless-pipe", "لوله استیل", "لوله-استیل", "گرید", "گرید"),
-      source("water-test-pipe", "لوله تست آب", "لوله-تست-آب"),
-      source("spiral-pipe", "لوله اسپیرال", "لوله-اسپیرال"),
-      source("api-pipe", "لوله API", "لوله-api", "استاندارد"),
-      source("gas-pipe", "لوله گاز", "لوله-گاز-خانگی"),
-      source("well-casing-pipe", "لوله جدار چاه", "لوله-جدار-چاه"),
-      source("seamless-pipe", "لوله مانیسمان", "لوله-مانیسمان", "رده"),
-      source("thick-wall-pipe", "لوله گوشتدار", "لوله-گوشتدار"),
-    ],
-  },
-  {
-    id: "angle",
-    label: "نبشی",
-    initialCategoryId: "angle",
-    sources: [source("angle", "نبشی", "نبشی")],
-  },
-  {
-    id: "channel",
-    label: "ناودانی",
-    initialCategoryId: "channel",
-    sources: [source("channel", "ناودانی", "ناودانی", "طول شاخه")],
-  },
-  {
-    id: "wire",
-    label: "مفتول و سیم",
-    initialCategoryId: "wire",
-    sources: [
-      source("wire", "سیم مفتول", "سیم-مفتول", "حالت", "گروه"),
-      source("rib-lath", "رابیتس", "رابیتس", "ستون", "گروه"),
-      source("steel-mesh", "مش", "مش", "چشمه", "گروه"),
-      source("chicken-mesh", "توری مرغی", "توری-مرغی", "عرض", "گروه"),
-      source("chain-link-mesh", "توری حصاری", "توری-حصاری", "ضخامت", "گروه"),
-      source("crimped-mesh", "توری پرسی", "توری-پرسی", "ضخامت", "گروه"),
-    ],
-  },
-];
+const catalogs = productCatalogs.map((catalog) => ({
+  ...catalog,
+  sources: catalog.sources.map(source),
+}));
 
 const fetched = await fetchCategories(catalogs.flatMap((catalog) => catalog.sources));
 const categoriesById = new Map(

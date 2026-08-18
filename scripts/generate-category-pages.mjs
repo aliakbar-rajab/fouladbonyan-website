@@ -8,6 +8,7 @@ import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data.ts";
 import { loadProductPricePayload } from "../app/product-price-data.ts";
 import { loadOverviewSummaries } from "../app/catalog-overview.ts";
 import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
+import { replaceTagContent } from "./html-template-utils.mjs";
 
 const SITE_URL = "https://fouladbonyan.com";
 const distDir = resolve(import.meta.dirname, "..", "dist");
@@ -123,12 +124,6 @@ function buildSubcategoryBreadcrumbJsonLd(group, sub) {
   };
   return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
 }
-
-const replaceTagContent = (html, attrMatcher, value) =>
-  html.replace(
-    new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
-    `$1${value}$2`,
-  );
 
 function buildHeroPreloadTag(group) {
   const heroImg = group.heroImage ?? group.image;

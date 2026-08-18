@@ -65,35 +65,6 @@ export function buildWazeUrl({ lat, lng }: typeof siteConfig.officeCoordinates) 
   return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 }
 
-
-export const missingOwnerInformation = [
-  {
-    key: "legalName",
-    label: "نام حقوقی یا نام صاحب امتیاز",
-    value: siteConfig.business.legalName,
-  },
-  {
-    key: "nationalId",
-    label: "شناسه ملی یا کد ملی صاحب امتیاز",
-    value: siteConfig.business.nationalId,
-  },
-  {
-    key: "registrationNumber",
-    label: "شماره ثبت",
-    value: siteConfig.business.registrationNumber,
-  },
-  {
-    key: "officialEmail",
-    label: "ایمیل رسمی",
-    value: siteConfig.contact.officialEmail,
-  },
-  {
-    key: "workingHours",
-    label: "ساعات کاری",
-    value: siteConfig.contact.workingHours,
-  },
-] as const;
-
 export function buildOrganizationStructuredData() {
   const organization = {
     "@context": "https://schema.org",

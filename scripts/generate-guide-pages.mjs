@@ -11,18 +11,13 @@ import {
 } from "../app/guide-page-data.ts";
 import { buildGuideReference } from "../app/steel-reference.ts";
 import { siteConfig } from "../app/site-config.ts";
+import { replaceTagContent } from "./html-template-utils.mjs";
 
 const SITE_URL = siteConfig.siteUrl;
 const distDir = resolve(import.meta.dirname, "..", "dist");
 const dataDir = resolve(import.meta.dirname, "..", "app", "data");
 
 const readJson = (path) => readFile(path, "utf8").then(JSON.parse);
-
-const replaceTagContent = (html, attrMatcher, value) =>
-  html.replace(
-    new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
-    `$1${value}$2`,
-  );
 
 /*
  * dist/index.html is already prerendered by the time this script runs, so the

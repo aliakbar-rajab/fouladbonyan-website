@@ -5,7 +5,6 @@ import sharp from "sharp";
 const categoriesDir = resolve(import.meta.dirname, "..", "public", "categories");
 
 const HERO_WIDTHS = [640, 960, 1280, 1672];
-const CATEGORY_WIDTHS = [240, 384];
 
 const AVIF_OPTIONS = { quality: 65, effort: 4 };
 const WEBP_OPTIONS = { quality: 80, effort: 4 };
@@ -47,6 +46,13 @@ async function processHeroImage(file) {
   }
 }
 
+// width 384 is also written unsuffixed (the "default" category image); width
+// 240 only ever appears as an explicit -240 file, alongside its JPEG fallback.
+const CATEGORY_TARGETS = [
+  { width: 240, suffixes: ["-240"], jpeg: true },
+  { width: 384, suffixes: ["", "-384"], jpeg: false },
+];
+
 async function processCategoryImage(file) {
   const filePath = resolve(categoriesDir, file);
   const { name } = parse(file); // e.g. 01-rebar
@@ -54,42 +60,16 @@ async function processCategoryImage(file) {
   console.log(`Processing category photo: ${file}`);
   const inputBuffer = await sharp(filePath).toBuffer();
 
-  for (const width of CATEGORY_WIDTHS) {
-    const suffix = width === 384 ? "" : `-${width}`;
-    const widthSuffix = `-${width}`;
+  for (const { width, suffixes, jpeg } of CATEGORY_TARGETS) {
+    const resized = () => sharp(inputBuffer).resize(width, null, { withoutEnlargement: true });
 
-    // AVIF
-    await sharp(inputBuffer)
-      .resize(width, null, { withoutEnlargement: true })
-      .avif(AVIF_OPTIONS)
-      .toFile(resolve(categoriesDir, `${name}${suffix}.avif`));
-
-    if (suffix !== widthSuffix) {
-      await sharp(inputBuffer)
-        .resize(width, null, { withoutEnlargement: true })
-        .avif(AVIF_OPTIONS)
-        .toFile(resolve(categoriesDir, `${name}${widthSuffix}.avif`));
+    for (const suffix of suffixes) {
+      await resized().avif(AVIF_OPTIONS).toFile(resolve(categoriesDir, `${name}${suffix}.avif`));
+      await resized().webp(WEBP_OPTIONS).toFile(resolve(categoriesDir, `${name}${suffix}.webp`));
     }
 
-    // WebP
-    await sharp(inputBuffer)
-      .resize(width, null, { withoutEnlargement: true })
-      .webp(WEBP_OPTIONS)
-      .toFile(resolve(categoriesDir, `${name}${suffix}.webp`));
-
-    if (suffix !== widthSuffix) {
-      await sharp(inputBuffer)
-        .resize(width, null, { withoutEnlargement: true })
-        .webp(WEBP_OPTIONS)
-        .toFile(resolve(categoriesDir, `${name}${widthSuffix}.webp`));
-    }
-
-    // JPEG (for smaller width)
-    if (width === 240) {
-      await sharp(inputBuffer)
-        .resize(width, null, { withoutEnlargement: true })
-        .jpeg(JPEG_OPTIONS)
-        .toFile(resolve(categoriesDir, `${name}-240.jpg`));
+    if (jpeg) {
+      await resized().jpeg(JPEG_OPTIONS).toFile(resolve(categoriesDir, `${name}-240.jpg`));
     }
   }
 }

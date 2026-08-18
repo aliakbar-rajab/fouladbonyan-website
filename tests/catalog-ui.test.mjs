@@ -1,38 +1,11 @@
 import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
-import { JSDOM } from "jsdom";
 import React from "react";
+import { setupDomEnv } from "./helpers/dom-env.mjs";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "https://example.test/",
-  // Supplies requestAnimationFrame, which the forms use to move focus.
-  pretendToBeVisual: true,
-});
-globalThis.window = dom.window;
-globalThis.document = dom.window.document;
-Object.defineProperty(globalThis, "navigator", {
-  value: dom.window.navigator,
-  configurable: true,
-});
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.Node = dom.window.Node;
-globalThis.MutationObserver = dom.window.MutationObserver;
-globalThis.getComputedStyle = dom.window.getComputedStyle;
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-// jsdom implements neither of these, and App calls both. Every query
-// reports false, which is the desktop / motion-allowed case.
-dom.window.Element.prototype.scrollIntoView = () => {};
-dom.window.matchMedia = (query) => ({
-  media: query,
-  matches: false,
-  onchange: null,
-  addEventListener: () => {},
-  removeEventListener: () => {},
-  addListener: () => {},
-  removeListener: () => {},
-  dispatchEvent: () => false,
-});
+// pretendToBeVisual supplies requestAnimationFrame, which the forms use to
+// move focus.
+setupDomEnv({ url: "https://example.test/", pretendToBeVisual: true });
 
 const { act, cleanup, fireEvent, render, screen, waitFor, within } = await import(
   "@testing-library/react"
