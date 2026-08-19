@@ -9,41 +9,60 @@ import {
 import { filterProductGroups } from "./site-logic.mjs";
 import { buildCatalogSearchGroups } from "./catalog-search.mjs";
 import { createRetryableLoader } from "./catalog-cache";
-import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
-import RebarPrices from "./RebarPrices";
-import BeamPrices from "./BeamPrices";
-import ProductPrices from "./ProductPrices";
+import CatalogPrices from "./CatalogPrices";
 import { SteelPriceOverview } from "./SteelPriceOverview";
-import { loadProductPricePayload } from "./product-price-data";
-import { initialCategoryIdOf } from "./group-catalog";
+import { initialCategoryIdOf, loadAllGroupCatalogs } from "./group-catalog";
+import { readRouteRequest } from "./root-dataset";
+import { nextRovingIndex } from "./roving-tabs";
 import {
   getCategoryById,
-  getInitialCategory,
-  isProductCatalogId,
   productGroups,
   type ProductGroup,
   type ProductGroupId,
 } from "./category-meta";
 import type { CatalogViewRequest } from "./catalog-types";
 import { siteConfig } from "./site-config";
-import { LightPillar } from "./LightPillar";
 import { SiteFooter } from "./SiteFooter";
-import { Brand, SectionTitle } from "./site-ui";
+import { SectionTitle } from "./site-ui";
 import { CategoryGrid } from "./CategoryGrid";
 import { HeroCarousel } from "./HeroCarousel";
 import { MarketPrices } from "./MarketPrices";
 import { MegaMenu } from "./MegaMenu";
+import { SiteHeader } from "./SiteHeader";
 import { useMediaQuery } from "./use-media-query";
 
 const loadCatalogSearchGroups = createRetryableLoader<ProductGroup[]>(() =>
-  Promise.all([
-    loadRebarPriceData(),
-    loadBeamPriceData(),
-    loadProductPricePayload(),
-  ]).then(([rebar, beam, products]) =>
-    buildCatalogSearchGroups(productGroups, { rebar, beam, products }),
+  loadAllGroupCatalogs().then((catalogs) =>
+    buildCatalogSearchGroups(productGroups, catalogs),
   ),
 );
+
+/** The price section's heading copy, which follows how the route was reached. */
+function priceSectionHeading(
+  subcategoryLabel: string | undefined,
+  categoryLabel: string | undefined,
+) {
+  if (subcategoryLabel) {
+    return {
+      eyebrow: `جدول قیمت ${subcategoryLabel}`,
+      title: `قیمت روز ${subcategoryLabel}`,
+      description: `قیمت روز و مشخصات فنی ${subcategoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
+    };
+  }
+  if (categoryLabel) {
+    return {
+      eyebrow: "جدول قیمت و مشخصات",
+      title: `قیمت روز ${categoryLabel}`,
+      description: `قیمت روز و مشخصات فنی انواع ${categoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
+    };
+  }
+  return {
+    eyebrow: "قیمت روز بازار",
+    title: "قیمت روز آهن‌آلات و مقاطع فولادی",
+    description:
+      "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید.",
+  };
+}
 
 function scrollToPrices(reduceMotion: boolean) {
   document.getElementById("prices")?.scrollIntoView({
@@ -61,33 +80,17 @@ export default function App({
   initialSubcategory?: string;
   initialSubcategoryLabel?: string;
 } = {}) {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const initialCategorySlug =
-    initialCategory ??
-    (typeof document !== "undefined"
-      ? (document.getElementById("root")?.dataset.initialCategory as
-          | ProductGroupId
-          | undefined)
-      : undefined);
-  const initialSubcategorySlug =
-    initialSubcategory ??
-    (typeof document !== "undefined"
-      ? document.getElementById("root")?.dataset.initialSubcategory
-      : undefined);
-  const initialSubcategoryLabelVal =
-    initialSubcategoryLabel ??
-    (typeof document !== "undefined"
-      ? document.getElementById("root")?.dataset.initialSubcategoryLabel
-      : undefined);
+  const route = readRouteRequest({
+    category: initialCategory,
+    subcategory: initialSubcategory,
+    subcategoryLabel: initialSubcategoryLabel,
+  });
 
-  const isCategoryRoute = Boolean(
-    initialCategorySlug &&
-      productGroups.some((group) => group.id === initialCategorySlug),
-  );
-  const [activeGroup, setActiveGroup] = useState<ProductGroupId>(() =>
-    initialCategorySlug && productGroups.some((g) => g.id === initialCategorySlug)
-      ? initialCategorySlug
-      : getInitialCategory(),
+  // `route.category` is already known to be a real group, so its presence is
+  // what makes this a category route.
+  const isCategoryRoute = Boolean(route.category);
+  const [activeGroup, setActiveGroup] = useState<ProductGroupId>(
+    () => route.category ?? productGroups[0].id,
   );
   const [searchInput, setSearchInput] = useState("");
   const [committedSearch, setCommittedSearch] = useState("");
@@ -97,8 +100,8 @@ export default function App({
   const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>(() => ({
     requestId: 0,
     categoryId:
-      initialSubcategorySlug ??
-      (initialCategorySlug ? initialCategoryIdOf(initialCategorySlug) : undefined),
+      route.subcategory ??
+      (route.category ? initialCategoryIdOf(route.category) : undefined),
   }));
 
   const isDirectCallDevice = useMediaQuery(
@@ -111,14 +114,14 @@ export default function App({
   const tabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const didAutoScrollCategoryRoute = useRef(false);
 
-  const categoryGroup = isCategoryRoute && initialCategorySlug
-    ? getCategoryById(initialCategorySlug) ?? null
+  const categoryGroup = route.category
+    ? getCategoryById(route.category) ?? null
     : null;
 
-  const subcategoryInfo = initialSubcategorySlug
+  const subcategoryInfo = route.subcategory
     ? {
-        id: initialSubcategorySlug,
-        label: initialSubcategoryLabelVal || initialSubcategorySlug,
+        id: route.subcategory,
+        label: route.subcategoryLabel || route.subcategory,
       }
     : null;
 
@@ -130,7 +133,9 @@ export default function App({
   }, [isCategoryRoute, reduceMotion]);
 
 
-  const filteredGroups = useMemo(
+  // filterProductGroups only ever narrows the list it is given, so the result
+  // is still the product groups it was built from.
+  const filteredGroups: ProductGroup[] = useMemo(
     () => filterProductGroups(searchGroups ?? productGroups, committedSearch),
     [committedSearch, searchGroups],
   );
@@ -139,6 +144,18 @@ export default function App({
     filteredGroups.find((group) => group.id === activeGroup) ??
     filteredGroups[0] ??
     null;
+
+  // A category route or a search shows whichever group is visible; the plain
+  // homepage opens on the first group.
+  const selectedTabId =
+    isCategoryRoute || committedSearch ? visibleGroup?.id : productGroups[0].id;
+
+  const heading = priceSectionHeading(
+    subcategoryInfo?.label,
+    isCategoryRoute
+      ? (visibleGroup?.label ?? categoryGroup?.label ?? "محصول")
+      : undefined,
+  );
 
   const navigateToCatalog = (
     groupId: ProductGroupId,
@@ -154,7 +171,6 @@ export default function App({
       factory: view?.factory,
       size: view?.size,
     }));
-    setMobileNavOpen(false);
     scrollToPrices(reduceMotion);
   };
 
@@ -214,26 +230,16 @@ export default function App({
     event: ReactKeyboardEvent<HTMLElement>,
     currentIndex: number,
   ) => {
-    let target: number;
-    if (event.key === "ArrowLeft") target = (currentIndex + 1) % productGroups.length;
-    else if (event.key === "ArrowRight") {
-      target = (currentIndex - 1 + productGroups.length) % productGroups.length;
-    } else if (event.key === "Home") target = 0;
-    else if (event.key === "End") target = productGroups.length - 1;
-    else return;
+    const target = nextRovingIndex(
+      event.key,
+      currentIndex,
+      productGroups.length,
+    );
+    if (target === null) return;
 
     event.preventDefault();
-    const group = productGroups[target];
-    navigateToCatalog(group.id);
+    navigateToCatalog(productGroups[target].id);
     tabRefs.current[target]?.focus();
-  };
-
-  const toggleMobileNav = () => {
-    setMobileNavOpen((open) => !open);
-  };
-
-  const closeMobileNav = () => {
-    setMobileNavOpen(false);
   };
 
   return (
@@ -242,72 +248,16 @@ export default function App({
         رفتن به محتوای اصلی
       </a>
 
-      <div className="utility-bar" id="top">
-        <div className="shell utility-inner">
-          <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
-          <div role="group" aria-label="شماره‌های تماس">
-            {siteConfig.contact.phones.map((phone) => (
-              <a href={phone.href} key={phone.href} dir="ltr">
-                {phone.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <header className="site-header">
-        <LightPillar />
-
-        <div className="shell header-main">
-          <Brand headerLogo href={isCategoryRoute ? "/" : "#top"} />
-
-          <form className="site-search" role="search" onSubmit={submitSearch}>
-            <label className="sr-only" htmlFor="site-search">
-              جست‌وجوی محصول
-            </label>
-            <input
-              id="site-search"
-              type="search"
-              placeholder="جست‌وجوی میلگرد، ورق، تیرآهن و…"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-            />
-            <button
-              type="submit"
-              aria-label="جست‌وجو"
-              disabled={searchLoading}
-            >
-              {searchLoading ? "در حال جست‌وجو…" : "جست‌وجو"}
-            </button>
-          </form>
-
-          <a className="header-phone" href={contactHref}>
-            <span aria-hidden="true">☎</span>
-            <span>
-              <small>تماس با واحد فروش</small>
-              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
-            </span>
-          </a>
-
-          <button
-            className="nav-toggle"
-            type="button"
-            aria-expanded={mobileNavOpen}
-            aria-controls="primary-navigation"
-            onClick={toggleMobileNav}
-          >
-            <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
-            <span className="sr-only">فهرست اصلی</span>
-          </button>
-
+      <SiteHeader
+        brandHref={isCategoryRoute ? "/" : "#top"}
+        renderNav={({ closeMobileNav }) => (
           <MegaMenu
-            mobileOpen={mobileNavOpen}
             onMobileClose={closeMobileNav}
             activeGroup={activeGroup}
             onNavigate={navigateToCatalog}
           />
-        </div>
-      </header>
+        )}
+      />
 
       <main id="main-content">
         <HeroCarousel
@@ -324,29 +274,30 @@ export default function App({
         <section className="prices section" id="prices">
           <div className="shell">
             <SectionTitle
-              eyebrow={
-                subcategoryInfo
-                  ? `جدول قیمت ${subcategoryInfo.label}`
-                  : isCategoryRoute
-                    ? "جدول قیمت و مشخصات"
-                    : "قیمت روز بازار"
-              }
-              title={
-                subcategoryInfo
-                  ? `قیمت روز ${subcategoryInfo.label}`
-                  : isCategoryRoute
-                    ? `قیمت روز ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"}`
-                    : "قیمت روز آهن‌آلات و مقاطع فولادی"
-              }
-              description={
-                subcategoryInfo
-                  ? `قیمت روز و مشخصات فنی ${subcategoryInfo.label} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
-                  : isCategoryRoute
-                    ? `قیمت روز و مشخصات فنی انواع ${visibleGroup?.label ?? categoryGroup?.label ?? "محصول"} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`
-                    : "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید."
-              }
+              eyebrow={heading.eyebrow}
+              title={heading.title}
+              description={heading.description}
             />
 
+            <form className="site-search" role="search" onSubmit={submitSearch}>
+              <label className="sr-only" htmlFor="site-search">
+                جست‌وجوی محصول
+              </label>
+              <input
+                id="site-search"
+                type="search"
+                placeholder="جست‌وجوی میلگرد، ورق، تیرآهن و…"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+              />
+              <button
+                type="submit"
+                aria-label="جست‌وجو"
+                disabled={searchLoading}
+              >
+                {searchLoading ? "در حال جست‌وجو…" : "جست‌وجو"}
+              </button>
+            </form>
 
             <p className="search-status" role="status" aria-live="polite">
               {searchMessage}
@@ -367,10 +318,7 @@ export default function App({
                 aria-label="گروه محصولات"
               >
                 {productGroups.map((group, index) => {
-                  const selected = isCategoryRoute
-                    ? (visibleGroup?.id === group.id)
-                    : (!committedSearch && group.id === "rebar") ||
-                      (committedSearch ? visibleGroup?.id === group.id : false);
+                  const selected = group.id === selectedTabId;
                   const focusable =
                     selected ||
                     (!visibleGroup && index === 0) ||
@@ -409,26 +357,12 @@ export default function App({
                   aria-labelledby={`tab-${visibleGroup.id}`}
                   tabIndex={0}
                 >
-                  {visibleGroup.id === "rebar" ? (
-                    <RebarPrices
-                      key={activeViewRequest.requestId}
-                      phoneHref={contactHref}
-                      requestedView={activeViewRequest}
-                    />
-                  ) : visibleGroup.id === "beam" ? (
-                    <BeamPrices
-                      key={activeViewRequest.requestId}
-                      phoneHref={contactHref}
-                      requestedView={activeViewRequest}
-                    />
-                  ) : isProductCatalogId(visibleGroup.id) ? (
-                    <ProductPrices
-                      key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
-                      catalogId={visibleGroup.id}
-                      phoneHref={contactHref}
-                      requestedView={activeViewRequest}
-                    />
-                  ) : null}
+                  <CatalogPrices
+                    key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
+                    groupId={visibleGroup.id}
+                    phoneHref={contactHref}
+                    requestedView={activeViewRequest}
+                  />
                 </div>
               ) : (
                 <div className="empty-state" role="status">

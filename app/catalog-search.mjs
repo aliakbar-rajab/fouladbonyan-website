@@ -1,18 +1,17 @@
-function categoriesForGroup(groupId, rebar, beam, products) {
-  if (groupId === "rebar") return rebar.categories;
-  if (groupId === "beam") return beam.categories;
-  return (
-    products.catalogs.find((catalog) => catalog.id === groupId)?.categories ?? []
+/**
+ * Fill each product group with the searchable rows of its own catalog.
+ *
+ * `baseGroups` are the groups to fill, in display order; `catalogs` is one
+ * GroupCatalog per group, matched by id.
+ */
+export function buildCatalogSearchGroups(baseGroups, catalogs) {
+  const categoriesByGroup = new Map(
+    catalogs.map((catalog) => [catalog.id, catalog.categories]),
   );
-}
 
-export function buildCatalogSearchGroups(
-  baseGroups,
-  { rebar, beam, products },
-) {
   return baseGroups.map((group) => ({
     ...group,
-    rows: categoriesForGroup(group.id, rebar, beam, products).flatMap(
+    rows: (categoriesByGroup.get(group.id) ?? []).flatMap(
       (category) =>
         category.factories.flatMap((factory) =>
           factory.rows.map((row) => ({

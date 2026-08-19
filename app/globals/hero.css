@@ -19,6 +19,32 @@
 }
 
 /*
+ * On desktop, the home carousel hero fills exactly what the header leaves
+ * behind, so the first screen shows a complete header and a complete hero
+ * with no scroll. --header-total-h (base.css) is the header's own desktop
+ * footprint, so the two can never drift apart. Scoped to the plain carousel
+ * hero, not `.hero-category`: the category hero carries a breadcrumb and a
+ * longer intro and was never part of this fit-to-viewport request.
+ */
+@media (min-width: 901px) {
+  .hero:not(.hero-category) {
+    min-height: calc(100dvh - var(--header-total-h));
+  }
+}
+
+/* Shorter desktop screens (common 1366x768 laptops) get tighter hero copy
+   instead of the hero spilling past the viewport. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .hero:not(.hero-category) .hero-content {
+    padding-block: 3.25rem 5.5rem;
+  }
+
+  .hero:not(.hero-category) h1 {
+    font-size: clamp(1.9rem, 3.4vw, 3.2rem);
+  }
+}
+
+/*
  * A continuous shallow bevel on all four sides, matching the molded transition
  * marked on the printer reference. The banner remains a single image surface.
  */
@@ -268,4 +294,60 @@
   padding-inline: 0.9rem;
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+/* Responsive overrides for this module's own rules. */
+
+@media (max-width: 900px) {
+  .hero {
+    min-height: 34rem;
+  }
+
+  .hero-content {
+    padding-block: 4rem 8rem;
+  }
+
+  .hero-overlay {
+    background:
+    linear-gradient(0deg, rgb(17 17 20 / 85%), rgb(17 17 20 / 32%)),
+    linear-gradient(90deg, transparent, rgb(17 17 20 / 55%));
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: 32rem;
+  }
+
+  .hero-image {
+    object-position: center;
+  }
+
+  .hero-content {
+    padding-block: 3rem 7.5rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.8rem, 9.5vw, 2.6rem);
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions a,
+  .hero-actions button {
+    width: 100%;
+  }
+
+  .carousel-controls {
+    bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .carousel-controls > button,
+  .carousel-dots button {
+    min-width: 2.75rem;
+  }
 }

@@ -6,7 +6,7 @@ export type CatalogLoadState<T> =
   | { status: "ready"; data: T };
 
 export type CatalogLoader<T, K extends string> = ((key: K) => Promise<T>) & {
-  getCached?: (key?: K) => T | undefined;
+  getCached: (key?: K) => T | undefined;
 };
 
 /**
@@ -18,7 +18,7 @@ export function useCatalogData<T, K extends string>(
   load: CatalogLoader<T, K>,
   key: K,
 ): CatalogLoadState<T> {
-  const initialData = load.getCached ? load.getCached(key) : undefined;
+  const initialData = load.getCached(key);
   const [loaded, setLoaded] = useState<
     (CatalogLoadState<T> & { key: K }) | null
   >(() => (initialData !== undefined ? { key, status: "ready", data: initialData } : null));

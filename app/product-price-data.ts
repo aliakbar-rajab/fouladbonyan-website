@@ -28,11 +28,3 @@ export const loadProductPricePayload = createRetryableLoader(
     ) as Promise<ProductPricePayload>,
 );
 
-export async function loadProductPriceCatalog(catalogId: ProductCatalogId) {
-  const payload = await loadProductPricePayload();
-  const catalog = payload.catalogs.find((item) => item.id === catalogId);
-  if (!catalog) {
-    throw new Error(`داده قیمت گروه ${catalogId} در دسترس نیست.`);
-  }
-  return catalog;
-}

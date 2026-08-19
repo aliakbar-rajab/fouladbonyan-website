@@ -1,15 +1,12 @@
-import { useState } from "react";
-import { Brand } from "./site-ui";
 import { Breadcrumb } from "./Breadcrumb";
 import { WhatsAppIcon } from "./icons";
-import { useMediaQuery } from "./use-media-query";
 import { localizeCatalogValue } from "./catalog-utils";
 import {
   buildGoogleMapsUrl,
   buildWazeUrl,
   siteConfig,
 } from "./site-config";
-import { LightPillar } from "./LightPillar";
+import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
 
 const googleMapsUrl = buildGoogleMapsUrl(siteConfig.officeCoordinates);
@@ -31,84 +28,34 @@ const mapDestinations = [
 ];
 
 export default function ContactPage() {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 900px)");
-
   return (
     <div id="fb-site">
       <a className="skip-link" href="#main-content">
         رفتن به محتوای اصلی
       </a>
 
-      <div className="utility-bar" id="top">
-        <div className="shell utility-inner">
-          <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
-          <div role="group" aria-label="شماره‌های تماس">
-            {siteConfig.contact.phones.map((phone) => (
-              <a href={phone.href} key={phone.href} dir="ltr">
-                {phone.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <header className="site-header">
-        <LightPillar />
-
-        <div className="shell header-main">
-          <Brand headerLogo href="/" />
-          <a className="contact-header-catalog" href="/#products">
-            <span>قیمت روز مقاطع فولادی و اطلاعات محصولات</span>
-            <strong>مشاهده محصولات</strong>
-          </a>
-          <a className="header-phone" href={siteConfig.contact.phones[0].href}>
-            <span aria-hidden="true">☎</span>
-            <span>
-              <small>تماس با واحد فروش</small>
-              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
-            </span>
-          </a>
-          <button
-            className="nav-toggle"
-            type="button"
-            aria-expanded={mobileNavOpen}
-            aria-controls="primary-navigation"
-            onClick={() => setMobileNavOpen((open) => !open)}
-          >
-            <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
-            <span className="sr-only">فهرست اصلی</span>
-          </button>
-
-          <div className="nav-wrap">
-            <nav
-              className="primary-nav"
-              id="primary-navigation"
-              aria-label="فهرست اصلی"
-              hidden={isMobile && !mobileNavOpen}
-            >
-              <a href="/" onClick={() => setMobileNavOpen(false)}>
-                صفحه اصلی
-              </a>
-              <a href="/#products" onClick={() => setMobileNavOpen(false)}>
-                قیمت روز محصولات
-              </a>
-              <a href="/#prices" onClick={() => setMobileNavOpen(false)}>
-                راهنمای استعلام
-              </a>
-              <a href="/about/" onClick={() => setMobileNavOpen(false)}>
-                درباره ما
-              </a>
-              <a href="/contact/" aria-current="page">
-                تماس با ما
-              </a>
-              <a className="nav-quote" href="/quote-process/#quote-form">
-                درخواست پیش‌فاکتور
-              </a>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        brandHref="/"
+        renderNav={({ closeMobileNav }) => (
+          <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
+            <a href="/" onClick={closeMobileNav}>
+              صفحه اصلی
+            </a>
+            <a href="/#products" onClick={closeMobileNav}>
+              قیمت روز محصولات
+            </a>
+            <a href="/#prices" onClick={closeMobileNav}>
+              راهنمای استعلام
+            </a>
+            <a href="/about/" onClick={closeMobileNav}>
+              درباره ما
+            </a>
+            <a href="/contact/" aria-current="page">
+              تماس با ما
+            </a>
+          </nav>
+        )}
+      />
 
       <main id="main-content" className="contact-main">
         <section className="contact-hero">

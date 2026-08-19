@@ -308,6 +308,67 @@
   color: #e1e1e4;
 }
 
+/*
+ * Product search. It used to live in the header, where it grew to 704px and
+ * outweighed everything around it; it belongs with the price table it filters,
+ * directly above that table's own status line.
+ */
+.site-search {
+  max-width: 34rem;
+  height: 3.1rem;
+  display: flex;
+  overflow: hidden;
+  margin-bottom: 1.1rem;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 12px;
+  background: rgb(20 20 24 / 45%);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.site-search:focus-within {
+  border-color: var(--brand-yellow);
+  background: rgb(16 16 20 / 70%);
+  box-shadow: 0 0 0 3px var(--brand-yellow-glow);
+}
+
+.site-search input {
+  min-width: 0;
+  flex: 1;
+  padding-inline: 1.15rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+}
+
+.site-search input::placeholder {
+  color: #b9b8bd;
+}
+
+.site-search button {
+  min-width: 6rem;
+  border: 0;
+  background: var(--brand-yellow);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.site-search button:hover:not(:disabled) {
+  background: #ffc41f;
+}
+
+.site-search button:disabled {
+  background: #8c7a45;
+  color: rgb(34 34 38 / 70%);
+  cursor: progress;
+}
+
 .search-status {
   min-height: 2.75rem;
   display: flex;
@@ -758,4 +819,130 @@ tbody tr:hover {
 
 .empty-state p {
   color: var(--muted);
+}
+
+/* Responsive overrides for this module's own rules. */
+
+@media (max-width: 1080px) {
+  .category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .steel-price-overview {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .overview-table-wrapper {
+    display: none;
+  }
+
+  .overview-mobile-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .overview-card {
+    padding: 1rem;
+    border-radius: 12px;
+    background: #2b2b2e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .overview-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .overview-card-thumb {
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .overview-card-header h4 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .overview-card-header h4 a {
+    color: var(--brand-yellow);
+  }
+
+  .overview-card-header p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #a0a1a8;
+  }
+
+  .overview-card-details {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .overview-card-price small {
+    display: block;
+    font-size: 0.75rem;
+    color: #8c8d94;
+  }
+
+  .overview-card-price strong {
+    color: #fff;
+    font-size: 0.92rem;
+  }
+
+  .overview-card-price span {
+    font-size: 0.75rem;
+    color: #8c8d94;
+    margin-inline-start: 0.25rem;
+  }
+
+  .overview-card-btn {
+    display: inline-flex;
+    padding: 0.45rem 0.75rem;
+    border-radius: 6px;
+    background: rgba(246, 181, 0, 0.15);
+    color: var(--brand-yellow);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .section {
+    padding-block: 4rem;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-card {
+    grid-template-columns: 8rem 1fr;
+    grid-template-rows: minmax(8rem, auto);
+  }
+
+  .category-card > b {
+    display: none;
+  }
+
+  .category-card > span {
+    align-content: center;
+  }
+
+  .search-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

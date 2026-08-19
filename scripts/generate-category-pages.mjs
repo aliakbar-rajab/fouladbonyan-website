@@ -4,45 +4,43 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import App from "../app/App.tsx";
 import { productGroups } from "../app/category-meta.ts";
-import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data.ts";
-import { loadProductPricePayload } from "../app/product-price-data.ts";
+import {
+  loadGroupCatalog,
+  primeCatalogSnapshot,
+  snapshotTypeOf,
+} from "../app/group-catalog.ts";
 import { loadOverviewSummaries } from "../app/catalog-overview.ts";
 import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
+import { siteConfig } from "../app/site-config.ts";
 import {
-  buildBreadcrumbJsonLd,
-  replaceSocialMeta,
-} from "./html-template-utils.mjs";
+  appendPayloads,
+  appendSitemapUrls,
+  fillRoot,
+  renderStaticPage,
+  setSitemapRootLastmod,
+} from "./page-shell.mjs";
 
-const SITE_URL = "https://fouladbonyan.com";
+const SITE_URL = siteConfig.siteUrl;
 const distDir = resolve(import.meta.dirname, "..", "dist");
 const dataDir = resolve(import.meta.dirname, "..", "app", "data");
 
 const readJson = (path) => readFile(path, "utf8").then(JSON.parse);
 
-async function loadPriceData() {
-  const [rebar, beam, products] = await Promise.all([
+const homeCrumb = { name: "صفحه اصلی", url: `${SITE_URL}/` };
+
+async function loadSnapshots() {
+  const [rebar, beam, product] = await Promise.all([
     readJson(resolve(dataDir, "rebar-prices.json")),
     readJson(resolve(dataDir, "beam-prices.json")),
     readJson(resolve(dataDir, "product-prices.json")),
   ]);
 
-  const dates = new Map();
-  dates.set("rebar", rebar.fetchedAt.slice(0, 10));
-  dates.set("beam", beam.fetchedAt.slice(0, 10));
-
-  const productDate = products.fetchedAt.slice(0, 10);
-  for (const group of productGroups) {
-    if (!dates.has(group.id)) {
-      dates.set(group.id, productDate);
-    }
-  }
-
-  const latestDate = [rebar.fetchedAt, beam.fetchedAt, products.fetchedAt]
+  const latestDate = [rebar, beam, product]
+    .map((snapshot) => snapshot.fetchedAt.slice(0, 10))
     .sort()
-    .at(-1)
-    .slice(0, 10);
+    .at(-1);
 
-  return { rebar, beam, products, dates, latestDate };
+  return { snapshots: { rebar, beam, product }, latestDate };
 }
 
 function buildHeroPreloadTag(group) {
@@ -73,139 +71,15 @@ function buildHeroPreloadTag(group) {
     />`;
 }
 
-function buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload) {
-  const pageUrl = `${SITE_URL}/${group.id}/`;
-
-  let html = baseHtml
-    .replace(/<title>[^<]*<\/title>/, `<title>${group.seoTitle}</title>`)
-    .replace(
-      /(<link rel="canonical" href=")[^"]*(")/,
-      `$1${pageUrl}$2`,
-    )
-    .replace(
-      /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
-      "",
-    )
-    .replace(
-      /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
-      "",
-    )
-    .replace(
-      /\s*<link id="hero-image-preload"[\s\S]*?\/>/,
-      `\n    ${buildHeroPreloadTag(group)}`,
-    );
-
-  html = replaceSocialMeta(html, { title: group.seoTitle, description: group.seoDescription, pageUrl });
-
-  html = html.replace(
-    /<div id="root"[\s\S]*?<\/div>/,
-    `<div id="root" data-initial-category="${group.id}">${renderedAppHtml}</div>`,
-  );
-
-  const initialDataScript = `\n    <script id="initial-page-data" type="application/json">${JSON.stringify(dataPayload)}</script>`;
-  html = html.replace(
-    "</body>",
-    `${menuDataScript}${initialDataScript}\n  </body>`,
-  );
-
-  return html.replace(
-    "</head>",
-    `${buildBreadcrumbJsonLd([
-      { name: "صفحه اصلی", url: `${SITE_URL}/` },
-      { name: group.label, url: `${SITE_URL}/${group.id}/` },
-    ])}\n  </head>`,
-  );
-}
-
-function buildSubcategoryHtml(baseHtml, group, sub, renderedAppHtml, dataPayload) {
-  const pageUrl = `${SITE_URL}/${group.id}/${sub.id}/`;
-  const seoTitle = `قیمت ${sub.label} امروز | بنیان فولاد داریا`;
-  const seoDescription = `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`;
-
-  let html = baseHtml
-    .replace(/<title>[^<]*<\/title>/, `<title>${seoTitle}</title>`)
-    .replace(
-      /(<link rel="canonical" href=")[^"]*(")/,
-      `$1${pageUrl}$2`,
-    )
-    .replace(
-      /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
-      "",
-    )
-    .replace(
-      /\s*<script id="initial-overview-data"[\s\S]*?<\/script>/,
-      "",
-    )
-    .replace(
-      /\s*<link id="hero-image-preload"[\s\S]*?\/>/,
-      `\n    ${buildHeroPreloadTag(group)}`,
-    );
-
-  html = replaceSocialMeta(html, { title: seoTitle, description: seoDescription, pageUrl });
-
-  html = html.replace(
-    /<div id="root"[\s\S]*?<\/div>/,
-    `<div id="root" data-initial-category="${group.id}" data-initial-subcategory="${sub.id}" data-initial-subcategory-label="${sub.label}">${renderedAppHtml}</div>`,
-  );
-
-  const initialDataScript = `\n    <script id="initial-page-data" type="application/json">${JSON.stringify(dataPayload)}</script>`;
-  html = html.replace(
-    "</body>",
-    `${menuDataScript}${initialDataScript}\n  </body>`,
-  );
-
-  return html.replace(
-    "</head>",
-    `${buildBreadcrumbJsonLd([
-      { name: "صفحه اصلی", url: `${SITE_URL}/` },
-      { name: group.label, url: `${SITE_URL}/${group.id}/` },
-      { name: sub.label, url: pageUrl },
-    ])}\n  </head>`,
-  );
-}
-
-async function updateSitemapWithCategories(freshnessMap, latestRootDate, subcategoryMap) {
-  const sitemapPath = resolve(distDir, "sitemap.xml");
-  const sitemap = await readFile(sitemapPath, "utf8");
-
-  // Update root URL lastmod with latest price data date and clean priority/changefreq
-  let updatedSitemap = sitemap.replace(
-    /<url>\s*<loc>https:\/\/fouladbonyan\.com\/<\/loc>[\s\S]*?<\/url>/,
-    `  <url>\n    <loc>${SITE_URL}/</loc>\n    <lastmod>${latestRootDate}</lastmod>\n  </url>`,
-  );
-
-  const categoryEntries = productGroups
-    .map((group) => {
-      const lastmod = freshnessMap.get(group.id) || latestRootDate;
-      return `  <url>\n    <loc>${SITE_URL}/${group.id}/</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`;
-    });
-
-  const subcategoryEntries = [];
-  for (const group of productGroups) {
-    const lastmod = freshnessMap.get(group.id) || latestRootDate;
-    const subs = subcategoryMap.get(group.id) || [];
-    for (const sub of subs) {
-      subcategoryEntries.push(`  <url>\n    <loc>${SITE_URL}/${group.id}/${sub.id}/</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`);
-    }
-  }
-
-  const allEntries = [...categoryEntries, ...subcategoryEntries].join("\n");
-  updatedSitemap = updatedSitemap.replace("</urlset>", `${allEntries}\n</urlset>`);
-
-  await writeFile(sitemapPath, updatedSitemap, "utf8");
-}
-
-const [baseHtml, priceData] = await Promise.all([
+const [baseHtml, { snapshots, latestDate }] = await Promise.all([
   readFile(resolve(distDir, "index.html"), "utf8"),
-  loadPriceData(),
+  loadSnapshots(),
 ]);
 
-const { rebar: rebarData, beam: beamData, products: productData, dates: freshnessDates, latestDate } = priceData;
-
-// Preload caches for SSR prerendering
-loadRebarPriceData.setCached(rebarData);
-loadBeamPriceData.setCached(beamData);
-loadProductPricePayload.setCached(productData);
+// Prime the caches every prerender reads through.
+for (const [type, data] of Object.entries(snapshots)) {
+  primeCatalogSnapshot({ type, data });
+}
 
 /*
  * The mega menu renders from this small payload rather than from the price
@@ -216,89 +90,101 @@ loadProductPricePayload.setCached(productData);
  */
 const menuCatalog = await buildMenuCatalog();
 setMenuCatalog(menuCatalog);
-const menuDataScript = `\n    <script id="initial-menu-data" type="application/json">${JSON.stringify(menuCatalog)}</script>`;
+const menuPayload = { id: "initial-menu-data", data: menuCatalog };
 
-// 1. Prerender the homepage (dist/index.html)
+// 1. Prerender the homepage (dist/index.html). It is the base document with
+// its own root filled in, so it keeps every tag the other pages rewrite.
 const overviewSummaries = await loadOverviewSummaries();
-const homeRenderedHtml = renderToString(React.createElement(App));
-
-
-let homeHtml = baseHtml.replace(
-  '<div id="root"></div>',
-  `<div id="root">${homeRenderedHtml}</div>`,
+await writeFile(
+  resolve(distDir, "index.html"),
+  appendPayloads(
+    fillRoot(baseHtml, renderToString(React.createElement(App))),
+    [menuPayload, { id: "initial-overview-data", data: overviewSummaries }],
+  ),
+  "utf8",
 );
-const overviewDataScript = `\n    <script id="initial-overview-data" type="application/json">${JSON.stringify(overviewSummaries)}</script>`;
-homeHtml = homeHtml.replace(
-  "</body>",
-  `${menuDataScript}${overviewDataScript}\n  </body>`,
-);
-await writeFile(resolve(distDir, "index.html"), homeHtml, "utf8");
 
-// 2. Prerender all category landing pages and subcategory pages
-const subcategoryMap = new Map();
-let totalSubcategoriesCount = 0;
+// 2. Describe every category landing page and subcategory page.
+const pages = [];
+
+for (const group of productGroups) {
+  const catalog = await loadGroupCatalog(group.id);
+  const snapshotType = snapshotTypeOf(group.id);
+  // A group is only as fresh as the snapshot it is served from.
+  const lastmod = catalog.fetchedAt.slice(0, 10);
+  const payloads = [
+    menuPayload,
+    {
+      id: "initial-page-data",
+      data: { type: snapshotType, data: snapshots[snapshotType] },
+    },
+  ];
+  const heroPreload = buildHeroPreloadTag(group);
+  const groupUrl = `${SITE_URL}/${group.id}/`;
+  const groupCrumb = { name: group.label, url: groupUrl };
+
+  pages.push({
+    outPath: [group.id],
+    appProps: { initialCategory: group.id },
+    lastmod,
+    page: {
+      title: group.seoTitle,
+      description: group.seoDescription,
+      pageUrl: groupUrl,
+      rootAttributes: ` data-initial-category="${group.id}"`,
+      heroPreload,
+      payloads,
+      breadcrumb: [homeCrumb, groupCrumb],
+    },
+  });
+
+  for (const sub of catalog.categories) {
+    const pageUrl = `${groupUrl}${sub.id}/`;
+    pages.push({
+      outPath: [group.id, sub.id],
+      appProps: {
+        initialCategory: group.id,
+        initialSubcategory: sub.id,
+        initialSubcategoryLabel: sub.label,
+      },
+      lastmod,
+      page: {
+        title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
+        description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
+        pageUrl,
+        rootAttributes: ` data-initial-category="${group.id}" data-initial-subcategory="${sub.id}" data-initial-subcategory-label="${sub.label}"`,
+        heroPreload,
+        payloads,
+        breadcrumb: [homeCrumb, groupCrumb, { name: sub.label, url: pageUrl }],
+      },
+    });
+  }
+}
 
 await Promise.all(
-  productGroups.map(async (group) => {
-    let dataPayload;
-    let subcategories;
-
-
-    if (group.id === "rebar") {
-      loadRebarPriceData.setCached(rebarData);
-      dataPayload = { type: "rebar", data: rebarData };
-      subcategories = rebarData.categories;
-    } else if (group.id === "beam") {
-      loadBeamPriceData.setCached(beamData);
-      dataPayload = { type: "beam", data: beamData };
-      subcategories = beamData.categories;
-    } else {
-      loadProductPricePayload.setCached(productData);
-      dataPayload = { type: "product", data: productData };
-      subcategories = productData.catalogs.find((c) => c.id === group.id)?.categories ?? [];
-    }
-
-    subcategoryMap.set(group.id, subcategories);
-    totalSubcategoriesCount += subcategories.length;
-
-    // Prerender category landing page
-    const renderedAppHtml = renderToString(
-      React.createElement(App, { initialCategory: group.id }),
-    );
-
-    const outDir = resolve(distDir, group.id);
+  pages.map(async ({ outPath, appProps, page }) => {
+    const rootHtml = renderToString(React.createElement(App, appProps));
+    const outDir = resolve(distDir, ...outPath);
     await mkdir(outDir, { recursive: true });
     await writeFile(
       resolve(outDir, "index.html"),
-      buildCategoryHtml(baseHtml, group, renderedAppHtml, dataPayload),
+      renderStaticPage(baseHtml, { ...page, rootHtml }),
       "utf8",
-    );
-
-    // Prerender each subcategory page
-    await Promise.all(
-      subcategories.map(async (sub) => {
-        const renderedSubHtml = renderToString(
-          React.createElement(App, {
-            initialCategory: group.id,
-            initialSubcategory: sub.id,
-            initialSubcategoryLabel: sub.label,
-          }),
-        );
-
-        const subOutDir = resolve(outDir, sub.id);
-        await mkdir(subOutDir, { recursive: true });
-        await writeFile(
-          resolve(subOutDir, "index.html"),
-          buildSubcategoryHtml(baseHtml, group, sub, renderedSubHtml, dataPayload),
-          "utf8",
-        );
-      }),
     );
   }),
 );
 
-await updateSitemapWithCategories(freshnessDates, latestDate, subcategoryMap);
+const sitemapPath = resolve(distDir, "sitemap.xml");
+await setSitemapRootLastmod(sitemapPath, {
+  siteUrl: SITE_URL,
+  lastmod: latestDate,
+});
+await appendSitemapUrls(
+  sitemapPath,
+  pages.map(({ page, lastmod }) => ({ pageUrl: page.pageUrl, lastmod })),
+);
 
+const subcategoryCount = pages.length - productGroups.length;
 console.log(
-  `تولید و پیش‌رندر ${productGroups.length} صفحه‌ی فرود دسته‌بندی، ${totalSubcategoriesCount} صفحه‌ی زیردسته، صفحه اصلی و بروزرسانی sitemap با موفقیت انجام شد.`,
+  `تولید و پیش‌رندر ${productGroups.length} صفحه‌ی فرود دسته‌بندی، ${subcategoryCount} صفحه‌ی زیردسته، صفحه اصلی و بروزرسانی sitemap با موفقیت انجام شد.`,
 );

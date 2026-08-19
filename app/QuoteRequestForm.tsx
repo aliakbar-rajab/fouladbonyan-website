@@ -1,87 +1,34 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   FieldErrors,
+  focusFirstError,
   setFieldError,
   validateFullName,
   validatePhone,
   validateRequired,
 } from "./form-validation";
-import { calculateRebarWeight } from "./catalog-behavior.mjs";
 import {
-  calculateApproximateTotal,
   loadQuotePriceEstimates,
-  type QuotePieceOption,
-  type QuotePriceEstimate,
-  type QuoteProductName,
+  priceQuoteItem,
+  resolvePieceOption,
+  type QuotePriceEstimates,
 } from "./quote-pricing";
+import {
+  branchLengthLabel,
+  buildGeneratedQuote,
+  buildQuoteMessage,
+  formatToman,
+} from "./quote-output";
 import { QuoteDocument } from "./QuoteDocument";
-import { quoteDisclaimer, type GeneratedQuote } from "./quote-types";
+import {
+  quoteDisclaimer,
+  quoteUnits,
+  type GeneratedQuote,
+  type PricedQuoteItem,
+  type QuoteItem,
+} from "./quote-types";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
-
-// Standard commercial rebar branch length in Iran; used only to estimate a
-// per-branch/per-piece weight when a buyer orders میلگرد by شاخه/عدد instead
-// of by weight.
-const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
-
-// Products whose catalog has no per-piece data at all (only کیلوگرم rows) —
-// شاخه/عدد are hidden for these so the form never offers a unit it can't
-// price. میلگرد is handled separately via a real weight formula, so it keeps
-// its شاخه/عدد options even though its catalog publishes no pieceOptions.
-const PRODUCTS_WITHOUT_PIECE_UNITS: readonly QuoteProductName[] = [
-  "هاش",
-  "ورق فولادی",
-  "پروفیل و قوطی",
-  "نبشی",
-  "ناودانی",
-];
-
-function resolvePieceOption(
-  pieceOptionKey: string,
-  estimate: QuotePriceEstimate | undefined,
-) {
-  if (!pieceOptionKey || !estimate?.pieceOptions) return undefined;
-  return estimate.pieceOptions.find((option) => option.key === pieceOptionKey);
-}
-
-function calculateItemTotal(
-  item: Pick<
-    QuoteItem,
-    "product" | "unit" | "quantity" | "rebarDiameterMm" | "pieceOptionKey"
-  >,
-  estimate: QuotePriceEstimate | undefined,
-) {
-  if (!estimate) return null;
-  const quantity = Number(item.quantity);
-
-  const pieceOption = resolvePieceOption(item.pieceOptionKey, estimate);
-  if (pieceOption) {
-    return Number.isFinite(quantity) && quantity > 0
-      ? Math.round(pieceOption.priceToman * quantity)
-      : null;
-  }
-
-  if (item.unit === "تن" || item.unit === "کیلوگرم") {
-    return calculateApproximateTotal(
-      estimate.unitPriceTomanPerKg,
-      quantity,
-      item.unit,
-    );
-  }
-
-  if (item.product === "میلگرد" && item.rebarDiameterMm) {
-    const weightKg = calculateRebarWeight(
-      Number(item.rebarDiameterMm),
-      REBAR_STANDARD_BRANCH_LENGTH_M,
-      Math.trunc(quantity),
-    );
-    return weightKg
-      ? Math.round(estimate.unitPriceTomanPerKg * weightKg)
-      : null;
-  }
-
-  return null;
-}
 
 const disclaimerError =
   "برای آماده‌سازی درخواست باید متن غیرقطعی‌بودن درخواست را تأیید کنید.";
@@ -113,26 +60,9 @@ const productOptions = [
   "ناودانی",
   "مفتول و سیم",
   "سایر محصولات فولادی",
-] as const satisfies readonly QuoteProductName[];
+] as const satisfies readonly QuoteItem["product"][];
 
 const MAX_QUOTE_ITEMS = 100;
-
-type QuoteItem = {
-  id: number;
-  product: QuoteProductName | "";
-  quantity: string;
-  unit: "تن" | "کیلوگرم" | "شاخه" | "عدد";
-  dimensions: string;
-  rebarDiameterMm: string;
-  // Key of a real catalog item, for products whose estimate carries
-  // pieceOptions (e.g. a specific تیرآهن size or a specific رابیتس/توری
-  // product) — determines both the real unit and real price.
-  pieceOptionKey: string;
-};
-
-type QuotePriceEstimates = Partial<
-  Record<QuoteProductName, QuotePriceEstimate>
->;
 
 const createQuoteItem = (id: number): QuoteItem => ({
   id,
@@ -144,23 +74,7 @@ const createQuoteItem = (id: number): QuoteItem => ({
   pieceOptionKey: "",
 });
 
-const formatToman = (value: number) =>
-  `${value.toLocaleString("fa-IR")} تومان`;
-
-const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-const persianDate = () => persianDateFormatter.format(new Date());
-
-type PricedQuoteItem = {
-  item: QuoteItem;
-  estimate: QuotePriceEstimate | undefined;
-  approximateTotal: number | null;
-  pieceOption: QuotePieceOption | undefined;
-};
+const isPieceUnit = (unit: string) => unit === "شاخه" || unit === "عدد";
 
 /**
  * What the buyer is told about one row's price: why it cannot be estimated
@@ -176,7 +90,7 @@ function ItemPriceHint({
   loadError: boolean;
 }) {
   const { item, estimate, approximateTotal, pieceOption } = priced;
-  const byPiece = item.unit === "شاخه" || item.unit === "عدد";
+  const byPiece = isPieceUnit(item.unit);
 
   if (loading) {
     return <span>در حال دریافت قیمت تقریبی از داده‌های سایت…</span>;
@@ -202,7 +116,7 @@ function ItemPriceHint({
       </span>
     );
   }
-  if (byPiece && item.product === "میلگرد" && !item.rebarDiameterMm) {
+  if (byPiece && estimate.branchWeight && !item.rebarDiameterMm) {
     return (
       <span>
         برای محاسبه قیمت بر اساس {item.unit}، قطر میلگرد (میلی‌متر) را در فیلد
@@ -235,8 +149,8 @@ function ItemPriceHint({
           میانگین داده قیمت سایت:{" "}
           <strong>{formatToman(estimate.unitPriceTomanPerKg)}</strong> برای هر
           کیلوگرم
-          {item.product === "میلگرد" && byPiece
-            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${REBAR_STANDARD_BRANCH_LENGTH_M.toLocaleString("fa-IR")} متر)`
+          {estimate.branchWeight && byPiece
+            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${branchLengthLabel()} متر)`
             : null}
         </span>
       )}
@@ -297,7 +211,6 @@ export function QuoteRequestForm() {
 
   useEffect(() => {
     let active = true;
-
     loadQuotePriceEstimates()
       .then((estimates) => {
         if (!active) return;
@@ -314,17 +227,27 @@ export function QuoteRequestForm() {
     };
   }, []);
 
-  const pricedItems = useMemo(
+  /*
+   * The one derivation. The price hints, the prepared text and the generated
+   * document all read this, so none of them can disagree about what a row
+   * costs or which unit it is sold in.
+   */
+  const pricedItems: PricedQuoteItem[] = useMemo(
     () =>
       items.map((item) => {
         const estimate =
           item.product && priceEstimates
             ? priceEstimates[item.product]
             : undefined;
-        const approximateTotal = calculateItemTotal(item, estimate);
         const pieceOption = resolvePieceOption(item.pieceOptionKey, estimate);
 
-        return { item, estimate, approximateTotal, pieceOption };
+        return {
+          item,
+          estimate,
+          pieceOption,
+          approximateTotal: priceQuoteItem(item, estimate),
+          effectiveUnit: pieceOption?.unit ?? item.unit,
+        };
       }),
     [items, priceEstimates],
   );
@@ -380,122 +303,36 @@ export function QuoteRequestForm() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const fullName = String(form.get("fullName") ?? "");
-    const phone = String(form.get("phone") ?? "");
-    const destination = String(form.get("destination") ?? "");
-    const notes = String(form.get("notes") ?? "");
-    const accepted = form.get("acceptDisclaimer") === "on";
-
-    const nextErrors: FieldErrors = {
-      fullName: validateFullName(fullName),
-      phone: validatePhone(phone),
+    const contact = {
+      fullName: String(form.get("fullName") ?? "").trim(),
+      phone: String(form.get("phone") ?? "").trim(),
+      destination: String(form.get("destination") ?? "").trim(),
+      notes: String(form.get("notes") ?? "").trim(),
     };
 
-    const quoteItems = items.map((item, index) => {
-      const { product, quantity, unit, dimensions, rebarDiameterMm, pieceOptionKey } =
-        item;
-
-      nextErrors[`itemProduct-${item.id}`] = validateProduct(product, index);
-      nextErrors[`itemQuantity-${item.id}`] = validateQuantity(quantity, index);
-
-      const estimate =
-        product && priceEstimates ? priceEstimates[product] : undefined;
-      const pieceOption = resolvePieceOption(pieceOptionKey, estimate);
-      const approximateTotal = calculateItemTotal(
-        { product, unit, quantity, rebarDiameterMm, pieceOptionKey },
-        estimate,
+    const nextErrors: FieldErrors = {
+      fullName: validateFullName(contact.fullName),
+      phone: validatePhone(contact.phone),
+      destination: validateRequired(contact.destination, "شهر مقصد"),
+      acceptDisclaimer:
+        form.get("acceptDisclaimer") === "on" ? "" : disclaimerError,
+    };
+    for (const [index, { item }] of pricedItems.entries()) {
+      nextErrors[`itemProduct-${item.id}`] = validateProduct(
+        item.product,
+        index,
       );
-      const effectiveUnit = pieceOption?.unit ?? unit;
-
-      return {
-        product,
-        quantity,
-        unit,
-        effectiveUnit,
-        pieceOption,
-        dimensions,
-        estimate,
-        approximateTotal,
-      };
-    });
-
-    nextErrors.destination = validateRequired(destination, "شهر مقصد");
-    nextErrors.acceptDisclaimer = accepted ? "" : disclaimerError;
-
-    setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) {
-      const firstErrorField = Object.entries(nextErrors).find(
-        ([, message]) => Boolean(message),
-      )?.[0];
-      const firstInvalid = firstErrorField
-        ? event.currentTarget.elements.namedItem(firstErrorField)
-        : null;
-      if (firstInvalid instanceof HTMLElement) firstInvalid.focus();
-      return;
+      nextErrors[`itemQuantity-${item.id}`] = validateQuantity(
+        item.quantity,
+        index,
+      );
     }
 
-    prepared.prepare(
-      [
-        "درخواست پیش‌فاکتور غیرقطعی",
-        `نام: ${fullName.trim()}`,
-        `شماره تماس: ${phone.trim()}`,
-        "",
-        `کالاهای درخواست (${quoteItems.length.toLocaleString("fa-IR")} کالا):`,
-        ...quoteItems.map((item, index) => {
-          const priceDescription =
-            item.approximateTotal === null || !item.estimate
-              ? " | قیمت تقریبی: نیازمند بررسی واحد فروش"
-              : item.pieceOption
-                ? ` | قیمت تقریبی: ${formatToman(item.approximateTotal)} (بر اساس قیمت واقعی سایت برای این آیتم: ${formatToman(item.pieceOption.priceToman)} برای هر ${item.pieceOption.unit})`
-                : ` | قیمت تقریبی: ${formatToman(item.approximateTotal)} (مبنای محاسبه: ${formatToman(item.estimate.unitPriceTomanPerKg)} برای هر کیلوگرم)`;
-          return `${(index + 1).toLocaleString("fa-IR")}) ${item.product.trim()} | ${item.quantity.trim()} ${item.effectiveUnit} | ابعاد/استاندارد: ${item.dimensions.trim() || "اعلام نشده"}${priceDescription}`;
-        }),
-        "",
-        `جمع تقریبی: ${
-          quoteItems.some((item) => item.approximateTotal !== null)
-            ? formatToman(
-                quoteItems.reduce(
-                  (sum, item) => sum + (item.approximateTotal ?? 0),
-                  0,
-                ),
-              )
-            : "محاسبه نشده"
-        }`,
-        "قیمت‌های تقریبی بالا صرفاً اطلاع‌رسانی هستند و ممکن است همه کالاها را پوشش ندهند.",
-        "",
-        `شهر مقصد: ${destination.trim()}`,
-        `توضیحات: ${notes.trim() || "ندارد"}`,
-        "",
-        quoteDisclaimer,
-      ].join("\n"),
-    );
-    setGeneratedQuote({
-      date: persianDate(),
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      destination: destination.trim(),
-      notes: notes.trim(),
-      items: quoteItems.map((item) => {
-        const totalRial =
-          item.approximateTotal === null ? null : item.approximateTotal * 10;
-        const numericQuantity = Number(item.quantity);
-        return {
-          product: item.product as QuoteProductName,
-          quantity: item.quantity,
-          unit: item.effectiveUnit,
-          dimensions: item.dimensions,
-          unitPriceRial:
-            totalRial === null || !numericQuantity
-              ? null
-              : Math.round(totalRial / numericQuantity),
-          totalRial,
-        };
-      }),
-      totalRial: quoteItems.reduce(
-        (sum, item) => sum + (item.approximateTotal ?? 0) * 10,
-        0,
-      ),
-    });
+    setErrors(nextErrors);
+    if (focusFirstError(event.currentTarget, nextErrors)) return;
+
+    prepared.prepare(buildQuoteMessage(contact, pricedItems));
+    setGeneratedQuote(buildGeneratedQuote(contact, pricedItems));
   };
 
   return (
@@ -583,24 +420,27 @@ export function QuoteRequestForm() {
           </div>
         </div>
         <div className="quote-items-list">
-          {items.map((item, index) => {
-            const itemNumber = (index + 1).toLocaleString("fa-IR");
+          {pricedItems.map((priced, index) => {
+            const { item, estimate } = priced;
+            const number = itemNumber(index);
             const productField = `itemProduct-${item.id}`;
             const quantityField = `itemQuantity-${item.id}`;
             const productErrorId = `quote-product-${item.id}-error`;
             const quantityErrorId = `quote-quantity-${item.id}-error`;
             const priceHintId = `quote-price-${item.id}-hint`;
-            const pricedItem = pricedItems[index];
+            // Only hide شاخه/عدد when the catalog says outright that it cannot
+            // price them; with no estimate at all there is nothing to hide.
+            const hidePieceUnits = Boolean(estimate) && !estimate?.supportsPieceUnits;
 
             return (
               <fieldset className="quote-item-card" key={item.id}>
-                <legend>کالای {itemNumber}</legend>
+                <legend>کالای {number}</legend>
                 {items.length > 1 ? (
                   <button
                     className="remove-quote-item"
                     type="button"
                     onClick={() => removeItem(item.id)}
-                    aria-label={`حذف کالای ${itemNumber}`}
+                    aria-label={`حذف کالای ${number}`}
                   >
                     حذف این کالا
                   </button>
@@ -660,25 +500,23 @@ export function QuoteRequestForm() {
                       />
                       <select
                         name={`itemUnit-${item.id}`}
-                        aria-label={`واحد مقدار کالای ${itemNumber}`}
+                        aria-label={`واحد مقدار کالای ${number}`}
                         value={item.unit}
                         onChange={(event) =>
                           updateItem(item.id, {
-                            unit: event.currentTarget.value as QuoteItem["unit"],
+                            unit: event.currentTarget
+                              .value as QuoteItem["unit"],
                             pieceOptionKey: "",
                           })
                         }
                       >
-                        <option>تن</option>
-                        <option>کیلوگرم</option>
-                        {!PRODUCTS_WITHOUT_PIECE_UNITS.includes(
-                          item.product as QuoteProductName,
-                        ) ? (
-                          <>
-                            <option>شاخه</option>
-                            <option>عدد</option>
-                          </>
-                        ) : null}
+                        {quoteUnits
+                          .filter(
+                            (unit) => !hidePieceUnits || !isPieceUnit(unit),
+                          )
+                          .map((unit) => (
+                            <option key={unit}>{unit}</option>
+                          ))}
                       </select>
                     </span>
                     <ErrorMessage
@@ -699,8 +537,7 @@ export function QuoteRequestForm() {
                       }
                     />
                   </label>
-                  {item.product === "میلگرد" &&
-                  (item.unit === "شاخه" || item.unit === "عدد") ? (
+                  {estimate?.branchWeight && isPieceUnit(item.unit) ? (
                     <label className="quote-item-rebar-size">
                       قطر میلگرد برای محاسبه وزن (میلی‌متر)
                       <input
@@ -719,8 +556,7 @@ export function QuoteRequestForm() {
                       />
                     </label>
                   ) : null}
-                  {pricedItem.estimate?.pieceOptions &&
-                  (item.unit === "شاخه" || item.unit === "عدد") ? (
+                  {estimate?.pieceOptions && isPieceUnit(item.unit) ? (
                     <label className="quote-item-rebar-size">
                       انتخاب دقیق از فهرست قیمت سایت
                       <select
@@ -733,13 +569,11 @@ export function QuoteRequestForm() {
                         }
                       >
                         <option value="">انتخاب کنید</option>
-                        {(pricedItem.estimate?.pieceOptions ?? []).map(
-                          (option) => (
-                            <option key={option.key} value={option.key}>
-                              {option.label}
-                            </option>
-                          ),
-                        )}
+                        {estimate.pieceOptions.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   ) : null}
@@ -750,7 +584,7 @@ export function QuoteRequestForm() {
                     .quote-price-summary stays live and covers the whole form. */}
                 <div className="quote-item-price" id={priceHintId}>
                   <ItemPriceHint
-                    priced={pricedItem}
+                    priced={priced}
                     loading={!priceEstimates && !priceLoadError}
                     loadError={priceLoadError}
                   />

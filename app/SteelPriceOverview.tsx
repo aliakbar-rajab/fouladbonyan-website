@@ -18,7 +18,7 @@ function formatStatusText(status: string, percent: number): string {
 }
 
 export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
-  const initialSummaries = loadOverviewSummaries.getCached?.();
+  const initialSummaries = loadOverviewSummaries.getCached();
   const [summaries, setSummaries] = useState<CategoryPriceOverview[]>(
     () => initialSummaries ?? buildFallbackOverviews(),
   );

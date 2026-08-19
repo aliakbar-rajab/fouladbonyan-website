@@ -82,11 +82,16 @@ test("Persian form validation rejects incomplete and malformed requests", () => 
 });
 
 test("homepage navigation reaches the quote form directly", async () => {
-  const navigation = await read("../app/MegaMenu.tsx");
+  // The CTA moved out of MegaMenu into the shared header when the three
+  // per-page copies of that header were collapsed into one component; the
+  // requirement it guards -- one click from any page to the quote form -- is
+  // unchanged.
+  const header = await read("../app/SiteHeader.tsx");
 
+  assert.match(header, /const QUOTE_HREF = "\/quote-process\/#quote-form";/);
   assert.match(
-    navigation,
-    /<a className="nav-quote" href="\/quote-process\/#quote-form">\s*درخواست پیش‌فاکتور/,
+    header,
+    /<a\s+className="header-quote"[\s\S]*?href=\{QUOTE_HREF\}[\s\S]*?درخواست پیش‌فاکتور/,
   );
 });
 

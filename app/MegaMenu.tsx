@@ -4,8 +4,8 @@ import { productGroups, type ProductGroupId } from "./category-meta";
 import type { CatalogViewRequest } from "./catalog-types";
 import { loadMenuGroup } from "./menu-catalog";
 import { CatalogLoadMessage } from "./site-ui";
+import { ChevronDownIcon } from "./icons";
 import { useCatalogData } from "./use-catalog-data";
-import { useMediaQuery } from "./use-media-query";
 
 type SelectView = (view: Omit<CatalogViewRequest, "requestId">) => void;
 
@@ -93,7 +93,6 @@ function MegaMenuSections({
 }
 
 type MegaMenuProps = {
-  mobileOpen: boolean;
   onMobileClose: () => void;
   activeGroup: ProductGroupId;
   onNavigate: (
@@ -103,7 +102,6 @@ type MegaMenuProps = {
 };
 
 export function MegaMenu({
-  mobileOpen,
   onMobileClose,
   activeGroup,
   onNavigate,
@@ -111,7 +109,6 @@ export function MegaMenu({
   const [productsOpen, setProductsOpen] = useState(false);
   const [megaProduct, setMegaProduct] = useState<ProductGroupId>("rebar");
 
-  const isMobile = useMediaQuery("(max-width: 900px)");
   const productMenuRef = useRef<HTMLDivElement>(null);
   const productTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -151,73 +148,64 @@ export function MegaMenu({
   };
 
   return (
-    <div className="nav-wrap">
-      <nav
-        className="primary-nav"
-        id="primary-navigation"
-        aria-label="فهرست اصلی"
-        hidden={isMobile && !mobileOpen}
-      >
-        <a href="/" onClick={onMobileClose}>
-          صفحه اصلی
-        </a>
-        <div className="products-menu" ref={productMenuRef}>
-          <button
-            type="button"
-            ref={productTriggerRef}
-            aria-expanded={productsOpen}
-            aria-controls="product-navigation"
-            onClick={() => {
-              const nextOpen = !productsOpen;
-              if (nextOpen) setMegaProduct(activeGroup);
-              setProductsOpen(nextOpen);
-            }}
-          >
-            قیمت روز محصولات <span aria-hidden="true">⌄</span>
-          </button>
-          <div
-            id="product-navigation"
-            className="product-dropdown rebar-mega-menu"
-            hidden={!productsOpen}
-          >
-            <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
+    <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
+      <a href="/" onClick={onMobileClose}>
+        صفحه اصلی
+      </a>
+      <div className="products-menu" ref={productMenuRef}>
+        <button
+          type="button"
+          ref={productTriggerRef}
+          aria-expanded={productsOpen}
+          aria-controls="product-navigation"
+          onClick={() => {
+            const nextOpen = !productsOpen;
+            if (nextOpen) setMegaProduct(activeGroup);
+            setProductsOpen(nextOpen);
+          }}
+        >
+          قیمت روز محصولات
+          <ChevronDownIcon />
+        </button>
+        <div
+          id="product-navigation"
+          className="product-dropdown rebar-mega-menu"
+          hidden={!productsOpen}
+        >
+          <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
 
-            <section className="mega-other-products" aria-label="گروه محصولات">
-              <p className="mega-group-label">گروه محصولات</p>
-              <div>
-                {productGroups.map((group) => (
-                  <a
-                    href={`/${group.id}/`}
-                    key={group.id}
-                    className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
-                    aria-current={megaProduct === group.id ? "true" : undefined}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      setMegaProduct(group.id);
-                    }}
-                  >
-                    {`قیمت ${group.label}`}
-                  </a>
+          <section className="mega-other-products" aria-label="گروه محصولات">
+            <p className="mega-group-label">گروه محصولات</p>
+            <div>
+              {productGroups.map((group) => (
+                <a
+                  href={`/${group.id}/`}
+                  key={group.id}
+                  className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
+                  aria-current={megaProduct === group.id ? "true" : undefined}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setMegaProduct(group.id);
+                  }}
+                >
+                  {`قیمت ${group.label}`}
+                </a>
 
-                ))}
-              </div>
-            </section>
-          </div>
-
+              ))}
+            </div>
+          </section>
         </div>
-        <a href="#prices" onClick={onMobileClose}>
-          راهنمای استعلام
-        </a>
-        <a href="/about/" onClick={onMobileClose}>
-          درباره ما
-        </a>
-        <a href="/contact/" onClick={onMobileClose}>
-          تماس با ما
-        </a>
-        <a className="nav-quote" href="/quote-process/#quote-form">
-          درخواست پیش‌فاکتور
-        </a>
-      </nav>
-    </div>
+
+      </div>
+      <a href="#prices" onClick={onMobileClose}>
+        راهنمای استعلام
+      </a>
+      <a href="/about/" onClick={onMobileClose}>
+        درباره ما
+      </a>
+      <a href="/contact/" onClick={onMobileClose}>
+        تماس با ما
+      </a>
+    </nav>
   );
 }

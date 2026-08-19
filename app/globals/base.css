@@ -1,3 +1,17 @@
+/*
+ * Matches the declaration in public/preloader/fb-preloader.css exactly -- same
+ * family, src and descriptors -- so the two resolve to one face and one
+ * download. Declared here as well because the app's stylesheet must not depend
+ * on the preloader's, and index.html already preloads this file.
+ */
+@font-face {
+  font-family: "B Titr";
+  src: url("/fonts/b-titr-bold.woff") format("woff");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "Vazirmatn";
   src: url("/fonts/vazirmatn-arabic-variable.woff2") format("woff2");
@@ -28,6 +42,31 @@
   /* The image itself is the panel: one continuous, molded printer-like edge. */
   --hero-bevel: clamp(12px, 1.4vw, 18px);
   --hero-backdrop: #17171b;
+
+  /*
+   * Header tokens. On :root, not `.site-header`, because `.header-nav` reads
+   * them too and is a sibling of `.site-header`, not a descendant -- custom
+   * properties only inherit down the DOM, never sideways. --header-total-h is
+   * shared with hero.css: the hero derives its own height from the header's
+   * actual footprint instead of carrying a guessed constant, so the two never
+   * drift. It assumes the desktop (non-mobile, non-compact) header footprint
+   * -- the only shape the hero's own desktop-only sizing rule reads.
+   *
+   * --header-nav-bg is high-opacity, not a light wash: `.header-nav` sits
+   * over the plain page background at rest and over arbitrary page content
+   * once stuck, never reliably over the identity band's black, so it has to
+   * read as dark on its own rather than by tinting whatever is behind it.
+   */
+  --header-ink: #f2efea;
+  --header-ink-dim: #b5aa98;
+  --header-hairline: rgb(255 255 255 / 9%);
+  --header-gold-line: rgb(246 181 0 / 26%);
+  --header-nav-bg: rgb(9 9 12 / 92%);
+  --header-bar-h: 9.5rem;
+  --header-nav-h: 3.25rem;
+  --header-mark-h: 7.25rem;
+  --header-total-h: calc(var(--header-bar-h) + var(--header-nav-h) + 4px);
+
   font-family:
     "Vazirmatn", Tahoma, Arial, sans-serif;
   font-feature-settings: "ss01" 1, "tnum" 1;
@@ -46,7 +85,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 9rem;
+  scroll-padding-top: 8rem;
 }
 
 body {
@@ -147,3 +186,25 @@ noscript {
   transform: translateY(0);
 }
 
+/* Responsive overrides for this module's own rules. */
+
+@media (max-width: 900px) {
+  :root {
+    --hero-bevel: 14px;
+  }
+
+  html {
+    scroll-padding-top: 4.75rem;
+  }
+
+  body {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --shell-gutter: 1.25rem;
+    --hero-bevel: 11px;
+  }
+}

@@ -8,8 +8,7 @@ import { type InfoPageKey } from "../app/info-page-data";
 import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
-import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data";
-import { loadProductPricePayload } from "../app/product-price-data";
+import { primeCatalogSnapshot } from "../app/group-catalog";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
 import { readJsonScript } from "../app/read-json-script";
@@ -24,14 +23,7 @@ if (!root) {
   throw new Error("React root element was not found.");
 }
 
-const pageData = readJsonScript("initial-page-data");
-if (pageData?.type === "rebar") {
-  loadRebarPriceData.setCached(pageData.data);
-} else if (pageData?.type === "beam") {
-  loadBeamPriceData.setCached(pageData.data);
-} else if (pageData?.type === "product") {
-  loadProductPricePayload.setCached(pageData.data);
-}
+primeCatalogSnapshot(readJsonScript("initial-page-data"));
 
 // Derived reference tables for /guide/*, computed at build time so the page
 // hydrates against exactly the bytes it was prerendered from.

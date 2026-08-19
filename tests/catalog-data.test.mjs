@@ -7,6 +7,7 @@ import {
   getTrendPresentation,
 } from "../app/catalog-behavior.mjs";
 import { buildCatalogSearchGroups } from "../app/catalog-search.mjs";
+import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-cache.ts";
 import {
   deriveSummaryFromRows,
@@ -218,17 +219,11 @@ test("F17: product groups carry no placeholder search rows", async () => {
 
 test("F17: every searchable row is built from live catalog data", async () => {
   const { productGroups } = await import("../app/category-meta.ts");
-  const [rebar, beam, products] = await Promise.all([
-    readJson("../app/data/rebar-prices.json"),
-    readJson("../app/data/beam-prices.json"),
-    readJson("../app/data/product-prices.json"),
-  ]);
 
-  const groups = buildCatalogSearchGroups(productGroups, {
-    rebar,
-    beam,
-    products,
-  });
+  const groups = buildCatalogSearchGroups(
+    productGroups,
+    await loadGroupCatalogs(),
+  );
   const rows = groups.flatMap((group) => group.rows);
 
   assert.ok(rows.length > 0, "the live builder must supply the rows");
@@ -241,25 +236,16 @@ test("F17: every searchable row is built from live catalog data", async () => {
 });
 
 test("live catalog search indexes real rows and navigation metadata", async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("../app/data/rebar-prices.json"),
-    readJson("../app/data/beam-prices.json"),
-    readJson("../app/data/product-prices.json"),
-  ]);
-  const baseGroups = [
-    { id: "rebar", label: "میلگرد", rows: [] },
-    { id: "beam", label: "تیرآهن", rows: [] },
-    ...products.catalogs.map((catalog) => ({
-      id: catalog.id,
-      label: catalog.label,
-      rows: [],
-    })),
-  ];
-  const groups = buildCatalogSearchGroups(baseGroups, {
-    rebar,
-    beam,
-    products,
-  });
+  const { productGroups } = await import("../app/category-meta.ts");
+  const baseGroups = productGroups.map(({ id, label }) => ({
+    id,
+    label,
+    rows: [],
+  }));
+  const groups = buildCatalogSearchGroups(
+    baseGroups,
+    await loadGroupCatalogs(),
+  );
 
   assert.ok(
     groups.reduce((total, group) => total + group.rows.length, 0) >= 2_000,

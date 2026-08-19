@@ -1,10 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { siteConfig } from "./site-config";
-import { LightPillar } from "./LightPillar";
+import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
-import { Brand } from "./site-ui";
 import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
-import { useMediaQuery } from "./use-media-query";
 
 /**
  * The shared chrome for every non-catalog page: header, hero, content shell and
@@ -31,8 +29,6 @@ export function InnerPageLayout({
   contentClassName,
   children,
 }: InnerPageLayoutProps) {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 900px)");
 
   useEffect(() => {
     document.title = documentTitle;
@@ -43,63 +39,28 @@ export function InnerPageLayout({
       <a className="skip-link" href="#main-content">
         رفتن به محتوای اصلی
       </a>
-      <div className="utility-bar" id="top">
-        <div className="shell utility-inner">
-          <p>مشاوره و استعلام تلفنی محصولات فولادی</p>
-          <div role="group" aria-label="شماره‌های تماس">
-            {siteConfig.contact.phones.map((phone) => (
-              <a href={phone.href} key={phone.href} dir="ltr">
-                {phone.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-      <header className="site-header">
-        <LightPillar />
-        <div className="shell header-main inner-header-main">
-          <Brand headerLogo href="/" />
-          <a className="contact-header-catalog" href="/#products">
-            <span>قیمت‌های اطلاع‌رسانی و مشخصات محصولات</span>
-            <strong>مشاهده محصولات</strong>
-          </a>
-          <a className="header-phone" href={siteConfig.contact.phones[0].href}>
-            <span aria-hidden="true">☎</span>
-            <span>
-              <small>تماس با واحد فروش</small>
-              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
-            </span>
-          </a>
-          <button
-            className="nav-toggle"
-            type="button"
-            aria-expanded={mobileNavOpen}
-            aria-controls="primary-navigation"
-            onClick={() => setMobileNavOpen((open) => !open)}
-          >
-            <span aria-hidden="true">{mobileNavOpen ? "×" : "☰"}</span>
-            <span className="sr-only">فهرست اصلی</span>
-          </button>
-
-          <div className="nav-wrap">
-            <nav
-              className="primary-nav"
-              id="primary-navigation"
-              aria-label="فهرست اصلی"
-              hidden={isMobile && !mobileNavOpen}
-            >
-              <a href="/">صفحه اصلی</a>
-              <a href="/#products">محصولات</a>
-              <a href="/#prices">قیمت‌های اطلاع‌رسانی</a>
-              <a href="/about/">درباره ما</a>
-              <a href="/contact/">تماس با ما</a>
-              <a className="nav-quote" href="/quote-process/#quote-form">
-                درخواست پیش‌فاکتور
-              </a>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        brandHref="/"
+        renderNav={({ closeMobileNav }) => (
+          <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
+            <a href="/" onClick={closeMobileNav}>
+              صفحه اصلی
+            </a>
+            <a href="/#products" onClick={closeMobileNav}>
+              محصولات
+            </a>
+            <a href="/#prices" onClick={closeMobileNav}>
+              قیمت‌های اطلاع‌رسانی
+            </a>
+            <a href="/about/" onClick={closeMobileNav}>
+              درباره ما
+            </a>
+            <a href="/contact/" onClick={closeMobileNav}>
+              تماس با ما
+            </a>
+          </nav>
+        )}
+      />
       <main id="main-content" className="info-main">
         <section className="info-hero">
           <div className="shell">

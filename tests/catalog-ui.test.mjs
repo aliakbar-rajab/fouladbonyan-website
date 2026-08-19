@@ -11,7 +11,10 @@ const { act, cleanup, fireEvent, render, screen, waitFor, within } = await impor
   "@testing-library/react"
 );
 const userEvent = (await import("@testing-library/user-event")).default;
-const { PriceCatalog } = await import("../app/RebarPrices.tsx");
+const { PriceCatalog } = await import("../app/CatalogPrices.tsx");
+const { RebarWeightCalculator } = await import(
+  "../app/RebarWeightCalculator.tsx"
+);
 const App = (await import("../app/App.tsx")).default;
 
 afterEach(cleanup);
@@ -66,7 +69,10 @@ const category = (id, label, catalogRow) => ({
   ],
 });
 
-const priceData = {
+const catalog = {
+  id: "rebar",
+  label: "آزمایشی",
+  initialCategoryId: "first",
   fetchedAt: "2026-07-27T10:00:00.000Z",
   sourceName: "منبع آزمایشی",
   sourceHome: "https://example.test/",
@@ -77,12 +83,9 @@ const priceData = {
   ],
 };
 
-const config = {
-  productLabel: "آزمایشی",
-  initialCategoryId: "first",
-  categoryIcons: { first: "۱", second: "۲" },
-  showWeightCalculator: true,
-};
+const presentation = { categoryIcons: { first: "۱", second: "۲" } };
+
+const phoneHref = "tel:+982100000000";
 
 /*
  * A category with more factory groups than the "show more" control keeps on
@@ -106,13 +109,13 @@ const wideCategory = () => {
 const renderWide = () =>
   render(
     React.createElement(PriceCatalog, {
-      priceData: { ...priceData, categories: [wideCategory()] },
-      config: {
-        ...config,
+      catalog: {
+        ...catalog,
         initialCategoryId: "wide",
-        categoryIcons: { wide: "۱" },
+        categories: [wideCategory()],
       },
-      phoneHref: "tel:+982100000000",
+      presentation: { categoryIcons: { wide: "۱" } },
+      phoneHref,
     }),
   );
 
@@ -168,9 +171,9 @@ test("catalog tabs use roving focus and connected tabpanels", async () => {
   const user = userEvent.setup({ document });
   render(
     React.createElement(PriceCatalog, {
-      priceData,
-      config,
-      phoneHref: "tel:+982100000000",
+      catalog,
+      presentation,
+      phoneHref,
     }),
   );
 
@@ -193,9 +196,9 @@ test("catalog tabs use roving focus and connected tabpanels", async () => {
 test("trend direction is textual and no fake chart is exposed", () => {
   render(
     React.createElement(PriceCatalog, {
-      priceData,
-      config,
-      phoneHref: "tel:+982100000000",
+      catalog,
+      presentation,
+      phoneHref,
     }),
   );
 
@@ -213,16 +216,13 @@ test("catalog rows alternate between light and dark treatments", () => {
 
   render(
     React.createElement(PriceCatalog, {
-      priceData: {
-        ...priceData,
+      catalog: {
+        ...catalog,
+        initialCategoryId: "striped",
         categories: [stripedCategory],
       },
-      config: {
-        ...config,
-        initialCategoryId: "striped",
-        categoryIcons: { striped: "۱" },
-      },
-      phoneHref: "tel:+982100000000",
+      presentation: { categoryIcons: { striped: "۱" } },
+      phoneHref,
     }),
   );
 
@@ -238,16 +238,13 @@ test("F4: a sub-one-percent move keeps its magnitude instead of showing zero", (
   const smallMove = row(3, "up", 0.14);
   render(
     React.createElement(PriceCatalog, {
-      priceData: {
-        ...priceData,
+      catalog: {
+        ...catalog,
+        initialCategoryId: "only",
         categories: [category("only", "آزمون", smallMove)],
       },
-      config: {
-        ...config,
-        initialCategoryId: "only",
-        categoryIcons: { only: "۱" },
-      },
-      phoneHref: "tel:+982100000000",
+      presentation: { categoryIcons: { only: "۱" } },
+      phoneHref,
     }),
   );
 
@@ -265,16 +262,13 @@ test("F4: a sub-one-percent move keeps its magnitude instead of showing zero", (
 test("F4: a whole-number move is not padded with decimals", () => {
   render(
     React.createElement(PriceCatalog, {
-      priceData: {
-        ...priceData,
+      catalog: {
+        ...catalog,
+        initialCategoryId: "only",
         categories: [category("only", "آزمون", row(4, "down", -3))],
       },
-      config: {
-        ...config,
-        initialCategoryId: "only",
-        categoryIcons: { only: "۱" },
-      },
-      phoneHref: "tel:+982100000000",
+      presentation: { categoryIcons: { only: "۱" } },
+      phoneHref,
     }),
   );
 
@@ -319,9 +313,10 @@ test("calculator rejects fractional branch quantities", async () => {
   const user = userEvent.setup({ document });
   render(
     React.createElement(PriceCatalog, {
-      priceData,
-      config,
-      phoneHref: "tel:+982100000000",
+      catalog,
+      presentation,
+      phoneHref,
+      sidebarExtra: React.createElement(RebarWeightCalculator),
     }),
   );
 

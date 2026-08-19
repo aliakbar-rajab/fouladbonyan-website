@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import {
   FieldErrors,
+  focusFirstError,
   setFieldError,
   validateFullName,
   validateMinimumText,
@@ -78,16 +79,7 @@ export function ComplaintForm() {
     };
 
     setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) {
-      const firstErrorField = Object.entries(nextErrors).find(
-        ([, message]) => Boolean(message),
-      )?.[0];
-      const firstInvalid = firstErrorField
-        ? event.currentTarget.elements.namedItem(firstErrorField)
-        : null;
-      if (firstInvalid instanceof HTMLElement) firstInvalid.focus();
-      return;
-    }
+    if (focusFirstError(event.currentTarget, nextErrors)) return;
 
     prepared.prepare(
       [

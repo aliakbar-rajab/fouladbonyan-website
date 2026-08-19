@@ -17,6 +17,24 @@ export function setFieldError(
   );
 }
 
+/**
+ * Move focus to the first field that failed, so the visitor lands on the
+ * problem instead of hunting for it. Returns true when the form has errors.
+ */
+export function focusFirstError(
+  form: HTMLFormElement,
+  errors: FieldErrors,
+): boolean {
+  const firstErrorField = Object.entries(errors).find(([, message]) =>
+    Boolean(message),
+  )?.[0];
+  if (!firstErrorField) return false;
+
+  const firstInvalid = form.elements.namedItem(firstErrorField);
+  if (firstInvalid instanceof HTMLElement) firstInvalid.focus();
+  return true;
+}
+
 const iranianPhonePattern = /^(?:\+98|0098|98|0)?(?:9\d{9}|21\d{8})$/;
 
 export function normalizePhone(value: string) {

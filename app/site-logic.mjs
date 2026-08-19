@@ -34,8 +34,14 @@ export function normalizeSearchText(value = "") {
 
 /**
  * Search all product groups and retain only groups containing matching rows.
- * @param {Array<{id:string,label:string,rows:Array<{product:string,origin:string,unit:string,categoryId?:string,factory?:string,size?:string,searchText?:string}>}>} groups
+ *
+ * Generic in the group, because this only ever narrows the list it is given:
+ * callers get back groups of the same shape they passed in.
+ *
+ * @template {{id:string,label:string,rows:Array<{product:string,origin:string,unit:string,categoryId?:string,factory?:string,size?:string,searchText?:string}>}} TGroup
+ * @param {TGroup[]} groups
  * @param {string} query
+ * @returns {TGroup[]}
  */
 export function filterProductGroups(groups, query) {
   const needle = normalizeSearchText(query);
