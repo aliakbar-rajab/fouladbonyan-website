@@ -1,4 +1,4 @@
-name: Verify and refresh prices
+name: Verify
 
 on:
   push:
@@ -6,11 +6,6 @@ on:
 
   pull_request:
     branches: ["main"]
-
-  schedule:
-    # شنبه تا پنجشنبه، هر ساعت از 06:00 تا 21:00 به وقت تهران
-    - cron: "0 6-21 * * 0-4,6"
-      timezone: "Asia/Tehran"
 
   workflow_dispatch:
 
@@ -21,52 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  refresh:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: main
-
-      - name: Set up Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Refresh and validate prices
-        run: npm run prices:update
-
-      - name: Commit refreshed prices to main
-        shell: bash
-        run: |
-          if ! git diff --quiet -- app/data; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-            git add app/data
-            git commit -m "chore(data): refresh prices"
-            git push origin HEAD:main
-          else
-            echo "Price data has not changed."
-          fi
-
   build:
-    needs: refresh
-
-    if: >-
-      always() &&
-      (needs.refresh.result == 'success' || needs.refresh.result == 'skipped')
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -75,8 +25,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7

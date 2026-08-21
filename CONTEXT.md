@@ -17,7 +17,7 @@ The canonical state of a source row whose upstream price is missing; it is repre
 _Avoid_: Zero price, estimated price, hidden row
 
 **Catalog snapshot**:
-A complete generated price payload that may replace the last committed snapshot only after every expected category passes validation. A failed refresh leaves the last committed snapshot live.
+A complete generated price payload that may replace the last stored snapshot only after every expected category passes validation. A failed refresh leaves the last stored snapshot live.
 _Avoid_: Partial publish, mixed snapshot, best-effort refresh
 
 **Catalog price summary**:
@@ -53,7 +53,7 @@ A third customer-facing form of [Catalog grouping](#catalog-grouping), alongside
 _Avoid_: Factory, generic specification
 
 **Refresh failure**:
-A scheduled refresh that cannot fetch or validate the complete catalog snapshot. It fails the GitHub Actions refresh job and leaves no data commit; its error is visible in that run's logs.
+A scheduled refresh that cannot fetch or validate the complete catalog snapshot. It leaves the last stored snapshot in Cloudflare KV untouched and triggers no Pages rebuild. A fetch or local-validation failure surfaces as a failed GitHub Actions run (that workflow only fetches, validates, and relays; it never commits); a failure the Worker's own re-validation catches surfaces in its refresh-status record and logs instead.
 _Avoid_: Successful refresh, silent publish
 
 **Market source**:
@@ -104,7 +104,7 @@ Online sales have been considered but are deliberately deferred: they are neithe
 
 ## Open questions
 
-Scheduled-refresh failures have GitHub Actions run status and logs, but no configured external notification or alerting. Decide separately whether and how that operational gap should be addressed.
+Scheduled-refresh failures have GitHub Actions run status/logs and a Cloudflare Worker status record and logs, but no configured external notification or alerting. Decide separately whether and how that operational gap should be addressed.
 
 Market source currently assumes exactly one source. If a second source is introduced, decide how provenance, comparison, and attribution work; do not redesign the current model pre-emptively.
 

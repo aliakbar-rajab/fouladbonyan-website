@@ -6,7 +6,11 @@
 
 # Legacy generated output (safe to delete locally)
 /pages-dist/
-/.wrangler/
+
+# Wrangler local dev state and secrets (root and workers/*/)
+.wrangler/
+.dev.vars
+.dev.vars.*
 
 # Test output
 /coverage/

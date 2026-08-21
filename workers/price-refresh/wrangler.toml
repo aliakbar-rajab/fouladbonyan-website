@@ -1,0 +1,27 @@
+name = "foulad-price-refresh"
+main = "worker.mjs"
+compatibility_date = "2026-08-01"
+
+# No [triggers]/cron here on purpose: Cloudflare's network cannot reach
+# fooladiranian.com at all (its DNS is unreachable from Cloudflare's own
+# resolvers -- confirmed directly, not a code bug), so this Worker never
+# fetches the upstream itself. Scheduling and fetching are owned by the
+# GitHub Actions relay (.github/workflows/price-refresh.yml), which POSTs
+# the fetched, validated data to POST /ingest below. This Worker only
+# re-validates, stores, and serves it.
+
+# Created with `wrangler kv namespace create PRICE_DATA` -- replace the id
+# below with the one it prints, and repeat for a `preview_id` if you want
+# `wrangler dev` to use a separate namespace.
+[[kv_namespaces]]
+binding = "PRICE_DATA"
+id = "126521cc824d487d92ff98b728914d48"
+
+# Secrets (not stored here): set with
+#   wrangler secret put DEPLOY_HOOK_URL
+#   wrangler secret put INGEST_TOKEN
+# DEPLOY_HOOK_URL is a Cloudflare Pages "Deploy Hook" URL (Pages project ->
+# Settings -> Builds & deployments -> Deploy hooks), called after a
+# successful ingest to rebuild the site with the new data. INGEST_TOKEN
+# guards POST /ingest -- the same value must also be set as the
+# PRICE_INGEST_TOKEN secret on the GitHub Actions side.

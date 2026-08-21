@@ -1,0 +1,48 @@
+name: Refresh prices (Cloudflare relay)
+
+# This workflow only fetches, validates, and POSTs price data to the
+# Cloudflare Worker (workers/price-refresh) -- it never reads or writes
+# app/data, never runs git add/commit/push, and its job below has no write
+# permission to the repository. main can never move because of this
+# workflow; a failed run just means Cloudflare keeps serving the last data
+# it already has.
+
+on:
+  schedule:
+    # شنبه تا پنجشنبه، هر ساعت از 06:00 تا 21:00 به وقت تهران
+    - cron: "0 6-21 * * 0-4,6"
+      timezone: "Asia/Tehran"
+
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch, validate, and publish prices to Cloudflare
+        env:
+          PRICE_DATA_ENDPOINT: ${{ vars.PRICE_DATA_ENDPOINT }}
+          PRICE_INGEST_TOKEN: ${{ secrets.PRICE_INGEST_TOKEN }}
+        run: npm run prices:refresh-and-publish
