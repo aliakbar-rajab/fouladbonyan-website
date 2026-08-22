@@ -46,7 +46,11 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
   return (
     <div className="steel-price-overview" id="overview-table">
       <div className="overview-header-info">
-        <h3>خلاصه و حدود قیمت روز آهن‌آلات و مقاطع فولادی</h3>
+        <div className="overview-command-status" role="status">
+          <span aria-hidden="true" />
+          {loaded ? "داده‌های جاری قیمت سایت" : "در حال دریافت داده‌های جاری"}
+        </div>
+        <h3>نمای کلی قیمت روز آهن‌آلات و مقاطع فولادی</h3>
         <p>
           جدول زیر میانگین و دامنه قیمت روز دسته‌های اصلی بازار آهن را نمایش
           می‌دهد. برای مشاهده جدول تفکیکی کارخانه‌ها، سایزها و استعلام لحظه‌ای،
@@ -112,7 +116,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                         <small>تومان</small>
                       </span>
                     ) : loaded ? (
-                      <span className="price-call">استعلام تلفنی</span>
+                      <span className="price-call">تماس بگیرید</span>
                     ) : (
                       <span className="price-loading">در حال بروزرسانی…</span>
                     )}
@@ -134,7 +138,6 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                       aria-label={`مشاهده جدول قیمت و مشخصات ${item.label}`}
                     >
                       مشاهده جدول {item.shortLabel}
-                      <span aria-hidden="true"> ←</span>
                     </a>
                   </td>
                 </tr>
@@ -185,12 +188,12 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                       تومان
                     </strong>
                   ) : (
-                    <strong>استعلام روز</strong>
+                    <strong>تماس بگیرید</strong>
                   )}
                   <span>({item.unit})</span>
                 </div>
                 <a href={`/${item.id}/`} className="overview-card-btn">
-                  مشاهده جدول کامل ←
+                  مشاهده جدول کامل
                 </a>
               </div>
             </article>

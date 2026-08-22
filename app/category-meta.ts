@@ -108,6 +108,7 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "پروفیل",
     image: "/categories/04-profile.jpg",
     imageAlt: "انواع قوطی و پروفیل ساختمانی و صنعتی",
+    heroImage: "/categories/hero-profile-1680.jpg",
     description: "پروفیل ساختمانی و صنعتی در ابعاد گوناگون",
     h1: "قیمت روز قوطی و پروفیل ساختمانی و صنعتی",
     intro:
@@ -124,6 +125,7 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "لوله",
     image: "/categories/05-pipe.jpg",
     imageAlt: "انواع لوله فولادی صنعتی، گازی و داربستی",
+    heroImage: "/categories/hero-pipe-1680.jpg",
     description: "لوله صنعتی، گازی و داربستی",
     h1: "قیمت روز لوله فولادی صنعتی، گازی و داربستی",
     intro:
@@ -140,6 +142,7 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "نبشی",
     image: "/categories/06-angle.jpg",
     imageAlt: "انواع نبشی فولادی بال مساوی و نامساوی",
+    heroImage: "/categories/hero-angle-1680.jpg",
     description: "نبشی بال مساوی و بال نامساوی",
     h1: "قیمت روز نبشی بال مساوی و نامساوی",
     intro:
@@ -156,6 +159,7 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "ناودانی",
     image: "/categories/07-channel.jpg",
     imageAlt: "انواع ناودانی فولادی سبک و سنگین ساختمانی",
+    heroImage: "/categories/hero-channel-1680.jpg",
     description: "ناودانی سبک و سنگین برای مصارف سازه‌ای",
     h1: "قیمت روز ناودانی سبک و سنگین",
     intro:
@@ -172,6 +176,7 @@ export const productGroups: ProductGroup[] = [
     shortLabel: "مفتول",
     image: "/categories/08-wire.jpg",
     imageAlt: "انواع مفتول سیاه، گالوانیزه و محصولات سیمی",
+    heroImage: "/categories/hero-wire-1680.jpg",
     description: "مفتول سیاه، گالوانیزه و محصولات سیمی",
     h1: "قیمت روز مفتول سیاه و محصولات سیمی",
     intro:
@@ -203,5 +208,4 @@ export function getInitialCategory(): ProductGroupId {
 export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
 }
-
 

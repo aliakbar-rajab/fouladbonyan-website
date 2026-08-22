@@ -355,3 +355,37 @@ test("a quote request grows and shrinks one item at a time", async () => {
   // The last row is never removable.
   assert.equal(screen.queryByRole("button", { name: /حذف کالای/ }), null);
 });
+
+test("a catalog row carries validated product details into the quote form", async () => {
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+    }),
+  );
+
+  const quoteLink = document.querySelector(".row-quote-cell a");
+  assert.ok(quoteLink);
+  const quoteUrl = new URL(quoteLink.href);
+  assert.equal(quoteUrl.pathname, "/quote-process/");
+  assert.equal(quoteUrl.searchParams.get("product"), "میلگرد");
+  assert.equal(quoteUrl.searchParams.get("dimensions"), "محصول 1");
+
+  cleanup();
+  window.history.replaceState({}, "", quoteUrl.href);
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+
+  await waitFor(() => {
+    assert.equal(
+      screen.getByRole("combobox", { name: "نوع محصول" }).value,
+      "میلگرد",
+    );
+    assert.equal(
+      screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
+      "محصول 1",
+    );
+  });
+  window.history.replaceState({}, "", "/");
+});

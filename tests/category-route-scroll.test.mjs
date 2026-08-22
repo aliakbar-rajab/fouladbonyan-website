@@ -48,6 +48,7 @@ afterEach(() => {
   document.getElementById("root")?.remove();
   scrollCalls.length = 0;
   prefersReducedMotion = false;
+  window.history.replaceState({}, "", "/");
 });
 
 test("a direct category route activates its tab and scrolls to prices", async () => {
@@ -82,6 +83,22 @@ test("a direct category route activates its tab and scrolls to prices", async ()
     ]);
   });
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
+});
+
+test("the development shell resolves a category directly from the pathname", async () => {
+  window.history.replaceState({}, "", "/channel/");
+  addRoot();
+  render(React.createElement(App));
+  await settle();
+
+  assert.equal(
+    screen.getByRole("tab", { name: "ناودانی" }).getAttribute("aria-selected"),
+    "true",
+  );
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "قیمت روز ناودانی سبک و سنگین",
+  );
 });
 
 test("the homepage keeps its default tab and does not auto-scroll", async () => {
@@ -121,6 +138,18 @@ test("the homepage keeps its default tab and does not auto-scroll", async () => 
   }
 
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
+});
+
+test("the homepage hero price action reaches the live price workspace", async () => {
+  addRoot();
+  render(React.createElement(App));
+  await settle();
+
+  screen.getByRole("button", { name: "ورود به مرکز قیمت فولاد" }).click();
+  assert.deepEqual(scrollCalls.at(-1), {
+    id: "prices",
+    options: { behavior: "smooth", block: "start" },
+  });
 });
 
 test("a direct category route respects reduced-motion scrolling", async () => {
@@ -196,5 +225,3 @@ test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and
     ]);
   });
 });
-
-

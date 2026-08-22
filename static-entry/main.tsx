@@ -7,8 +7,11 @@ import GuidePage from "../app/GuidePage";
 import { type InfoPageKey } from "../app/info-page-data";
 import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
+import { buildGuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
 import { primeCatalogSnapshot } from "../app/group-catalog";
+import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data";
+import { loadProductPricePayload } from "../app/product-price-data";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
 import { readJsonScript } from "../app/read-json-script";
@@ -22,6 +25,7 @@ const root = document.getElementById("root");
 if (!root) {
   throw new Error("React root element was not found.");
 }
+const rootElement = root;
 
 primeCatalogSnapshot(readJsonScript("initial-page-data"));
 
@@ -47,7 +51,7 @@ const pathSegments = window.location.pathname
   .toLowerCase()
   .split("/")
   .filter(Boolean);
-const pageName = root.dataset.page || pathSegments[0] || "";
+const pageName = rootElement.dataset.page || pathSegments[0] || "";
 const isOrganizationPage = !pageName || pageName === "about";
 
 const organizationJsonLd = document.getElementById(
@@ -71,26 +75,42 @@ const infoPages = new Set<InfoPageKey>([
   "shipping-delivery",
 ]);
 
-let content = <App />;
-if (pageName === "contact") {
-  content = <ContactPage />;
-} else if (infoPages.has(pageName as InfoPageKey)) {
-  content = <InfoPage page={pageName as InfoPageKey} />;
-} else if (pageName === "guide" && guideReference) {
-  // Without the prerendered reference payload there is nothing to hydrate
-  // against, so fall through to <App /> rather than render an empty guide.
-  const requested = root.dataset.guide || pathSegments[1] || "";
-  content = (
-    <GuidePage
-      guide={isGuidePageKey(requested) ? requested : undefined}
-      reference={guideReference}
-    />
-  );
+async function resolveContent() {
+  if (pageName === "contact") return <ContactPage />;
+  if (infoPages.has(pageName as InfoPageKey)) {
+    return <InfoPage page={pageName as InfoPageKey} />;
+  }
+  if (pageName === "guide") {
+    // Production pages carry a build-time reference payload. The Vite
+    // development server has no prerender step, so load the same validated
+    // snapshots lazily instead of falling back to the homepage for /guide/*.
+    const reference =
+      guideReference ??
+      buildGuideReference(
+        ...(await Promise.all([
+          loadRebarPriceData(),
+          loadBeamPriceData(),
+          loadProductPricePayload(),
+        ])),
+      );
+    const requested = rootElement.dataset.guide || pathSegments[1] || "";
+    return (
+      <GuidePage
+        guide={isGuidePageKey(requested) ? requested : undefined}
+        reference={reference}
+      />
+    );
+  }
+  return <App />;
 }
 
-if (root.hasChildNodes()) {
-  hydrateRoot(root, <StrictMode>{content}</StrictMode>);
-} else {
-  createRoot(root).render(<StrictMode>{content}</StrictMode>);
+async function mount() {
+  const content = await resolveContent();
+  if (rootElement.hasChildNodes()) {
+    hydrateRoot(rootElement, <StrictMode>{content}</StrictMode>);
+  } else {
+    createRoot(rootElement).render(<StrictMode>{content}</StrictMode>);
+  }
 }
 
+void mount();

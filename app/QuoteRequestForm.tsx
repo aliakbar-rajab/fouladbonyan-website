@@ -173,6 +173,32 @@ export function QuoteRequestForm() {
   const nextItemId = useRef(2);
   const prepared = usePreparedRequest();
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedProduct = params.get("product");
+    const requestedDimensions = params.get("dimensions")?.slice(0, 240) ?? "";
+    const matchedProduct = productOptions.find(
+      (product) => product === requestedProduct,
+    );
+    if (!matchedProduct && !requestedDimensions) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setItems((current) => {
+        const first = current[0];
+        if (!first || first.product || first.dimensions) return current;
+        return [
+          {
+            ...first,
+            product: matchedProduct ?? "",
+            dimensions: requestedDimensions,
+          },
+          ...current.slice(1),
+        ];
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   const validateChangedField = (
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => {

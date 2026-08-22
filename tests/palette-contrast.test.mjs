@@ -22,9 +22,12 @@ test("core palette combinations meet WCAG AA contrast", () => {
     return (values[0] + 0.05) / (values[1] + 0.05);
   };
 
-  assert.ok(ratio("#222226", "#F6B500") >= 4.5);
-  assert.ok(ratio("#FFFFFF", "#3B3B3E") >= 4.5);
-  assert.ok(ratio("#65656C", "#FFFFFF") >= 4.5);
+  assert.ok(ratio("#111417", "#F6B500") >= 4.5);
+  assert.ok(ratio("#F3F5F6", "#090C0F") >= 4.5);
+  assert.ok(ratio("#AEB7BC", "#0E1215") >= 4.5);
+  assert.ok(ratio("#929DA3", "#0B0F12") >= 4.5);
+  assert.ok(ratio("#EF6D7D", "#0B0F12") >= 4.5);
+  assert.ok(ratio("#F3F5F6", "#10161A") >= 4.5);
   // Currency/unit metadata beside every displayed price (rebar.css,
   // market-prices.css) — previously #8a8b94-family greys at ~3.3:1.
   assert.ok(ratio("#6B6C76", "#FFFFFF") >= 4.5);

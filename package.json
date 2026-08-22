@@ -21,7 +21,7 @@
         "lint": "eslint .",
         "typecheck": "tsc --noEmit --incremental false",
         "test": "node --import tsx --test tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/palette-contrast.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs tests/steel-reference.test.mjs tests/guide-page-ui.test.mjs tests/pull-price-data.test.mjs tests/publish-price-payloads.test.mjs workers/price-refresh/ingest.test.mjs workers/price-refresh/worker.test.mjs",
-        "test:build": "node --test tests/built-assets.test.mjs tests/built-seo.test.mjs tests/built-prerender.test.mjs tests/built-guide.test.mjs tests/built-csp.test.mjs tests/hydration.test.mjs",
+        "test:build": "node --test tests/built-assets.test.mjs tests/built-seo.test.mjs tests/built-prerender.test.mjs tests/built-guide.test.mjs tests/built-csp.test.mjs tests/built-links.test.mjs tests/hydration.test.mjs",
         "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:build"
     },
     "dependencies": {

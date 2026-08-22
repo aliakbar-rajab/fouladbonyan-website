@@ -20,6 +20,11 @@ test("production output contains required GitHub Pages files", async () => {
       "categories/hero-rebar-1680.jpg",
       "categories/hero-beam-1680.jpg",
       "categories/hero-sheet-1680.jpg",
+      "categories/hero-profile-1680.jpg",
+      "categories/hero-pipe-1680.jpg",
+      "categories/hero-angle-1680.jpg",
+      "categories/hero-channel-1680.jpg",
+      "categories/hero-wire-1680.jpg",
       "categories/hero-rebar-640.webp",
       "categories/hero-rebar-640.avif",
       "categories/01-rebar.webp",
@@ -27,6 +32,46 @@ test("production output contains required GitHub Pages files", async () => {
       "categories/01-rebar-240.webp",
     ].map((path) => access(new URL(`../dist/${path}`, import.meta.url))),
   );
+});
+
+test("every product family ships a dedicated responsive hero set", async () => {
+  await Promise.all(
+    productGroups.flatMap((group) => {
+      assert.ok(group.heroImage, `${group.id} must not fall back to its card image`);
+      const base = group.heroImage.replace(/-1680\.jpg$/, "").replace(/^\//, "");
+      return ["640", "960", "1280", "1680"].flatMap((width) =>
+        ["avif", "webp", "jpg"].map((format) =>
+          access(new URL(`../dist/${base}-${width}.${format}`, import.meta.url)),
+        ),
+      );
+    }),
+  );
+});
+
+test("every category and subcategory page renders its family hero", async () => {
+  for (const group of productGroups) {
+    assert.ok(group.heroImage, `${group.id} must define a dedicated hero image`);
+    const heroBase = group.heroImage.replace(/-1680\.jpg$/, "");
+    const escapedHeroBase = heroBase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const groupDirectory = new URL(`../dist/${group.id}/`, import.meta.url);
+    const subcategoryDirectories = (await readdir(groupDirectory, {
+      withFileTypes: true,
+    }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => `${group.id}/${entry.name}/index.html`);
+    const pagePaths = [`${group.id}/index.html`, ...subcategoryDirectories];
+
+    for (const pagePath of pagePaths) {
+      const html = await readDist(pagePath);
+      assert.match(
+        html,
+        new RegExp(
+          `<picture class="hero-image is-active">[\\s\\S]*?<img src="${escapedHeroBase}-1680\\.jpg"`,
+        ),
+        `${pagePath} must render the ${group.id} hero`,
+      );
+    }
+  }
 });
 
 test("built HTML uses root-safe assets and production metadata", async () => {
@@ -200,9 +245,13 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
   // 2. Category pages: hero picture and preload matching the category
   for (const group of productGroups) {
     const catHtml = await readDist(`${group.id}/index.html`);
+    assert.ok(group.heroImage, `${group.id} must define a dedicated hero image`);
+    const heroBase = group.heroImage.replace(/-1680\.jpg$/, "");
     assert.match(
       catHtml,
-      /<link[\s\S]*?id="hero-image-preload"[\s\S]*?rel="preload"[\s\S]*?as="image"/,
+      new RegExp(
+        `<link[\\s\\S]*?id="hero-image-preload"[\\s\\S]*?href="${heroBase}-1680\\.webp"`,
+      ),
       `${group.id} must have hero-image-preload link in head`,
     );
     assert.match(

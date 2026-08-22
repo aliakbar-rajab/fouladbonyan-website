@@ -30,6 +30,7 @@ import { MarketPrices } from "./MarketPrices";
 import { MegaMenu } from "./MegaMenu";
 import { SiteHeader } from "./SiteHeader";
 import { useMediaQuery } from "./use-media-query";
+import { PhoneIcon } from "./icons";
 
 const loadCatalogSearchGroups = createRetryableLoader<ProductGroup[]>(() =>
   loadAllGroupCatalogs().then((catalogs) =>
@@ -44,20 +45,17 @@ function priceSectionHeading(
 ) {
   if (subcategoryLabel) {
     return {
-      eyebrow: `جدول قیمت ${subcategoryLabel}`,
       title: `قیمت روز ${subcategoryLabel}`,
       description: `قیمت روز و مشخصات فنی ${subcategoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
     };
   }
   if (categoryLabel) {
     return {
-      eyebrow: "جدول قیمت و مشخصات",
       title: `قیمت روز ${categoryLabel}`,
       description: `قیمت روز و مشخصات فنی انواع ${categoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
     };
   }
   return {
-    eyebrow: "قیمت روز بازار",
     title: "قیمت روز آهن‌آلات و مقاطع فولادی",
     description:
       "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید.",
@@ -267,16 +265,16 @@ export default function App({
           subcategory={subcategoryInfo}
         />
 
-        <CategoryGrid onSelectGroup={navigateToCatalog} />
-
-        <MarketPrices />
-
         <section className="prices section" id="prices">
           <div className="shell">
             <SectionTitle
-              eyebrow={heading.eyebrow}
               title={heading.title}
               description={heading.description}
+            />
+
+            <CategoryGrid
+              activeGroup={activeGroup}
+              onSelectGroup={navigateToCatalog}
             />
 
             <form className="site-search" role="search" onSubmit={submitSearch}>
@@ -379,13 +377,14 @@ export default function App({
           </div>
         </section>
 
+        <MarketPrices />
+
         <section className="about section" id="about">
           <div className="shell about-grid">
             <div className="about-copy">
               <SectionTitle
-                eyebrow="درباره بنیان فولاد داریا"
                 title="از انتخاب محصول تا هماهنگی تحویل"
-                description="بنیان فولاد داریا (با نام‌های فولاد بنیان داریا، بنیان فولاد و فولاد بنیان نیز شناخته می‌شود) برای معرفی محصولات، استعلام موجودی، مقایسه گزینه‌های تأمین و هماهنگی تحویل در کنار متقاضیان ساختمانی و صنعتی است."
+                description="بنیان فولاد داریا مسیر بررسی مشخصات، استعلام موجودی، مقایسه گزینه‌های تأمین و هماهنگی تحویل را برای متقاضیان ساختمانی و صنعتی یکپارچه می‌کند."
               />
               <ul className="feature-list">
                 <li>
@@ -416,13 +415,38 @@ export default function App({
           </div>
         </section>
 
+        <section className="knowledge-section section" aria-labelledby="knowledge-heading">
+          <div className="shell knowledge-layout">
+            <div className="knowledge-intro">
+              <h2 id="knowledge-heading">دانش فنی، پیش از استعلام</h2>
+              <p>
+                ابزارها و جدول‌های مرجع برای آماده‌کردن مشخصات خرید پیش از تماس
+                با واحد فروش.
+              </p>
+            </div>
+            <div className="knowledge-links">
+              <a href="/guide/rebar-weight-chart/">
+                <strong>جدول وزن میلگرد</strong>
+                <span>بررسی قطر، طول و وزن تقریبی</span>
+              </a>
+              <a href="/guide/beam-weight-chart/">
+                <strong>جدول وزن تیرآهن</strong>
+                <span>مرجع وزن شاخه و سایز</span>
+              </a>
+              <a href="/guide/units-and-quote-specs/">
+                <strong>واحدها و مشخصات استعلام</strong>
+                <span>آماده‌سازی اطلاعات خرید</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
         <section
           className="quote-section section"
           aria-labelledby="quote-heading"
         >
           <div className="shell quote-inner">
             <div>
-              <span>درخواست پیش‌فاکتور</span>
               <h2 id="quote-heading">مشخصات محصول موردنیاز را آماده کنید</h2>
               <p>
                 نوع محصول، ابعاد، مقدار و شهر مقصد را آماده کنید تا واحد فروش
@@ -438,7 +462,7 @@ export default function App({
 
       <div className="mobile-actions" role="group" aria-label="اقدام‌های سریع">
         <a href={contactHref}>
-          <span aria-hidden="true">☎</span>
+          <PhoneIcon className="mobile-action-icon" />
           تماس
         </a>
         <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>

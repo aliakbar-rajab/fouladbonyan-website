@@ -26,6 +26,7 @@ import {
 } from "./catalog-utils";
 import { RebarWeightCalculator } from "./RebarWeightCalculator";
 import { CatalogLoadMessage } from "./site-ui";
+import { ChevronDownIcon, PhoneIcon } from "./icons";
 import { nextRovingIndex } from "./roving-tabs";
 import { useCatalogData } from "./use-catalog-data";
 
@@ -51,14 +52,29 @@ function displayPrice(
   return formatCatalogNumber(adjustedPrice);
 }
 
-const statIcons = { max: "↗", min: "↘", change: "▥", average: "▥" };
-
-function StatIcon({ type }: { type: keyof typeof statIcons }) {
+function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
   return (
-    <span className={`rebar-stat-icon is-${type}`} aria-hidden="true">
-      {statIcons[type]}
-    </span>
+    <span className={`rebar-stat-marker is-${type}`} aria-hidden="true" />
   );
+}
+
+const quoteProductByGroup: Record<ProductGroupId, string> = {
+  rebar: "میلگرد",
+  beam: "تیرآهن",
+  sheet: "ورق فولادی",
+  profile: "پروفیل و قوطی",
+  pipe: "لوله فولادی",
+  angle: "نبشی",
+  channel: "ناودانی",
+  wire: "مفتول و سیم",
+};
+
+function quoteHref(groupId: ProductGroupId, categoryLabel: string, row: CatalogRow) {
+  const product =
+    groupId === "beam" && categoryLabel.includes("هاش")
+      ? "هاش"
+      : quoteProductByGroup[groupId];
+  return `/quote-process/?product=${encodeURIComponent(product)}&dimensions=${encodeURIComponent(row.title)}#quote-form`;
 }
 
 function TaxSwitch({
@@ -290,9 +306,6 @@ export function PriceCatalog({
             }}
             onKeyDown={(event) => moveCategoryTabFocus(event, index)}
           >
-            <span aria-hidden="true">
-              {presentation.categoryIcons[item.id] ?? "◆"}
-            </span>
             {`قیمت ${item.label}`}
           </a>
         ))}
@@ -341,19 +354,19 @@ export function PriceCatalog({
             {pricingState.hasPrices && pricingState.units.length === 1 ? (
               <div className="rebar-stats">
               <article className="is-max">
-                <StatIcon type="max" />
+                <StatMarker type="max" />
                 <span>بیشترین قیمت</span>
                 <strong>{summaryPrice(category.summary.max)}</strong>
                 <small>تومان</small>
               </article>
               <article className="is-min">
-                <StatIcon type="min" />
+                <StatMarker type="min" />
                 <span>کمترین قیمت</span>
                 <strong>{summaryPrice(category.summary.min)}</strong>
                 <small>تومان</small>
               </article>
               <article className="is-change">
-                <StatIcon type="change" />
+                <StatMarker type="change" />
                 <span>میزان نوسان روزانه</span>
                 <strong>
                   {
@@ -367,7 +380,7 @@ export function PriceCatalog({
                 <small>نسبت به روز قبل</small>
               </article>
               <article className="is-average">
-                <StatIcon type="average" />
+                <StatMarker type="average" />
                 <span>میانگین قیمت بازار</span>
                 <strong>{summaryPrice(category.summary.average)}</strong>
                 <small>تومان</small>
@@ -409,7 +422,7 @@ export function PriceCatalog({
                     قیمت {category.label} {factory.name}
                   </h4>
                   <p>
-                    <span aria-hidden="true">▣</span> آخرین بروزرسانی:{" "}
+                    آخرین بروزرسانی:{" "}
                     <b>
                       <time dateTime={unixSecondsToIso(factory.updatedAt)}>
                         {toPersianDigits(factory.updatedDate) || "—"}
@@ -432,6 +445,7 @@ export function PriceCatalog({
                         <th scope="col">محل تحویل</th>
                         <th scope="col">قیمت</th>
                         <th scope="col">نوسان</th>
+                        <th scope="col">استعلام</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -456,7 +470,9 @@ export function PriceCatalog({
                                   aria-label={`جزئیات ${row.title}`}
                                   onClick={() => toggleRow(row.id)}
                                 >
-                                  {expanded ? "⌃" : "⌄"}
+                                  <ChevronDownIcon
+                                    className={expanded ? "is-expanded" : undefined}
+                                  />
                                 </button>
                               </td>
                               <td data-label="سایز">
@@ -492,11 +508,15 @@ export function PriceCatalog({
                                 data-label="نوسان"
                                 className={`row-change is-${row.status}`}
                               >
-                                <span aria-hidden="true">{trend.symbol}</span>{" "}
                                 {trend.direction}{" "}
                                 {trend.amount
                                   ? `${formatCatalogNumber(trend.amount, 2)}٪`
                                   : ""}
+                              </td>
+                              <td data-label="استعلام" className="row-quote-cell">
+                                <a href={quoteHref(catalog.id, category.label, row)}>
+                                  افزودن به درخواست
+                                </a>
                               </td>
                             </tr>
                             {expanded ? (
@@ -504,7 +524,7 @@ export function PriceCatalog({
                               <td
                                 className="rebar-row-detail"
                                 id={`row-detail-${row.id}`}
-                                colSpan={6}
+                                colSpan={7}
                               >
                                 <dl>
                                   {getRowDetails(
@@ -549,17 +569,10 @@ export function PriceCatalog({
               aria-controls={factoryListId}
               onClick={() => setShowAllFactories((current) => !current)}
             >
-              {showAllFactories ? (
-                <>
-                  نمایش کمتر <span aria-hidden="true">↑</span>
-                </>
-              ) : (
-                <>
-                  نمایش {formatCatalogNumber(collapsedFactories)}{" "}
-                  {category.groupingLabel} دیگر
-                  <span aria-hidden="true">↓</span>
-                </>
-              )}
+              {showAllFactories
+                ? "نمایش کمتر"
+                : `نمایش ${formatCatalogNumber(collapsedFactories)} ${category.groupingLabel} دیگر`}
+              <ChevronDownIcon className={showAllFactories ? "is-expanded" : undefined} />
             </button>
           ) : null}
 
@@ -579,7 +592,6 @@ export function PriceCatalog({
         >
           <section className="filter-card">
             <header>
-              <span aria-hidden="true">⌁</span>
               <h3>فیلترها</h3>
               {activeFilterCount ? (
                 <b>{formatCatalogNumber(activeFilterCount)}</b>
@@ -641,12 +653,12 @@ export function PriceCatalog({
               از خرید باید با واحد فروش تأیید شوند.
             </p>
             <a href={category.sourceUrl} target="_blank" rel="noreferrer">
-              منبع: {catalog.sourceName} ↗
+              منبع: {catalog.sourceName}
             </a>
           </section>
 
           <section className="rebar-contact-card" aria-label="قیمت قطعی و موجودی">
-            <span aria-hidden="true">☎</span>
+            <PhoneIcon className="rebar-contact-icon" />
             <strong>قیمت قطعی و موجودی</strong>
             <p>برای تأیید قیمت، تناژ و زمان تحویل با واحد فروش تماس بگیرید.</p>
             <a href={phoneHref}>تماس با واحد فروش</a>

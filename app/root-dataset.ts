@@ -32,11 +32,25 @@ export function readRouteRequest(overrides: RouteRequest = {}): RouteRequest {
       ? undefined
       : document.getElementById("root")?.dataset;
 
-  const category = overrides.category ?? dataset?.initialCategory;
+  const pathSegments =
+    typeof window === "undefined"
+      ? []
+      : window.location.pathname
+          .replace(/^\/|\/$/g, "")
+          .toLowerCase()
+          .split("/")
+          .filter(Boolean);
+
+  const category =
+    overrides.category ?? dataset?.initialCategory ?? pathSegments[0];
+  const validCategory = isProductGroupId(category) ? category : undefined;
 
   return {
-    category: isProductGroupId(category) ? category : undefined,
-    subcategory: overrides.subcategory ?? dataset?.initialSubcategory,
+    category: validCategory,
+    subcategory:
+      overrides.subcategory ??
+      dataset?.initialSubcategory ??
+      (validCategory ? pathSegments[1] : undefined),
     subcategoryLabel:
       overrides.subcategoryLabel ?? dataset?.initialSubcategoryLabel,
   };

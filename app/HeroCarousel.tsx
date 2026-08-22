@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { productGroups, type ProductGroup } from "./category-meta";
 import { Breadcrumb } from "./Breadcrumb";
 import { getHeroImageSources } from "./image-utils";
+import { ArrowIcon } from "./icons";
 
 const heroSlides = productGroups.slice(0, 3);
-const HERO_SLIDE_INTERVAL_MS = 1_700;
+const HERO_SLIDE_INTERVAL_MS = 9_000;
 
 export type SubcategoryHeroInfo = {
   id: string;
@@ -89,17 +90,11 @@ export function HeroCarousel({
           <div className="hero-overlay" />
           <div className="shell hero-content">
             <Breadcrumb items={breadcrumbItems} />
-            <p className="hero-kicker">
-              تأمین و استعلام مقاطع فولادی — بنیان فولاد داریا
-            </p>
             <h1>
               <span>{displayH1}</span>
             </h1>
             <p className="hero-category-intro">{displayIntro}</p>
             <div className="hero-actions">
-              <a href="/quote-process/#quote-form">
-                درخواست پیش‌فاکتور {displayLabel}
-              </a>
               <button
                 className="hero-price-jump"
                 type="button"
@@ -107,13 +102,9 @@ export function HeroCarousel({
               >
                 مشاهده جدول قیمت {displayLabel}
               </button>
-              {subcategory ? (
-                <a href={`/${categoryGroup.id}/`}>
-                  سایر انواع {categoryGroup.label}
-                </a>
-              ) : (
-                <a href="#products">سایر گروه‌های محصول</a>
-              )}
+              <a href="/quote-process/#quote-form">
+                درخواست پیش‌فاکتور {displayLabel}
+              </a>
             </div>
           </div>
         </section>
@@ -174,23 +165,36 @@ export function HeroCarousel({
         })}
         <div className="hero-overlay" />
         <div className="shell hero-content">
-          <p className="hero-kicker">تأمین و استعلام مقاطع فولادی</p>
           <h1>
             <span>قیمت روز آهن و فولاد؛</span>
             <span>بنیان فولاد داریا</span>
           </h1>
-          <p>{slide.description}</p>
+          <p className="hero-lede">
+            بنیان فولاد داریا؛ دسترسی سریع به قیمت، مشخصات و مسیر استعلام{" "}
+            {slide.label} و دیگر مقاطع فولادی.
+          </p>
           <div className="hero-actions">
-            <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
             <button
               className="hero-price-jump"
               type="button"
               onClick={onGoToPrices}
             >
-              قیمت روز مقاطع فولادی
+              ورود به مرکز قیمت فولاد
             </button>
-            <a href="#products">مشاهده محصولات</a>
+            <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
           </div>
+        </div>
+
+        <div className="shell hero-live-dock" role="note" aria-label="وضعیت مرکز قیمت">
+          <div>
+            <span className="hero-live-dot" aria-hidden="true" />
+            <strong>قیمت‌های جاری فولاد</strong>
+          </div>
+          <p>تفکیک محصول، کارخانه و مشخصات فنی</p>
+          <p>منبع و زمان دریافت کنار جدول‌ها</p>
+          <button type="button" onClick={onGoToPrices}>
+            مشاهده قیمت‌ها
+          </button>
         </div>
 
         <div className="shell carousel-controls">
@@ -204,7 +208,7 @@ export function HeroCarousel({
               )
             }
           >
-            →
+            <ArrowIcon className="carousel-arrow is-previous" />
           </button>
           <div className="carousel-dots" role="group" aria-label="انتخاب اسلاید">
             {heroSlides.map((item, index) => (
@@ -225,7 +229,7 @@ export function HeroCarousel({
               setActiveSlide((current) => (current + 1) % heroSlides.length)
             }
           >
-            ←
+            <ArrowIcon className="carousel-arrow is-next" />
           </button>
           {!reduceMotion ? (
             <button

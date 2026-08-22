@@ -51,13 +51,13 @@ export function SectionTitle({
   title,
   description,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
 }) {
   return (
     <div className="section-heading">
-      <span>{eyebrow}</span>
+      {eyebrow ? <span>{eyebrow}</span> : null}
       <h2>{title}</h2>
       {description ? <p>{description}</p> : null}
     </div>

@@ -52,7 +52,6 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
         <small>{item.unit}</small>
       </p>
       <p className="market-price-trend">
-        <span aria-hidden="true">{trend.symbol}</span>
         <span>{trend.direction}</span>
         {trend.amount ? <span>{formatPercent(trend.amount)}٪</span> : null}
       </p>
@@ -71,14 +70,17 @@ export function MarketPrices() {
 
   return (
     <section
-      className="market-prices section"
+      className="market-prices market-context section"
       id="market-prices"
       aria-labelledby="market-prices-title"
     >
       <div className="shell">
         <div className="section-heading market-prices-heading">
-          <span>نرخ لحظه‌ای بازار</span>
-          <h2 id="market-prices-title">طلا، ارز و تتر</h2>
+          <h2 id="market-prices-title">زمینه بازار، کنار قیمت فولاد</h2>
+          <p>
+            نرخ طلا، ارز و تتر برای خوانش بهتر فضای بازار؛ مرجع اصلی خرید در
+            جدول‌های تخصصی قیمت فولاد بالاست.
+          </p>
         </div>
 
         {state.status === "loading" ? (

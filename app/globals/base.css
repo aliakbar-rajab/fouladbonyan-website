@@ -22,15 +22,39 @@
 
 :root {
   --brand-yellow: #f6b500;
-  --brand-yellow-glow: rgba(246, 181, 0, 0.35);
-  --brand-dark: #3b3b3e;
-  --ink: #222226;
-  --muted: #65656c;
-  --line: #dedee2;
+  --brand-yellow-glow: rgb(246 181 0 / 35%);
+  --brand-dark: #121518;
+  --ink: #1d2227;
+  --muted: #656b71;
+  --line: #d9dde0;
   --white: #fff;
-  --shadow: 0 18px 50px rgb(18 18 22 / 10%);
+  --shadow: 0 24px 70px rgb(0 0 0 / 18%);
   --radius: 14px;
   --shell-gutter: 2rem;
+
+  /* Cinematic Liquid Steel */
+  --steel-1000: #050708;
+  --steel-950: #090c0f;
+  --steel-900: #0e1215;
+  --steel-850: #14191d;
+  --steel-800: #1a2025;
+  --steel-700: #2a3238;
+  --steel-500: #69747c;
+  --steel-200: #cbd1d5;
+  --steel-100: #e8ecee;
+  --bronze-500: #d79200;
+  --bronze-400: #f6b500;
+  --bronze-300: #ffd45a;
+  --surface-quiet: rgb(255 255 255 / 4%);
+  --surface-control: rgb(17 22 26 / 76%);
+  --surface-feature: rgb(12 16 19 / 88%);
+  --surface-border: rgb(255 255 255 / 11%);
+  --surface-highlight: rgb(255 255 255 / 18%);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --font-display: "Vazirmatn", Tahoma, Arial, sans-serif;
+  --font-brand: "B Titr", "Vazirmatn", Tahoma, sans-serif;
 
   /* Liquid Glass System Tokens */
   --glass-dark-bg: rgba(42, 43, 47, 0.78);
