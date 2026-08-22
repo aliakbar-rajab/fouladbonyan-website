@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 import { siteConfig } from "../site-config";
-import { toPersianDigits } from "../catalog-utils";
+import { formatCatalogNumber as fa, toPersianDigits } from "../catalog-utils";
 import type { CatalogProfile, GuideReference } from "../steel-reference";
 
-export const fa = (value: number, maximumFractionDigits = 0) =>
-  value.toLocaleString("fa-IR", { maximumFractionDigits });
+export { fa };
 
 /** Fixed precision, so a numeric column stays aligned down its whole length. */
 export const faFixed = (value: number, digits: number) =>

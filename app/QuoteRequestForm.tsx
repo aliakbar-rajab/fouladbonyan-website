@@ -35,10 +35,6 @@ const disclaimerError =
 
 const itemNumber = (index: number) => (index + 1).toLocaleString("fa-IR");
 
-function validateProduct(value: string, index: number) {
-  return validateRequired(value, `نوع کالای ${itemNumber(index)}`);
-}
-
 function validateQuantity(value: string, index: number) {
   const label = `مقدار تقریبی کالای ${itemNumber(index)}`;
   const requiredError = validateRequired(value, label);
@@ -296,7 +292,7 @@ export function QuoteRequestForm() {
           setFieldError(
             setErrors,
             `itemProduct-${itemId}`,
-            validateProduct(patch.product ?? "", index),
+            validateRequired(patch.product ?? "", `نوع کالای ${itemNumber(index)}`),
           );
         }
         if ("quantity" in patch) {
@@ -351,9 +347,9 @@ export function QuoteRequestForm() {
         form.get("acceptDisclaimer") === "on" ? "" : disclaimerError,
     };
     for (const [index, { item }] of pricedItems.entries()) {
-      nextErrors[`itemProduct-${item.id}`] = validateProduct(
+      nextErrors[`itemProduct-${item.id}`] = validateRequired(
         item.product,
-        index,
+        `نوع کالای ${itemNumber(index)}`,
       );
       nextErrors[`itemQuantity-${item.id}`] = validateQuantity(
         item.quantity,

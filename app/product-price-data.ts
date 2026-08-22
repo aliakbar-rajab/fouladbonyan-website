@@ -1,5 +1,4 @@
 import type { CatalogCategory, CatalogPriceData } from "./catalog-types";
-import { loadProductSnapshot } from "./group-catalog";
 
 export type ProductCatalogId =
   | "sheet"
@@ -19,7 +18,3 @@ export type ProductPriceCatalog = {
 export type ProductPricePayload = Omit<CatalogPriceData, "categories"> & {
   catalogs: ProductPriceCatalog[];
 };
-
-export const loadProductPricePayload = loadProductSnapshot;
-
-

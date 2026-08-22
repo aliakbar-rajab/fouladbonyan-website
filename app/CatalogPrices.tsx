@@ -40,10 +40,11 @@ export function PriceCatalog({
   requestedView?: CatalogViewRequest;
   sidebarExtra?: ReactNode;
 }) {
-  const factorySelectId = useId();
-  const sizeSelectId = useId();
-  const factoryListId = useId().replaceAll(":", "");
-  const tabsId = useId().replaceAll(":", "");
+  const baseId = useId();
+  const factorySelectId = `${baseId}-factory-select`;
+  const sizeSelectId = `${baseId}-size-select`;
+  const factoryListId = `${baseId}-factory-list`;
+  const tabsId = `${baseId}-tabs`;
   const categoryTabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
 
   const {
