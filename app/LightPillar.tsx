@@ -270,13 +270,27 @@ export function LightPillar() {
       canvas.style.height = "100%";
       canvas.style.pointerEvents = "none";
 
-      gl = canvas.getContext("webgl2", {
-        alpha: true,
-        antialias: false,
-        depth: false,
-        stencil: false,
-        powerPreference: tier === QUALITY_TIERS.high ? "high-performance" : "low-power",
-      });
+      if (
+        typeof window === "undefined" ||
+        typeof window.WebGL2RenderingContext === "undefined"
+      ) {
+        if (isNearViewport) signalPillarReady();
+        return;
+      }
+
+      try {
+        if (typeof canvas.getContext === "function") {
+          gl = canvas.getContext("webgl2", {
+            alpha: true,
+            antialias: false,
+            depth: false,
+            stencil: false,
+            powerPreference: tier === QUALITY_TIERS.high ? "high-performance" : "low-power",
+          });
+        }
+      } catch {
+        gl = null;
+      }
       if (!gl) {
         if (isNearViewport) signalPillarReady();
         return;

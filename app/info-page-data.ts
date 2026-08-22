@@ -70,3 +70,7 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
     lastmod: "2026-07-29",
   },
 };
+
+export function isInfoPageKey(value: string): value is InfoPageKey {
+  return value in infoPageDefinitions;
+}

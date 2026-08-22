@@ -21,6 +21,7 @@ import {
 } from "./quote-output";
 import { QuoteDocument } from "./QuoteDocument";
 import {
+  isQuoteUnit,
   quoteDisclaimer,
   quoteUnits,
   type GeneratedQuote,
@@ -57,6 +58,9 @@ const productOptions = [
   "مفتول و سیم",
   "سایر محصولات فولادی",
 ] as const satisfies readonly QuoteItem["product"][];
+
+const isQuoteProduct = (value: unknown): value is QuoteItem["product"] =>
+  typeof value === "string" && (productOptions as readonly string[]).includes(value);
 
 const MAX_QUOTE_ITEMS = 100;
 
@@ -480,14 +484,16 @@ export function QuoteRequestForm() {
                     <select
                       name={productField}
                       value={item.product}
-                      onChange={(event) =>
-                        updateItem(item.id, {
-                          product: event.currentTarget
-                            .value as QuoteItem["product"],
-                          rebarDiameterMm: "",
-                          pieceOptionKey: "",
-                        })
-                      }
+                      onChange={(event) => {
+                        const val = event.currentTarget.value;
+                        if (isQuoteProduct(val)) {
+                          updateItem(item.id, {
+                            product: val,
+                            rebarDiameterMm: "",
+                            pieceOptionKey: "",
+                          });
+                        }
+                      }}
                       aria-invalid={Boolean(errors[productField])}
                       aria-describedby={
                         errors[productField] ? productErrorId : undefined
@@ -531,13 +537,15 @@ export function QuoteRequestForm() {
                         name={`itemUnit-${item.id}`}
                         aria-label={`واحد مقدار کالای ${number}`}
                         value={item.unit}
-                        onChange={(event) =>
-                          updateItem(item.id, {
-                            unit: event.currentTarget
-                              .value as QuoteItem["unit"],
-                            pieceOptionKey: "",
-                          })
-                        }
+                        onChange={(event) => {
+                          const val = event.currentTarget.value;
+                          if (isQuoteUnit(val)) {
+                            updateItem(item.id, {
+                              unit: val,
+                              pieceOptionKey: "",
+                            });
+                          }
+                        }}
                       >
                         {quoteUnits
                           .filter(

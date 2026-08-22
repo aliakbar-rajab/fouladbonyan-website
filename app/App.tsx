@@ -12,7 +12,7 @@ import { createRetryableLoader } from "./catalog-cache";
 import CatalogPrices from "./CatalogPrices";
 import { SteelPriceOverview } from "./SteelPriceOverview";
 import { initialCategoryIdOf, loadAllGroupCatalogs } from "./group-catalog";
-import { readRouteRequest } from "./root-dataset";
+import { isProductGroupId, readRouteRequest } from "./root-dataset";
 import { nextRovingIndex } from "./roving-tabs";
 import {
   getCategoryById,
@@ -203,7 +203,9 @@ export default function App({
       setCommittedSearch(query);
       const results = filterProductGroups(groups, query);
       if (results.length > 0) {
-        const resultGroupId = results[0].id as ProductGroupId;
+        const resultGroupId = isProductGroupId(results[0].id)
+          ? results[0].id
+          : productGroups[0].id;
         const firstRow = results[0].rows[0];
         setActiveGroup(resultGroupId);
         setActiveViewRequest((current) => ({

@@ -11,6 +11,10 @@ export const quoteUnits = ["تن", "کیلوگرم", "شاخه", "عدد"] as co
 
 export type QuoteUnit = (typeof quoteUnits)[number];
 
+export function isQuoteUnit(value: unknown): value is QuoteUnit {
+  return typeof value === "string" && (quoteUnits as readonly string[]).includes(value);
+}
+
 /** One row of the form, exactly as the buyer filled it in. */
 export type QuoteItem = {
   id: number;

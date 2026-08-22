@@ -72,3 +72,5 @@ export type CatalogViewRequest = {
   factory?: string;
   size?: string;
 };
+
+export const INITIAL_FACTORY_COUNT = 6;

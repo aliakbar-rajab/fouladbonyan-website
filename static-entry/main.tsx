@@ -4,7 +4,7 @@ import App from "../app/App";
 import ContactPage from "../app/ContactPage";
 import InfoPage from "../app/InfoPage";
 import GuidePage from "../app/GuidePage";
-import { type InfoPageKey } from "../app/info-page-data";
+import { isInfoPageKey } from "../app/info-page-data";
 import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
@@ -64,19 +64,10 @@ if (organizationJsonLd) {
     organizationJsonLd.remove();
   }
 }
-const infoPages = new Set<InfoPageKey>([
-  "about",
-  "terms",
-  "privacy",
-  "quote-process",
-  "complaints",
-  "shipping-delivery",
-]);
-
 async function resolveContent() {
   if (pageName === "contact") return <ContactPage />;
-  if (infoPages.has(pageName as InfoPageKey)) {
-    return <InfoPage page={pageName as InfoPageKey} />;
+  if (isInfoPageKey(pageName)) {
+    return <InfoPage page={pageName} />;
   }
   if (pageName === "guide") {
     // Production pages carry a build-time reference payload. The Vite

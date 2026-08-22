@@ -1,9 +1,10 @@
 import { Fragment } from "react";
 import { getTrendPresentation } from "./catalog-behavior.mjs";
-import type {
-  CatalogCategory,
-  CatalogFactoryGroup,
-  CatalogRow,
+import {
+  INITIAL_FACTORY_COUNT,
+  type CatalogCategory,
+  type CatalogFactoryGroup,
+  type CatalogRow,
 } from "./catalog-types";
 import type { ProductGroupId } from "./category-meta";
 import {
@@ -14,8 +15,6 @@ import {
 } from "./catalog-utils";
 import { ChevronDownIcon } from "./icons";
 import { displayPrice } from "./CatalogSummaryBanner";
-
-const INITIAL_FACTORY_COUNT = 6;
 
 const quoteProductByGroup: Record<ProductGroupId, string> = {
   rebar: "میلگرد",

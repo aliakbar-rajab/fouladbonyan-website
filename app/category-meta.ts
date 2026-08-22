@@ -189,23 +189,8 @@ export const productGroups: ProductGroup[] = [
   },
 ];
 
-/**
- * Category landing pages (e.g. /rebar/) stamp this as a plain data attribute
- * on the root element so the price section opens on that category instead of
- * the default tab. It has to be a static attribute rather than an inline
- * script: the site's CSP is script-src 'self', which silently drops any
- * inline <script> with no matching nonce/hash.
- */
-export function getInitialCategory(): ProductGroupId {
-  if (typeof document === "undefined") {
-    return productGroups[0].id;
-  }
-  const requested = document.getElementById("root")?.dataset.initialCategory;
-  const match = requested && productGroups.find((group) => group.id === requested);
-  return match ? match.id : productGroups[0].id;
-}
-
 export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
 }
+
 

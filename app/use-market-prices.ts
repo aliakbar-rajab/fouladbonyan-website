@@ -32,13 +32,16 @@ export type MarketPricesState =
 const MARKET_PRICES_URL = "/api/market-prices";
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function isMarketPriceData(value: unknown): value is MarketPriceData {
   return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    Array.isArray((value as MarketPriceData).items) &&
-    (value as MarketPriceData).items.length > 0 &&
-    typeof (value as MarketPriceData).fetchedAt === "string"
+    isRecord(value) &&
+    Array.isArray(value.items) &&
+    value.items.length > 0 &&
+    typeof value.fetchedAt === "string"
   );
 }
 
