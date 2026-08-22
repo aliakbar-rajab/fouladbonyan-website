@@ -183,23 +183,75 @@ export default function GlassSurface({
       gaussianBlurRef.current?.setAttribute("stdDeviation", displace.toString());
     };
 
-    apply();
-
-    /* The map is generated from the measured box, so every resize invalidates
-       it. rAF keeps the regeneration off the observer callback itself. Absent
-       a ResizeObserver (jsdom), the pane keeps the map it was mounted with. */
-    if (typeof ResizeObserver === "undefined") return;
-
+    let applied = false;
     let frame = 0;
-    const observer = new ResizeObserver(() => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(apply);
-    });
-    observer.observe(container);
+    let observer: ResizeObserver | null = null;
+
+    const safeApply = () => {
+      if (applied && frame && typeof cancelAnimationFrame !== "undefined") cancelAnimationFrame(frame);
+      if (typeof requestAnimationFrame !== "undefined") {
+        frame = requestAnimationFrame(() => {
+          apply();
+          applied = true;
+        });
+      } else {
+        apply();
+        applied = true;
+      }
+    };
+
+    const initialRect = container.getBoundingClientRect();
+    const isNearViewport =
+      initialRect.top < (window.innerHeight || 800) + 300 && initialRect.bottom > -300;
+
+    let intersectionObserver: IntersectionObserver | null = null;
+
+    if (isNearViewport) {
+      apply();
+      applied = true;
+    } else if (typeof IntersectionObserver !== "undefined") {
+      intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            apply();
+            applied = true;
+            intersectionObserver?.disconnect();
+            intersectionObserver = null;
+          }
+        },
+        { rootMargin: "300px", threshold: 0.01 },
+      );
+      intersectionObserver.observe(container);
+    } else {
+      // Fallback if no IntersectionObserver
+      if (typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(() => {
+          apply();
+          applied = true;
+        });
+      } else {
+        window.setTimeout(() => {
+          apply();
+          applied = true;
+        }, 100);
+      }
+    }
+
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => {
+        if (applied) {
+          safeApply();
+        }
+      });
+      observer.observe(container);
+    }
 
     return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
+      if (frame && typeof cancelAnimationFrame !== "undefined") {
+        cancelAnimationFrame(frame);
+      }
+      observer?.disconnect();
+      intersectionObserver?.disconnect();
     };
   }, [
     borderWidth,

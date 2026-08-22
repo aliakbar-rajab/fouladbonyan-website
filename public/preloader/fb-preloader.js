@@ -4,6 +4,7 @@
   const SESSION_KEY = "bonyan-foulad-daria-preloader-seen-v9";
   let finished = false;
   let watchdog = 0;
+  let warmupTimer = 0;
   let overlay = null;
   let site = null;
   let video = null;
@@ -25,6 +26,16 @@
     },
   };
 
+  function signalWarmup() {
+    if (window.__fbPreloaderWarmup) return;
+    window.__fbPreloaderWarmup = true;
+    try {
+      window.dispatchEvent(new CustomEvent("fb:preloader-warmup"));
+    } catch {
+      // CustomEvent support fallback
+    }
+  }
+
   function signalDone() {
     window.__fbPreloaderDone = true;
     try {
@@ -42,22 +53,46 @@
     }
   }
 
-  function finish() {
-    if (finished) return;
-    finished = true;
+  function teardown() {
     storage.set();
     window.clearTimeout(watchdog);
+    window.clearTimeout(warmupTimer);
     restoreSite();
     signalDone();
 
     if (!overlay) return;
     overlay.classList.add("is-leaving");
-    window.setTimeout(() => overlay?.remove(), 260);
+    window.setTimeout(() => overlay?.remove(), 400);
+  }
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    signalWarmup();
+
+    // If the homepage first viewport is already hydrated and confirmed ready, exit immediately.
+    if (window.__fbSiteReady || typeof window === "undefined") {
+      teardown();
+      return;
+    }
+
+    let settled = false;
+    const proceed = () => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("fb:site-ready", proceed);
+      teardown();
+    };
+
+    window.addEventListener("fb:site-ready", proceed, { once: true });
+    // Fail-safe ceiling: on very slow devices or interrupted assets, never block the visitor indefinitely.
+    window.setTimeout(proceed, 1000);
   }
 
   function showPlaybackPrompt() {
     if (!overlay || finished) return;
     window.clearTimeout(watchdog);
+    signalWarmup();
     overlay.classList.add("needs-play");
     // If autoplay was blocked and the visitor never notices the manual
     // play button, the gate must not strand them on the overlay forever.
@@ -69,6 +104,7 @@
     // looking for a specific price or document — skip it without
     // downloading the video, and without marking the session as seen so
     // a later visit to "/" itself still shows it once.
+    signalWarmup();
     signalDone();
     return;
   }
@@ -78,6 +114,7 @@
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
     storage.set();
+    signalWarmup();
     signalDone();
     return;
   }
@@ -135,6 +172,20 @@
       skip?.addEventListener("click", finish, { once: true });
       video?.addEventListener("ended", finish, { once: true });
       video?.addEventListener("error", showPlaybackPrompt, { once: true });
+
+      // Schedule background warmup once video playback has safely begun and settled
+      video?.addEventListener(
+        "playing",
+        () => {
+          if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(() => signalWarmup(), { timeout: 800 });
+          } else {
+            warmupTimer = window.setTimeout(signalWarmup, 600);
+          }
+        },
+        { once: true },
+      );
+
       play?.addEventListener(
         "click",
         () => {

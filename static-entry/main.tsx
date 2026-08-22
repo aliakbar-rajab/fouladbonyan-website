@@ -104,12 +104,17 @@ async function resolveContent() {
   return <App />;
 }
 
-function waitForPreloader(): Promise<void> {
+function waitForWarmup(): Promise<void> {
   if (typeof window === "undefined" || window.location.pathname !== "/") {
     return Promise.resolve();
   }
 
-  if ((window as unknown as { __fbPreloaderDone?: boolean }).__fbPreloaderDone) {
+  const globalScope = window as unknown as {
+    __fbPreloaderDone?: boolean;
+    __fbPreloaderWarmup?: boolean;
+  };
+
+  if (globalScope.__fbPreloaderDone || globalScope.__fbPreloaderWarmup) {
     return Promise.resolve();
   }
 
@@ -129,23 +134,96 @@ function waitForPreloader(): Promise<void> {
     const done = () => {
       if (settled) return;
       settled = true;
+      window.removeEventListener("fb:preloader-warmup", done);
       window.removeEventListener("fb:preloader-done", done);
       resolve();
     };
 
+    window.addEventListener("fb:preloader-warmup", done, { once: true });
     window.addEventListener("fb:preloader-done", done, { once: true });
-    window.setTimeout(done, 6500);
+    window.setTimeout(done, 5000);
   });
 }
 
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  fallbackValue?: T,
+): Promise<T | undefined> {
+  return Promise.race([
+    promise,
+    new Promise<T | undefined>((resolve) => {
+      window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+    }),
+  ]);
+}
+
+async function whenFirstViewportReady(): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  const checks: Promise<unknown>[] = [];
+
+  // 1. Font loading check (Critical Tier 1 — 200ms budget to prevent FOIT/FOUT)
+  if ("fonts" in document && typeof document.fonts.ready?.then === "function") {
+    checks.push(withTimeout(document.fonts.ready.catch(() => {}), 200));
+  }
+
+  // 2. Hero image decode check (Critical Tier 1 — 800ms budget for primary canvas)
+  const heroImg = document.querySelector<HTMLImageElement>(
+    ".hero-image img, .hero-image picture img",
+  );
+  if (heroImg) {
+    if (heroImg.complete && heroImg.naturalWidth > 0) {
+      // Already decoded
+    } else if (typeof heroImg.decode === "function") {
+      checks.push(withTimeout(heroImg.decode().catch(() => {}), 800));
+    } else {
+      const imgPromise = new Promise<void>((resolve) => {
+        heroImg.addEventListener("load", () => resolve(), { once: true });
+        heroImg.addEventListener("error", () => resolve(), { once: true });
+      });
+      checks.push(withTimeout(imgPromise, 800));
+    }
+  }
+
+  // 3. Header WebGL LightPillar (Atmospheric Enhancement Tier 2 — 250ms opportunistic budget)
+  // If WebGL compiles quickly, it's included before reveal; if slow, fallback header styles display immediately
+  const globalScope = window as unknown as { __fbHeaderPillarReady?: boolean };
+  if (!globalScope.__fbHeaderPillarReady) {
+    const pillarPromise = new Promise<void>((resolve) => {
+      const onPillarReady = () => {
+        window.removeEventListener("fb:header-pillar-ready", onPillarReady);
+        resolve();
+      };
+      window.addEventListener("fb:header-pillar-ready", onPillarReady, { once: true });
+    });
+    checks.push(withTimeout(pillarPromise, 250));
+  }
+
+  await Promise.all(checks);
+}
+
+function signalSiteReady() {
+  if (typeof window === "undefined") return;
+  (window as unknown as { __fbSiteReady?: boolean }).__fbSiteReady = true;
+  try {
+    window.dispatchEvent(new CustomEvent("fb:site-ready"));
+  } catch {
+    // fallback
+  }
+}
+
 async function mount() {
-  await waitForPreloader();
+  await waitForWarmup();
   const content = await resolveContent();
   if (rootElement.hasChildNodes()) {
     hydrateRoot(rootElement, <StrictMode>{content}</StrictMode>);
   } else {
     createRoot(rootElement).render(<StrictMode>{content}</StrictMode>);
   }
+
+  await whenFirstViewportReady();
+  signalSiteReady();
 }
 
 void mount();

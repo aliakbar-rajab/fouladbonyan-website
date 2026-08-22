@@ -162,64 +162,33 @@ export function LightPillar() {
     const container = containerRef.current;
     if (!container || typeof window === "undefined") return undefined;
 
+    let isDestroyed = false;
+    let gl: WebGL2RenderingContext | null = null;
+    let program: WebGLProgram | null = null;
+    let buffer: WebGLBuffer | null = null;
+    let canvas: HTMLCanvasElement | null = null;
+    let frame: number | null = null;
+    let isInitialized = false;
+
     const tier = pickQuality();
     const pixelRatio = tier.pixelRatio || Math.min(window.devicePixelRatio || 1, 2);
-
-    const canvas = document.createElement("canvas");
-    canvas.style.display = "block";
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
-    canvas.style.pointerEvents = "none";
-
-    const gl = canvas.getContext("webgl2", {
-      alpha: true,
-      antialias: false,
-      depth: false,
-      stencil: false,
-      powerPreference: tier === QUALITY_TIERS.high ? "high-performance" : "low-power",
-    });
-    if (!gl) return undefined;
-
-    const program = createProgram(gl, fragmentShader(tier));
-    if (!program) return undefined;
-
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
-      gl.STATIC_DRAW,
-    );
-    const positionLocation = gl.getAttribLocation(program, "position");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.useProgram(program);
-    const uTime = gl.getUniformLocation(program, "uTime");
-    const uWindowResolution = gl.getUniformLocation(program, "uWindowResolution");
-    const uCanvasOffset = gl.getUniformLocation(program, "uCanvasOffset");
-    gl.uniform1f(gl.getUniformLocation(program, "uPixelRatio"), pixelRatio);
-
-    container.replaceChildren(canvas);
-
-    const resize = () => {
-      const width = container.clientWidth || 1;
-      const height = container.clientHeight || 1;
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
-      gl.viewport(0, 0, canvas.width, canvas.height);
-    };
 
     let offsetLeft = 0;
     let offsetBottom = 0;
     let viewportWidth = 1;
     let viewportHeight = 1;
+    let isVisible = true;
 
-    // The shader positions the ribbon from the pane's place in the viewport.
-    // Measuring that inside the frame loop forced a layout on every frame, and
-    // there are two pillars per page (header and footer), so it is sampled only
-    // when it can actually have moved: scroll, viewport resize, and any layout
-    // change that shifts the pane.
+    const motionQuery =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-reduced-motion: reduce)")
+        : null;
+    let reducedMotion = motionQuery?.matches ?? false;
+
+    let uTime: WebGLUniformLocation | null = null;
+    let uWindowResolution: WebGLUniformLocation | null = null;
+    let uCanvasOffset: WebGLUniformLocation | null = null;
+
     const readGeometry = () => {
       const rect = container.getBoundingClientRect();
       viewportWidth = window.innerWidth || 1;
@@ -228,24 +197,47 @@ export function LightPillar() {
       offsetBottom = viewportHeight - rect.bottom;
     };
 
+    const resize = () => {
+      if (!canvas || !gl) return;
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    };
+
+    let hasRenderedFirstFrame = false;
+
+    const signalPillarReady = () => {
+      if (hasRenderedFirstFrame) return;
+      hasRenderedFirstFrame = true;
+      if (typeof window !== "undefined") {
+        (window as unknown as { __fbHeaderPillarReady?: boolean }).__fbHeaderPillarReady = true;
+        try {
+          window.dispatchEvent(new CustomEvent("fb:header-pillar-ready"));
+        } catch {
+          // CustomEvent fallback in non-standard environments
+        }
+      }
+    };
+
     const render = (time: number) => {
+      if (!gl || !program || !uCanvasOffset || !uWindowResolution || !uTime) return;
       gl.uniform2f(uCanvasOffset, offsetLeft, offsetBottom);
       gl.uniform2f(uWindowResolution, viewportWidth, viewportHeight);
       gl.uniform1f(uTime, time);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      if (isNearViewport && !hasRenderedFirstFrame) {
+        signalPillarReady();
+      }
     };
 
-    const motionQuery =
-      typeof window.matchMedia === "function"
-        ? window.matchMedia("(prefers-reduced-motion: reduce)")
-        : null;
-    let reducedMotion = motionQuery?.matches ?? false;
-    let isVisible = true;
-    let frame: number | null = null;
     let lastTime = performance.now();
     const frameTime = 1000 / tier.fps;
 
     const animate = (currentTime: number) => {
+      if (isDestroyed) return;
       const delta = currentTime - lastTime;
       if (delta >= frameTime) {
         render((currentTime - globalClockStart) * 0.001 * 0.15);
@@ -255,44 +247,122 @@ export function LightPillar() {
     };
 
     const startOrStopLoop = () => {
+      if (!isInitialized) return;
       if (reducedMotion || !isVisible) {
-        if (frame) cancelAnimationFrame(frame);
+        if (frame && typeof cancelAnimationFrame !== "undefined") cancelAnimationFrame(frame);
         frame = null;
-        // A still frame keeps the panel from going blank when the loop stops.
         if (reducedMotion) render(3.4);
         return;
       }
-      if (!frame) {
+      if (!frame && typeof requestAnimationFrame !== "undefined") {
         lastTime = performance.now();
         frame = requestAnimationFrame(animate);
       }
     };
 
-    const onResize = () => {
+    const initWebGL = () => {
+      if (isInitialized || isDestroyed) return;
+      isInitialized = true;
+
+      canvas = document.createElement("canvas");
+      canvas.style.display = "block";
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
+      canvas.style.pointerEvents = "none";
+
+      gl = canvas.getContext("webgl2", {
+        alpha: true,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        powerPreference: tier === QUALITY_TIERS.high ? "high-performance" : "low-power",
+      });
+      if (!gl) {
+        if (isNearViewport) signalPillarReady();
+        return;
+      }
+
+      program = createProgram(gl, fragmentShader(tier));
+      if (!program) {
+        if (isNearViewport) signalPillarReady();
+        return;
+      }
+
+      buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+        gl.STATIC_DRAW,
+      );
+      const positionLocation = gl.getAttribLocation(program, "position");
+      gl.enableVertexAttribArray(positionLocation);
+      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+      gl.useProgram(program);
+      uTime = gl.getUniformLocation(program, "uTime");
+      uWindowResolution = gl.getUniformLocation(program, "uWindowResolution");
+      uCanvasOffset = gl.getUniformLocation(program, "uCanvasOffset");
+      gl.uniform1f(gl.getUniformLocation(program, "uPixelRatio"), pixelRatio);
+
+      container.replaceChildren(canvas);
       resize();
       readGeometry();
-      if (reducedMotion || !isVisible) render(3.4);
+      render((performance.now() - globalClockStart) * 0.001 * 0.15);
+      startOrStopLoop();
     };
+
+    const onResize = () => {
+      if (isInitialized) {
+        resize();
+        readGeometry();
+        if (reducedMotion || !isVisible) render(3.4);
+      }
+    };
+
     const onScroll = () => {
-      readGeometry();
-      if (reducedMotion || !isVisible) render(3.4);
+      if (isInitialized) {
+        readGeometry();
+        if (reducedMotion || !isVisible) render(3.4);
+      }
     };
+
     const onMotionChange = (event: MediaQueryListEvent) => {
       reducedMotion = event.matches;
       startOrStopLoop();
     };
 
-    resize();
-    readGeometry();
-    startOrStopLoop();
+    // Check if container is in or near the current viewport
+    const initialRect = container.getBoundingClientRect();
+    const vHeight = typeof window !== "undefined" && window.innerHeight ? window.innerHeight : 800;
+    const isNearViewport = initialRect.top < vHeight + 300 && initialRect.bottom > -300;
+
+    if (isNearViewport) {
+      initWebGL();
+    }
+
+    const intersectionObserver =
+      typeof IntersectionObserver !== "undefined"
+        ? new IntersectionObserver(
+            (entries) => {
+              const entry = entries[0];
+              isVisible = entry?.isIntersecting ?? true;
+              if (isVisible && !isInitialized) {
+                initWebGL();
+              }
+              if (isInitialized) {
+                readGeometry();
+                startOrStopLoop();
+              }
+            },
+            { rootMargin: "300px", threshold: 0.01 },
+          )
+        : null;
+    intersectionObserver?.observe(container);
 
     const resizeObserver =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver((entries) => {
-            // The pane's own box changing needs a new drawing buffer. The
-            // document box changing only moves the pane down or up the page --
-            // expanding a price table above the footer, say -- which the scroll
-            // listener would otherwise not catch while the user sits still.
             if (entries.some((entry) => entry.target === container)) onResize();
             else onScroll();
           })
@@ -300,41 +370,26 @@ export function LightPillar() {
     resizeObserver?.observe(container);
     resizeObserver?.observe(document.documentElement);
 
-    const intersectionObserver =
-      typeof IntersectionObserver !== "undefined"
-        ? new IntersectionObserver(
-            (entries) => {
-              isVisible = entries[0]?.isIntersecting ?? true;
-              readGeometry();
-              startOrStopLoop();
-            },
-            { threshold: 0.01 },
-          )
-        : null;
-    intersectionObserver?.observe(container);
-
     window.addEventListener("resize", onResize, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     motionQuery?.addEventListener("change", onMotionChange);
 
     return () => {
-      if (frame) cancelAnimationFrame(frame);
+      isDestroyed = true;
+      if (frame && typeof cancelAnimationFrame !== "undefined") cancelAnimationFrame(frame);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll);
       motionQuery?.removeEventListener("change", onMotionChange);
       resizeObserver?.disconnect();
       intersectionObserver?.disconnect();
-      gl.deleteProgram(program);
-      gl.deleteBuffer(buffer);
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-      canvas.remove();
+      if (gl && program) gl.deleteProgram(program);
+      if (gl && buffer) gl.deleteBuffer(buffer);
+      if (gl) gl.getExtension("WEBGL_lose_context")?.loseContext();
+      if (canvas) canvas.remove();
     };
   }, []);
 
   return (
-    /* `pointer-events: none` lives in `.light-pillar-container`, not in a style
-       attribute: the prerendered markup is served under `style-src 'self'`,
-       which blocks inline styles outright. */
     <div ref={containerRef} className="light-pillar-container" aria-hidden="true" />
   );
 }

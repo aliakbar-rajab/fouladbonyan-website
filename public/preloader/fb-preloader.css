@@ -17,7 +17,8 @@
   background: #202024;
   color: #fff;
   opacity: 1;
-  transition: opacity 220ms ease;
+  transition: opacity 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
 }
 
 #fb-preloader.is-leaving {
