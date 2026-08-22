@@ -353,6 +353,18 @@ function buildUnitUsage(
     }));
 }
 
+export function buildGuideReferenceFromSnapshots(snapshots: {
+  rebar: CatalogPriceData;
+  beam: CatalogPriceData;
+  product: ProductPricePayload;
+}): GuideReference {
+  return buildGuideReference(
+    snapshots.rebar,
+    snapshots.beam,
+    snapshots.product,
+  );
+}
+
 export function buildGuideReference(
   rebar: CatalogPriceData,
   beam: CatalogPriceData,
@@ -398,3 +410,4 @@ export function buildGuideReference(
     unitUsage: buildUnitUsage(entries),
   };
 }
+

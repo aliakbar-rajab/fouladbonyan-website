@@ -1,15 +1,11 @@
-import { loadBeamPriceData, loadRebarPriceData } from "./catalog-data";
-import {
-  loadProductPricePayload,
-  type ProductPricePayload,
-} from "./product-price-data";
-
+import { createRetryableLoader } from "./catalog-cache";
 import {
   isProductCatalogId,
   productGroups,
   type ProductGroupId,
 } from "./category-meta";
 import type { CatalogCategory, CatalogPriceData } from "./catalog-types";
+import type { ProductPricePayload } from "./product-price-data";
 
 /**
  * One product group's catalog, in the shape every reader wants: the snapshot
@@ -30,9 +26,30 @@ export type GroupCatalog = {
   categories: CatalogCategory[];
 };
 
+export const loadRebarSnapshot = createRetryableLoader(
+  () =>
+    import("./data/rebar-prices.json").then(
+      (module) => module.default,
+    ) as Promise<CatalogPriceData>,
+);
+
+export const loadBeamSnapshot = createRetryableLoader(
+  () =>
+    import("./data/beam-prices.json").then(
+      (module) => module.default,
+    ) as Promise<CatalogPriceData>,
+);
+
+export const loadProductSnapshot = createRetryableLoader(
+  () =>
+    import("./data/product-prices.json").then(
+      (module) => module.default,
+    ) as Promise<ProductPricePayload>,
+);
+
 const ownSnapshots = {
-  rebar: { load: loadRebarPriceData, initialCategoryId: "ribbed" },
-  beam: { load: loadBeamPriceData, initialCategoryId: "beam" },
+  rebar: { load: loadRebarSnapshot, initialCategoryId: "ribbed" },
+  beam: { load: loadBeamSnapshot, initialCategoryId: "beam" },
 } as const;
 
 type OwnSnapshotId = keyof typeof ownSnapshots;
@@ -92,7 +109,7 @@ export async function loadGroupCatalog(
     return fromOwnSnapshot(groupId, await ownSnapshots[groupId].load());
   }
 
-  const catalog = fromProductPayload(groupId, await loadProductPricePayload());
+  const catalog = fromProductPayload(groupId, await loadProductSnapshot());
   if (!catalog) {
     throw new Error(`داده قیمت گروه ${groupId} در دسترس نیست.`);
   }
@@ -115,7 +132,7 @@ loadGroupCatalog.getCached = (
   }
 
   if (!isProductCatalogId(groupId)) return undefined;
-  const payload = loadProductPricePayload.getCached();
+  const payload = loadProductSnapshot.getCached();
   return payload ? fromProductPayload(groupId, payload) : undefined;
 };
 
@@ -124,6 +141,20 @@ export async function loadAllGroupCatalogs(): Promise<GroupCatalog[]> {
   return Promise.all(
     productGroups.map((group) => loadGroupCatalog(group.id)),
   );
+}
+
+/** Load all underlying snapshots in parallel, for build scripts and reference generation. */
+export async function loadAllSnapshots(): Promise<{
+  rebar: CatalogPriceData;
+  beam: CatalogPriceData;
+  product: ProductPricePayload;
+}> {
+  const [rebar, beam, product] = await Promise.all([
+    loadRebarSnapshot(),
+    loadBeamSnapshot(),
+    loadProductSnapshot(),
+  ]);
+  return { rebar, beam, product };
 }
 
 /**
@@ -146,8 +177,8 @@ export function primeCatalogSnapshot(
 ) {
   if (!payload) return;
   if (payload.type === "product") {
-    loadProductPricePayload.setCached(payload.data);
+    loadProductSnapshot.setCached(payload.data);
     return;
   }
-  ownSnapshots[payload.type].load.setCached(payload.data);
+  ownSnapshots[payload.type]?.load.setCached(payload.data);
 }

@@ -7,11 +7,9 @@ import GuidePage from "../app/GuidePage";
 import { type InfoPageKey } from "../app/info-page-data";
 import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
-import { buildGuideReference } from "../app/steel-reference";
+import { buildGuideReferenceFromSnapshots } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
-import { primeCatalogSnapshot } from "../app/group-catalog";
-import { loadBeamPriceData, loadRebarPriceData } from "../app/catalog-data";
-import { loadProductPricePayload } from "../app/product-price-data";
+import { loadAllSnapshots, primeCatalogSnapshot } from "../app/group-catalog";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
 import { readJsonScript } from "../app/read-json-script";
@@ -86,13 +84,7 @@ async function resolveContent() {
     // snapshots lazily instead of falling back to the homepage for /guide/*.
     const reference =
       guideReference ??
-      buildGuideReference(
-        ...(await Promise.all([
-          loadRebarPriceData(),
-          loadBeamPriceData(),
-          loadProductPricePayload(),
-        ])),
-      );
+      buildGuideReferenceFromSnapshots(await loadAllSnapshots());
     const requested = rootElement.dataset.guide || pathSegments[1] || "";
     return (
       <GuidePage

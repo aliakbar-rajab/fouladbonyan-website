@@ -220,20 +220,8 @@ export function QuoteRequestForm() {
       setFieldError(setErrors, name, accepted ? "" : disclaimerError);
       return;
     }
-
-    const match = /^item(Product|Quantity)-(\d+)$/.exec(name);
-    const index = match
-      ? items.findIndex((item) => String(item.id) === match[2])
-      : -1;
-    if (index === -1 || !match) return;
-    setFieldError(
-      setErrors,
-      name,
-      match[1] === "Product"
-        ? validateProduct(value, index)
-        : validateQuantity(value, index),
-    );
   };
+
 
   useEffect(() => {
     let active = true;
@@ -298,13 +286,32 @@ export function QuoteRequestForm() {
   };
 
   const updateItem = (itemId: number, patch: Partial<QuoteItem>) => {
-    setItems((current) =>
-      current.map((item) =>
+    setItems((current) => {
+      const next = current.map((item) =>
         item.id === itemId ? { ...item, ...patch } : item,
-      ),
-    );
+      );
+      const index = next.findIndex((item) => item.id === itemId);
+      if (index !== -1) {
+        if ("product" in patch) {
+          setFieldError(
+            setErrors,
+            `itemProduct-${itemId}`,
+            validateProduct(patch.product ?? "", index),
+          );
+        }
+        if ("quantity" in patch) {
+          setFieldError(
+            setErrors,
+            `itemQuantity-${itemId}`,
+            validateQuantity(patch.quantity ?? "", index),
+          );
+        }
+      }
+      return next;
+    });
     clearDraft();
   };
+
 
   const addItem = () => {
     if (items.length >= MAX_QUOTE_ITEMS) return;

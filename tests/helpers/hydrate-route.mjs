@@ -70,11 +70,8 @@ const App = (await import("../../app/App.tsx")).default;
 const ContactPage = (await import("../../app/ContactPage.tsx")).default;
 const InfoPage = (await import("../../app/InfoPage.tsx")).default;
 const GuidePage = (await import("../../app/GuidePage.tsx")).default;
-const { loadRebarPriceData, loadBeamPriceData } = await import(
-  "../../app/catalog-data.ts"
-);
-const { loadProductPricePayload } = await import(
-  "../../app/product-price-data.ts"
+const { primeCatalogSnapshot } = await import(
+  "../../app/group-catalog.ts"
 );
 const { loadOverviewSummaries } = await import("../../app/catalog-overview.ts");
 const { setMenuCatalog } = await import("../../app/menu-catalog.ts");
@@ -93,11 +90,8 @@ const guideReference = readJsonScript("initial-guide-data");
 const overview = readJsonScript("initial-overview-data");
 if (overview) loadOverviewSummaries.setCached(overview);
 
-const pageData = readJsonScript("initial-page-data");
-if (pageData?.type === "rebar") loadRebarPriceData.setCached(pageData.data);
-else if (pageData?.type === "beam") loadBeamPriceData.setCached(pageData.data);
-else if (pageData?.type === "product")
-  loadProductPricePayload.setCached(pageData.data);
+primeCatalogSnapshot(readJsonScript("initial-page-data"));
+
 
 const page = root.dataset.page ?? "";
 let element;
