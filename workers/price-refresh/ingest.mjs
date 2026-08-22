@@ -64,7 +64,12 @@ export async function ingestAll(kv, payloads) {
         kv.put(kvKey, JSON.stringify(payloads[key])),
       ),
     );
-    const status = { ok: true, at: startedAt, finishedAt: new Date().toISOString() };
+    const status = {
+      ok: true,
+      at: startedAt,
+      finishedAt: new Date().toISOString(),
+      ...(payloads.diagnostics ? { diagnostics: payloads.diagnostics } : {}),
+    };
     await kv.put(STATUS_KEY, JSON.stringify(status));
     return status;
   } catch (error) {
@@ -78,3 +83,4 @@ export async function ingestAll(kv, payloads) {
     return status;
   }
 }
+

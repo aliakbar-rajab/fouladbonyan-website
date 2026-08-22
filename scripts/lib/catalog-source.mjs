@@ -67,15 +67,25 @@ function compareSizeValues(first, second) {
  * @param {string[]} [source.detailKeys] extra metas to publish per row
  * @param {(item: object) => string} [source.deriveSize] override the size meta
  */
-function parseCatalogPage(html, source) {
+export function parseCatalogPage(html, source) {
   const match = html.match(
-    /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/s,
+    /<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>(.*?)<\/script>/s,
   );
   if (!match) {
     throw new Error(`داده ساختاریافته در صفحه ${source.label} پیدا نشد.`);
   }
 
-  const shopData = JSON.parse(match[1])?.props?.pageProps?.shopData;
+  let nextData;
+  try {
+    nextData = JSON.parse(match[1]);
+  } catch (error) {
+    throw new Error(`تجزیه JSON ساختاریافته صفحه ${source.label} ناموفق بود: ${error.message}`, {
+      cause: error,
+    });
+  }
+
+
+  const shopData = nextData?.props?.pageProps?.shopData;
   if (!shopData?.products || !shopData?.price_compare) {
     throw new Error(`ساختار داده صفحه ${source.label} معتبر نیست.`);
   }
@@ -158,49 +168,151 @@ function parseCatalogPage(html, source) {
   };
 }
 
-async function fetchCategoryOnce(source) {
-  const response = await fetch(source.url, {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function fetchCategoryOnce(source, { timeoutMs = 25_000, fetchImpl = fetch } = {}) {
+  const response = await fetchImpl(source.url, {
     headers: {
       accept: "text/html,application/xhtml+xml",
       "accept-language": "fa-IR,fa;q=0.9",
       "user-agent": "Bonyan-Foulad-Daria/1.0 (+https://fouladbonyan.com/)",
     },
-    signal: AbortSignal.timeout(25_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
+
   if (!response.ok) {
-    throw new Error(`${source.label}: HTTP ${response.status}`);
+    const error = new Error(`${source.label}: HTTP ${response.status}`);
+    error.status = response.status;
+    const retryAfterHeader = response.headers?.get?.("retry-after");
+    if (retryAfterHeader) {
+      const parsedSeconds = Number.parseInt(retryAfterHeader, 10);
+      if (Number.isFinite(parsedSeconds) && parsedSeconds > 0) {
+        error.retryAfterMs = parsedSeconds * 1000;
+      }
+    }
+    throw error;
   }
-  return parseCatalogPage(await response.text(), source);
+
+  const html = await response.text();
+  return parseCatalogPage(html, source);
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// Requests through Cloudflare's edge network hit this upstream's CDN
-// (ArvanCloud) with a real, non-negligible transient-5xx rate that plain
-// Node fetches from a regular IP don't see -- observed directly while
-// standing up workers/price-refresh. A source-level retry absorbs that
-// without weakening the all-or-nothing validation: a source that is
-// genuinely down still fails after every attempt.
-async function fetchCategory(source, attempts = 3) {
+// Requests through edge networks hit upstreams and CDNs (such as ArvanCloud)
+// with transient 5xx or 429 rate limits. An exponential backoff with jitter
+// handles temporary spikes cleanly without failing immediately.
+export async function fetchCategory(
+  source,
+  {
+    attempts = 4,
+    baseDelayMs = 800,
+    maxDelayMs = 8_000,
+    timeoutMs = 25_000,
+    fetchImpl = fetch,
+    onRetry = null,
+  } = {},
+) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
-      return await fetchCategoryOnce(source);
+      return await fetchCategoryOnce(source, { timeoutMs, fetchImpl });
     } catch (error) {
       lastError = error;
-      if (attempt < attempts) await sleep(400 * attempt);
+      if (attempt < attempts) {
+        let delayMs = Math.min(
+          maxDelayMs,
+          baseDelayMs * 2 ** (attempt - 1) + Math.floor(Math.random() * 300),
+        );
+        if (error.retryAfterMs && error.retryAfterMs > 0) {
+          delayMs = Math.min(maxDelayMs, Math.max(delayMs, error.retryAfterMs));
+        }
+
+        const logMsg = `[تلاش مجدد ${attempt}/${attempts}] دریافت «${source.label}» با خطا مواجه شد (${error.message}). تلاش بعدی پس از ${delayMs}ms...`;
+        if (onRetry) {
+          onRetry({ source, attempt, attempts, delayMs, error, message: logMsg });
+        } else {
+          console.warn(logMsg);
+        }
+        await sleep(delayMs);
+      }
     }
   }
   throw lastError;
 }
 
-/** Fetch every source, at most `limit` pages in flight. */
-export async function fetchCategories(sources, limit = 6) {
-  const categories = [];
+/**
+ * Fetch every source with concurrency control, robust retries, and category-level
+ * error isolation with fallback support.
+ * Returns { categories, diagnostics }.
+ */
+export async function fetchCategoriesWithDiagnostics(sources, optionsOrLimit = {}) {
+  const options =
+    typeof optionsOrLimit === "number"
+      ? { limit: optionsOrLimit }
+      : optionsOrLimit;
+
+  const {
+    limit = 4,
+    fallbackCategories = [],
+    fetchImpl = fetch,
+    attempts = 4,
+    onWarning = null,
+  } = options;
+
+  const fallbackMap = new Map(
+    (fallbackCategories ?? []).map((category) => [category?.id, category]),
+  );
+
+  const results = [];
+  const warnings = [];
+
   for (let index = 0; index < sources.length; index += limit) {
-    categories.push(
-      ...(await Promise.all(sources.slice(index, index + limit).map((source) => fetchCategory(source)))),
+    const batch = sources.slice(index, index + limit);
+    const batchResults = await Promise.all(
+      batch.map(async (source) => {
+        try {
+          const category = await fetchCategory(source, { attempts, fetchImpl });
+          return { category, fresh: true };
+        } catch (error) {
+          const fallback = fallbackMap.get(source.id);
+          if (fallback) {
+            const warningMsg = `[ایزوله‌سازی خطا] دریافت دسته «${source.label}» (${source.id}) پس از ${attempts} تلاش ناموفق بود (${error.message}). از داده‌های معتبر قبلی استفاده شد.`;
+            warnings.push({
+              sourceId: source.id,
+              sourceLabel: source.label,
+              error: error.message,
+              message: warningMsg,
+            });
+            if (onWarning) {
+              onWarning(warningMsg, { source, error });
+            } else {
+              console.warn(warningMsg);
+            }
+            return { category: fallback, fresh: false, fallback: true, error: error.message };
+          }
+          // No fallback available: fail explicitly rather than silently omitting
+          throw error;
+        }
+      }),
     );
+    results.push(...batchResults);
   }
+
+  const categories = results.map((item) => item.category);
+
+  const diagnostics = {
+    total: sources.length,
+    freshCount: results.filter((r) => r.fresh).length,
+    fallbackCount: results.filter((r) => r.fallback).length,
+    warnings,
+  };
+
+  return { categories, diagnostics };
+}
+
+/** Fetch every source, returning clean categories array for backwards compatibility. */
+export async function fetchCategories(sources, optionsOrLimit = {}) {
+  const { categories } = await fetchCategoriesWithDiagnostics(sources, optionsOrLimit);
   return categories;
 }
+
+
