@@ -25,6 +25,15 @@
     },
   };
 
+  function signalDone() {
+    window.__fbPreloaderDone = true;
+    try {
+      window.dispatchEvent(new CustomEvent("fb:preloader-done"));
+    } catch {
+      // CustomEvent support fallback
+    }
+  }
+
   function restoreSite() {
     document.body.classList.remove("fb-preloader-active");
     if (site) {
@@ -39,6 +48,7 @@
     storage.set();
     window.clearTimeout(watchdog);
     restoreSite();
+    signalDone();
 
     if (!overlay) return;
     overlay.classList.add("is-leaving");
@@ -59,6 +69,7 @@
     // looking for a specific price or document — skip it without
     // downloading the video, and without marking the session as seen so
     // a later visit to "/" itself still shows it once.
+    signalDone();
     return;
   }
 
@@ -67,6 +78,7 @@
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
     storage.set();
+    signalDone();
     return;
   }
 

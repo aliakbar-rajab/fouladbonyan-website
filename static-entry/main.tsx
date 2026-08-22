@@ -104,7 +104,42 @@ async function resolveContent() {
   return <App />;
 }
 
+function waitForPreloader(): Promise<void> {
+  if (typeof window === "undefined" || window.location.pathname !== "/") {
+    return Promise.resolve();
+  }
+
+  if ((window as unknown as { __fbPreloaderDone?: boolean }).__fbPreloaderDone) {
+    return Promise.resolve();
+  }
+
+  try {
+    if (
+      window.sessionStorage.getItem("bonyan-foulad-daria-preloader-seen-v9") ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      return Promise.resolve();
+    }
+  } catch {
+    // sessionStorage unavailable
+  }
+
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("fb:preloader-done", done);
+      resolve();
+    };
+
+    window.addEventListener("fb:preloader-done", done, { once: true });
+    window.setTimeout(done, 6500);
+  });
+}
+
 async function mount() {
+  await waitForPreloader();
   const content = await resolveContent();
   if (rootElement.hasChildNodes()) {
     hydrateRoot(rootElement, <StrictMode>{content}</StrictMode>);
