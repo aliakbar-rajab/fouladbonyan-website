@@ -815,7 +815,8 @@
 
 @media (max-width: 640px) {
   .site-footer {
-    padding-block: 1.7rem 1rem;
+    padding-top: 1.7rem;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .footer-shell {
@@ -869,6 +870,10 @@
 /* Responsive overrides for this module's own rules. */
 
 @media (max-width: 900px) {
+  .site-footer {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .about-grid {
     grid-template-columns: 1fr;
   }

@@ -197,7 +197,7 @@ export function MegaMenu({
         </div>
 
       </div>
-      <a href="#prices" onClick={onMobileClose}>
+      <a href="/#prices" onClick={onMobileClose}>
         راهنمای استعلام
       </a>
       <a href="/about/" onClick={onMobileClose}>
