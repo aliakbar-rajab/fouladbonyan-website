@@ -8,13 +8,13 @@ import {
 } from "./catalog-types";
 import type { ProductGroupId } from "./category-meta";
 import {
+  displayPrice,
   formatCatalogNumber,
   localizeCatalogValue,
   toPersianDigits,
   unixSecondsToIso,
 } from "./catalog-utils";
 import { ChevronDownIcon } from "./icons";
-import { displayPrice } from "./CatalogSummaryBanner";
 
 const quoteProductByGroup: Record<ProductGroupId, string> = {
   rebar: "میلگرد",

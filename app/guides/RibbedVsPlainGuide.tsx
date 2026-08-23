@@ -1,14 +1,13 @@
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
+import { ComparisonTable, QuoteChecklist } from "./GuideShared";
 import {
-  ComparisonTable,
-  QuoteChecklist,
   fa,
   findProfile,
   list,
   profileRow,
   sizeRange,
-} from "./GuideShared";
+} from "./guide-helpers";
 
 export function RibbedVsPlainGuide({
   reference,

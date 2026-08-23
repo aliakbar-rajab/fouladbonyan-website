@@ -464,3 +464,33 @@ test("deriveQuoteEstimates derives valid estimates from group catalogs", () => {
   assert.equal(estimates.میلگرد?.branchWeight, "rebar-12m");
 });
 
+test("parsePersianNumber parses Persian/Arabic decimal and thousands separators", () => {
+  assert.equal(parsePersianNumber("۲/۵"), 2.5);
+  assert.equal(parsePersianNumber("۲٫۵"), 2.5);
+  assert.equal(parsePersianNumber("12.5"), 12.5);
+  assert.equal(parsePersianNumber("۱,۰۰۰"), 1000);
+  assert.equal(parsePersianNumber("۱٬۲۵۰"), 1250);
+  assert.equal(parsePersianNumber("  ۱۰ "), 10);
+  assert.equal(parsePersianNumber("۰"), 0);
+  assert.equal(parsePersianNumber(""), null);
+  assert.equal(parsePersianNumber("نامعتبر"), null);
+});
+
+test("validateQuantity accepts Persian decimal and integer inputs properly", () => {
+  assert.equal(validateQuantity("۲/۵", "تن", 0), "");
+  assert.equal(validateQuantity("۲٫۵", "کیلوگرم", 0), "");
+  assert.equal(validateQuantity("۱۰", "شاخه", 0), "");
+  assert.match(
+    validateQuantity("۲/۵", "شاخه", 0),
+    /عدد صحیح باشد/,
+  );
+});
+
+test("rialToWords handles zero, negative, and normal values safely", async () => {
+  const { rialToWords } = await import("../app/persian-numbers.ts");
+  assert.equal(rialToWords(0), "صفر ریال");
+  assert.equal(rialToWords(-100), "صفر ریال");
+  assert.equal(rialToWords(1_000_000), "یک میلیون ریال");
+  assert.equal(rialToWords(10_000_000), "ده میلیون ریال");
+});
+

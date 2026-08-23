@@ -21,7 +21,10 @@ function CategoryOverviewRow({
 }) {
   const href = `/${groupId}/${category.id}/`;
   const pricingState = getCategoryPricingState(category);
-  const hasRange = category.summary.min > 0 && category.summary.max > 0;
+  const hasRange =
+    pricingState.units.length === 1 &&
+    category.summary.min > 0 &&
+    category.summary.max > 0;
   const trend = getTrendPresentation(category.summary.status, category.summary.percent);
 
   return (
@@ -81,7 +84,11 @@ function CategoryOverviewCard({
   category: CatalogCategory;
 }) {
   const href = `/${groupId}/${category.id}/`;
-  const hasRange = category.summary.min > 0 && category.summary.max > 0;
+  const pricingState = getCategoryPricingState(category);
+  const hasRange =
+    pricingState.units.length === 1 &&
+    category.summary.min > 0 &&
+    category.summary.max > 0;
 
   return (
     <article className="overview-card">

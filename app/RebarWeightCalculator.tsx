@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
 import { formatCatalogNumber } from "./catalog-utils";
+import { toAsciiDigits } from "./site-logic.mjs";
 
 /**
  * Rebar-only sidebar tool. It lives outside the shared catalog so the catalog
@@ -18,9 +19,10 @@ export function RebarWeightCalculator() {
     [diameter, length, quantity],
   );
 
+  const quantityNum = Number(toAsciiDigits(quantity).trim());
   const quantityInvalid =
     quantity !== "" &&
-    (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0);
+    (!Number.isInteger(quantityNum) || quantityNum <= 0);
 
   return (
     <section className="calculator-card">

@@ -1,4 +1,4 @@
-import { toPersianDigits } from "../../app/site-logic.mjs";
+import { toAsciiDigits, toPersianDigits } from "../../app/site-logic.mjs";
 import { deriveSummaryFromRows } from "../../app/catalog-validation.mjs";
 
 // Every price snapshot comes from the same Next.js-rendered source, so the
@@ -47,8 +47,16 @@ function formatPersianDate(unixTimestamp) {
 
 /** Numeric where both sides are numeric, Persian collation otherwise. */
 function compareSizeValues(first, second) {
-  const firstNumber = Number.parseFloat(String(first).replace(/[^\d.]/g, ""));
-  const secondNumber = Number.parseFloat(String(second).replace(/[^\d.]/g, ""));
+  const firstNumber = Number.parseFloat(
+    toAsciiDigits(String(first ?? ""))
+      .replace(/[/٫]/g, ".")
+      .replace(/[^\d.]/g, ""),
+  );
+  const secondNumber = Number.parseFloat(
+    toAsciiDigits(String(second ?? ""))
+      .replace(/[/٫]/g, ".")
+      .replace(/[^\d.]/g, ""),
+  );
   if (Number.isFinite(firstNumber) && Number.isFinite(secondNumber)) {
     return firstNumber - secondNumber;
   }

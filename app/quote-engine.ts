@@ -76,7 +76,9 @@ export function calculateApproximateTotal(
 
 export function parsePersianNumber(value: string): number | null {
   if (!value) return null;
-  const ascii = toAsciiDigits(value.trim());
+  const ascii = toAsciiDigits(value.trim())
+    .replace(/[/٫]/g, ".")
+    .replace(/[,٬]/g, "");
   const parsed = Number(ascii);
   return Number.isFinite(parsed) ? parsed : null;
 }

@@ -21,7 +21,7 @@ function threeDigitsToWords(value: number) {
 }
 
 export function rialToWords(value: number) {
-  if (!value) return "صفر ریال";
+  if (!value || value <= 0 || !Number.isFinite(value)) return "صفر ریال";
   const groups: string[] = [];
   let remaining = Math.round(value);
   let scaleIndex = 0;

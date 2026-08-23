@@ -1,18 +1,10 @@
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
-import { formatCatalogNumber, toPersianDigits } from "./catalog-utils";
-
-export function displayPrice(
-  price: number | null,
-  taxIncluded: boolean,
-  taxRate: number,
-) {
-  if (!price) return "تماس بگیرید";
-  const adjustedPrice = taxIncluded
-    ? Math.round((price * (1 + taxRate)) / 100) * 100
-    : price;
-  return formatCatalogNumber(adjustedPrice);
-}
+import {
+  displayPrice,
+  formatCatalogNumber,
+  toPersianDigits,
+} from "./catalog-utils";
 
 function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
   return (

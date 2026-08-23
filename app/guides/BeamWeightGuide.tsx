@@ -2,7 +2,7 @@ import { toPersianDigits } from "../catalog-utils";
 import { guidePageUrl } from "../guide-page-data";
 import { siteConfig } from "../site-config";
 import type { GuideReference } from "../steel-reference";
-import { fa, list } from "./GuideShared";
+import { fa, list } from "./guide-helpers";
 
 export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
   const { beamTable } = reference;

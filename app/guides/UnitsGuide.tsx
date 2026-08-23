@@ -1,6 +1,7 @@
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
-import { QuoteChecklist, fa } from "./GuideShared";
+import { QuoteChecklist } from "./GuideShared";
+import { fa } from "./guide-helpers";
 
 export function UnitsGuide({ reference }: { reference: GuideReference }) {
   return (

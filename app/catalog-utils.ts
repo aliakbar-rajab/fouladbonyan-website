@@ -25,3 +25,15 @@ export function formatCatalogNumber(value: number, maximumFractionDigits = 0) {
 export function unixSecondsToIso(value: number): string {
   return new Date(value * 1000).toISOString();
 }
+
+export function displayPrice(
+  price: number | null,
+  taxIncluded: boolean,
+  taxRate: number,
+) {
+  if (!price) return "تماس بگیرید";
+  const adjustedPrice = taxIncluded
+    ? Math.round((price * (1 + taxRate)) / 100) * 100
+    : price;
+  return formatCatalogNumber(adjustedPrice);
+}

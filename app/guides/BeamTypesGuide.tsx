@@ -1,15 +1,14 @@
 import { toPersianDigits } from "../catalog-utils";
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
+import { ComparisonTable, QuoteChecklist } from "./GuideShared";
 import {
-  ComparisonTable,
-  QuoteChecklist,
   fa,
   findProfile,
   list,
   profileRow,
   sizeRange,
-} from "./GuideShared";
+} from "./guide-helpers";
 
 export function BeamTypesGuide({ reference }: { reference: GuideReference }) {
   const beam = findProfile(reference, "beam", "beam");

@@ -100,3 +100,23 @@ test("ASCII and Arabic digits convert to Persian digits", () => {
   assert.equal(toPersianDigits, toPersianDigitsFromSiteLogic);
 });
 
+test("calculateRebarWeight correctly calculates weight with Persian digits and normalizes decimals", async () => {
+  const { calculateRebarWeight } = await import("../app/catalog-behavior.mjs");
+  const weightAscii = calculateRebarWeight("16", "12", "1");
+  const weightPersian = calculateRebarWeight("۱۶", "۱۲", "۱");
+  assert.ok(weightAscii !== null);
+  assert.ok(weightPersian !== null);
+  assert.equal(weightAscii.toFixed(2), weightPersian.toFixed(2));
+  assert.equal(calculateRebarWeight("0", "12", "1"), null);
+  assert.equal(calculateRebarWeight("16", "12", "۰"), null);
+  assert.equal(calculateRebarWeight("invalid", "12", "1"), null);
+});
+
+test("displayPrice formats prices with and without tax correctly", async () => {
+  const { displayPrice } = await import("../app/catalog-utils.ts");
+  assert.equal(displayPrice(null, false, 0.1), "تماس بگیرید");
+  assert.equal(displayPrice(0, false, 0.1), "تماس بگیرید");
+  assert.equal(displayPrice(30000, false, 0.1), "۳۰٬۰۰۰");
+  assert.equal(displayPrice(30000, true, 0.1), "۳۳٬۰۰۰");
+});
+

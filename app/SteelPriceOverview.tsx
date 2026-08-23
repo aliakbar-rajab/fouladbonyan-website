@@ -8,11 +8,12 @@ import { localizeCatalogValue } from "./catalog-utils";
 import { getThumbnailSources } from "./image-utils";
 
 function formatStatusText(status: string, percent: number): string {
-  if (status === "up" && percent > 0) {
-    return `افزایشی (${localizeCatalogValue(percent.toFixed(1))}٪)`;
+  const absPercent = Math.abs(percent);
+  if (status === "up" && absPercent > 0) {
+    return `افزایشی (${localizeCatalogValue(absPercent.toFixed(1))}٪)`;
   }
-  if (status === "down" && percent < 0) {
-    return `کاهشی (${localizeCatalogValue(Math.abs(percent).toFixed(1))}٪)`;
+  if (status === "down" && absPercent > 0) {
+    return `کاهشی (${localizeCatalogValue(absPercent.toFixed(1))}٪)`;
   }
   return "ثابت / بدون تغییر";
 }

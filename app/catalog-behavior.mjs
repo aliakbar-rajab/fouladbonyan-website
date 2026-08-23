@@ -1,7 +1,11 @@
+import { toAsciiDigits } from "./site-logic.mjs";
+
 export function calculateRebarWeight(diameter, length, quantity) {
-  const parsedDiameter = Number(diameter);
-  const parsedLength = Number(length);
-  const parsedQuantity = Number(quantity);
+  const clean = (val) =>
+    Number(toAsciiDigits(String(val ?? "")).replace(/[/٫]/g, ".").trim());
+  const parsedDiameter = clean(diameter);
+  const parsedLength = clean(length);
+  const parsedQuantity = clean(quantity);
   if (
     !Number.isFinite(parsedDiameter) ||
     !Number.isFinite(parsedLength) ||

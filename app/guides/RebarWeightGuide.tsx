@@ -1,7 +1,7 @@
 import { toPersianDigits } from "../catalog-utils";
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
-import { fa, faFixed, list } from "./GuideShared";
+import { fa, faFixed, list } from "./guide-helpers";
 
 export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
   return (

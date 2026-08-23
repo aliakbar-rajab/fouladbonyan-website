@@ -4,9 +4,17 @@ import { siteConfig } from "./site-config";
 import { rialToWords } from "./persian-numbers";
 import { quoteDisclaimer, type GeneratedQuote } from "./quote-types";
 import { toPersianDigits } from "./catalog-utils";
+import { parsePersianNumber } from "./quote-engine";
 
 const formatRial = (value: number) =>
   `${value.toLocaleString("fa-IR")} ریال`;
+
+function formatQuoteQuantity(quantity: string) {
+  const parsed = parsePersianNumber(quantity);
+  return parsed !== null
+    ? parsed.toLocaleString("fa-IR")
+    : toPersianDigits(quantity);
+}
 
 export function QuoteDocument({
   quote,
@@ -98,7 +106,7 @@ export function QuoteDocument({
               <tr key={`${item.product}-${index}`}>
                 <td>{(index + 1).toLocaleString("fa-IR")}</td>
                 <td>{item.product}</td>
-                <td>{Number(item.quantity).toLocaleString("fa-IR")}</td>
+                <td>{formatQuoteQuantity(item.quantity)}</td>
                 <td>{item.unit}</td>
                 <td>{item.unitPriceRial ? item.unitPriceRial.toLocaleString("fa-IR") : "استعلام فروش"}</td>
                 <td>{item.totalRial ? item.totalRial.toLocaleString("fa-IR") : "استعلام فروش"}</td>
