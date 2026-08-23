@@ -193,4 +193,70 @@ export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
 }
 
+export const subcategoryLabels: Record<string, string> = {
+  // rebar
+  ribbed: "میلگرد آجدار",
+  simple: "میلگرد ساده",
+  stainless: "میلگرد استیل",
+  alloy: "میلگرد آلیاژی",
 
+  // beam
+  beam: "تیرآهن",
+  hash: "تیرآهن هاش",
+
+  // sheet
+  "black-sheet": "ورق سیاه",
+  "sheet-st52": "ورق ST52",
+  "sheet-a283": "ورق A283",
+  "sheet-a285": "ورق A285",
+  "sheet-a516": "ورق A516",
+  "steel-strip": "تسمه آهنی",
+  "galvanized-sheet": "ورق گالوانیزه",
+  "colored-sheet": "ورق رنگی",
+  "oily-sheet": "ورق روغنی",
+  "checkered-sheet": "ورق آجدار",
+  "pickled-sheet": "ورق اسیدشویی",
+  "decking-sheet": "عرشه فولادی",
+  "stainless-sheet": "ورق استیل",
+  "wear-resistant-sheet": "ورق ضد سایش",
+  "sheet-ck45": "ورق CK45",
+
+  // profile
+  "box-profile": "قوطی و پروفیل",
+  "building-profile": "پروفیل ساختمانی",
+  "industrial-profile": "پروفیل صنعتی",
+  "stainless-profile": "پروفیل استیل",
+  "furniture-profile": "پروفیل مبلی",
+  "galvanized-profile": "پروفیل گالوانیزه",
+  "z-profile": "پروفیل Z",
+
+  // pipe
+  "scaffold-pipe": "لوله داربست",
+  "galvanized-pipe": "لوله گالوانیزه",
+  "stainless-pipe": "لوله استیل",
+  "water-test-pipe": "لوله تست آب",
+  "spiral-pipe": "لوله اسپیرال",
+  "api-pipe": "لوله API",
+  "gas-pipe": "لوله گاز",
+  "well-casing-pipe": "لوله جدار چاه",
+  "seamless-pipe": "لوله مانیسمان",
+  "thick-wall-pipe": "لوله گوشتدار",
+
+  // angle
+  angle: "نبشی",
+
+  // channel
+  channel: "ناودانی",
+
+  // wire
+  wire: "سیم مفتول",
+  "rib-lath": "رابیتس",
+  "steel-mesh": "مش",
+  "chicken-mesh": "توری مرغی",
+  "chain-link-mesh": "توری حصاری",
+  "crimped-mesh": "توری پرسی",
+};
+
+export function getSubcategoryLabel(subcategoryId?: string): string | undefined {
+  return subcategoryId ? subcategoryLabels[subcategoryId] : undefined;
+}

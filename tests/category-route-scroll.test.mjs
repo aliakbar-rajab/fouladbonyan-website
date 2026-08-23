@@ -225,3 +225,18 @@ test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and
     ]);
   });
 });
+
+test("a subcategory route resolved from pathname or without explicit label resolves Persian H1 and breadcrumbs", async () => {
+  window.history.replaceState({}, "", "/rebar/ribbed/");
+  addRoot();
+  render(React.createElement(App));
+  await settle();
+
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "قیمت روز میلگرد آجدار",
+  );
+  const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
+  assert.ok(breadcrumb);
+  assert.match(breadcrumb.textContent, /میلگرد آجدار/);
+});

@@ -1,4 +1,8 @@
-import { productGroups, type ProductGroupId } from "./category-meta";
+import {
+  getSubcategoryLabel,
+  productGroups,
+  type ProductGroupId,
+} from "./category-meta";
 
 /**
  * The route a prerendered page asks for.
@@ -44,14 +48,17 @@ export function readRouteRequest(overrides: RouteRequest = {}): RouteRequest {
   const category =
     overrides.category ?? dataset?.initialCategory ?? pathSegments[0];
   const validCategory = isProductGroupId(category) ? category : undefined;
+  const subcategory =
+    overrides.subcategory ??
+    dataset?.initialSubcategory ??
+    (validCategory ? pathSegments[1] : undefined);
 
   return {
     category: validCategory,
-    subcategory:
-      overrides.subcategory ??
-      dataset?.initialSubcategory ??
-      (validCategory ? pathSegments[1] : undefined),
+    subcategory,
     subcategoryLabel:
-      overrides.subcategoryLabel ?? dataset?.initialSubcategoryLabel,
+      overrides.subcategoryLabel ??
+      dataset?.initialSubcategoryLabel ??
+      getSubcategoryLabel(subcategory),
   };
 }

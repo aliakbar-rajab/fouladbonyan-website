@@ -16,6 +16,7 @@ import { isProductGroupId, readRouteRequest } from "./root-dataset";
 import { nextRovingIndex } from "./roving-tabs";
 import {
   getCategoryById,
+  getSubcategoryLabel,
   productGroups,
   type ProductGroup,
   type ProductGroupId,
@@ -119,7 +120,10 @@ export default function App({
   const subcategoryInfo = route.subcategory
     ? {
         id: route.subcategory,
-        label: route.subcategoryLabel || route.subcategory,
+        label:
+          route.subcategoryLabel ||
+          getSubcategoryLabel(route.subcategory) ||
+          route.subcategory,
       }
     : null;
 
