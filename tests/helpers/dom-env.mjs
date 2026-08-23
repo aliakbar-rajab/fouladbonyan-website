@@ -21,6 +21,13 @@ export function setupDomEnv({ url, pretendToBeVisual = false } = {}) {
     configurable: true,
   });
   globalThis.HTMLElement = dom.window.HTMLElement;
+  globalThis.HTMLInputElement = dom.window.HTMLInputElement;
+  globalThis.HTMLSelectElement = dom.window.HTMLSelectElement;
+  globalThis.HTMLTextAreaElement = dom.window.HTMLTextAreaElement;
+  // Node's own built-in FormData (undici) rejects jsdom's HTMLFormElement --
+  // different realms, so `new FormData(formEl)` throws unless FormData
+  // itself comes from the same jsdom realm as the form it reads.
+  globalThis.FormData = dom.window.FormData;
   globalThis.Node = dom.window.Node;
   globalThis.MutationObserver = dom.window.MutationObserver;
   globalThis.getComputedStyle = dom.window.getComputedStyle;

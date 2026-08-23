@@ -96,12 +96,24 @@ export default function App({
   const [searchMessage, setSearchMessage] = useState("");
   const [searchGroups, setSearchGroups] = useState<ProductGroup[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>(() => ({
-    requestId: 0,
-    categoryId:
-      route.subcategory ??
-      (route.category ? initialCategoryIdOf(route.category) : undefined),
-  }));
+  // The mega menu's factory/size links are real navigations to this group's
+  // initial category page (see MegaMenu.tsx); the filter itself has no
+  // dedicated route, so it rides along as a query param the first render
+  // reads once, here.
+  const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>(() => {
+    const params =
+      typeof window === "undefined"
+        ? null
+        : new URLSearchParams(window.location.search);
+    return {
+      requestId: 0,
+      categoryId:
+        route.subcategory ??
+        (route.category ? initialCategoryIdOf(route.category) : undefined),
+      factory: params?.get("factory") ?? undefined,
+      size: params?.get("size") ?? undefined,
+    };
+  });
 
   const isDirectCallDevice = useMediaQuery(
     "(max-width: 900px) and (hover: none) and (pointer: coarse)",
@@ -230,6 +242,12 @@ export default function App({
     scrollToPrices(reduceMotion);
   };
 
+  // Roving-tabindex focus only: this tablist is a set of real links (see the
+  // render below), so arrow keys must behave like Tab/Shift+Tab and merely
+  // move focus. Committing to a tab is left to the browser's own Enter/click
+  // activation of the now-focused <a>, the same path a mouse click uses --
+  // otherwise the visible catalog could switch without the URL, <title>, or
+  // metadata following it.
   const moveTabFocus = (
     event: ReactKeyboardEvent<HTMLElement>,
     currentIndex: number,
@@ -242,7 +260,6 @@ export default function App({
     if (target === null) return;
 
     event.preventDefault();
-    navigateToCatalog(productGroups[target].id);
     tabRefs.current[target]?.focus();
   };
 
@@ -258,7 +275,6 @@ export default function App({
           <MegaMenu
             onMobileClose={closeMobileNav}
             activeGroup={activeGroup}
-            onNavigate={navigateToCatalog}
           />
         )}
       />
@@ -278,10 +294,7 @@ export default function App({
               description={heading.description}
             />
 
-            <CategoryGrid
-              activeGroup={activeGroup}
-              onSelectGroup={navigateToCatalog}
-            />
+            <CategoryGrid activeGroup={activeGroup} />
 
             <form className="site-search" role="search" onSubmit={submitSearch}>
               <label className="sr-only" htmlFor="site-search">

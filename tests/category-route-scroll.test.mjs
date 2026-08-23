@@ -22,7 +22,7 @@ dom.window.matchMedia = (query) => ({
   dispatchEvent: () => false,
 });
 
-const { act, cleanup, render, screen, waitFor } = await import(
+const { act, cleanup, fireEvent, render, screen, waitFor } = await import(
   "@testing-library/react"
 );
 const App = (await import("../app/App.tsx")).default;
@@ -239,4 +239,45 @@ test("a subcategory route resolved from pathname or without explicit label resol
   const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
   assert.ok(breadcrumb);
   assert.match(breadcrumb.textContent, /میلگرد آجدار/);
+});
+
+test("arrow-key roving through the product tabs moves focus only, leaving the URL, selection and heading unchanged until activated", async () => {
+  addRoot();
+  render(React.createElement(App));
+  await settle();
+
+  const tabs = screen.getAllByRole("tab");
+  const initiallySelected = tabs.find(
+    (tab) => tab.getAttribute("aria-selected") === "true",
+  );
+  assert.ok(initiallySelected);
+  const initialHeading = screen.getByRole("heading", { level: 1 }).textContent;
+
+  tabs[0].focus();
+  fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
+
+  // Mirrors a mouse click's own behaviour (App.tsx's onClick only intercepts
+  // navigation while a search is active): roving focus alone must not select
+  // a different tab, change the URL, or change the heading -- only actually
+  // activating the focused link (Enter/click) may do that.
+  assert.equal(document.activeElement, tabs[1]);
+  assert.equal(
+    tabs.find((tab) => tab.getAttribute("aria-selected") === "true"),
+    initiallySelected,
+  );
+  assert.equal(window.location.pathname, "/");
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    initialHeading,
+  );
+
+  // The now-focused tab is a real link to its own page; activating it (the
+  // same click Enter performs on a focused <a>) must be allowed to navigate,
+  // not intercepted the way the eager arrow-key handler used to.
+  const clickEvent = new window.MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+  });
+  tabs[1].dispatchEvent(clickEvent);
+  assert.equal(clickEvent.defaultPrevented, false);
 });

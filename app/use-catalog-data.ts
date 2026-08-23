@@ -24,7 +24,13 @@ export function useCatalogData<T, K extends string>(
   >(() => (initialData !== undefined ? { key, status: "ready", data: initialData } : null));
 
   useEffect(() => {
-    if (loaded?.key === key && loaded.status === "ready") return;
+    // Settled for this key already, either way: a "ready" result has nothing
+    // left to do, and an "error" must wait for an explicit retry (a fresh
+    // key, or a remount/reload) rather than refire itself. Without this,
+    // setLoaded({status: "error"}) on failure would change `loaded` -- a
+    // dependency of this same effect -- and refire it immediately, looping
+    // forever on a persistent failure.
+    if (loaded?.key === key) return;
     let active = true;
     load(key)
       .then((data) => {

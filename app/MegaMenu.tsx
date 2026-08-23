@@ -1,27 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
 import { productGroups, type ProductGroupId } from "./category-meta";
-import type { CatalogViewRequest } from "./catalog-types";
 import { loadMenuGroup } from "./menu-catalog";
 import { CatalogLoadMessage } from "./site-ui";
 import { ChevronDownIcon } from "./icons";
 import { useCatalogData } from "./use-catalog-data";
-
-type SelectView = (view: Omit<CatalogViewRequest, "requestId">) => void;
 
 /*
  * Driven by the small menu payload (see menu-catalog.ts), never by the price
  * snapshots. The build embeds that payload on every page rendering <App />, and
  * static-entry/main.tsx seeds it before hydrateRoot, so this subtree renders
  * identically on the server and on the client for every route.
+ *
+ * Every link here is a real navigation, on purpose: a subcategory has its own
+ * prerendered page, so following its href is what keeps the URL, <title>,
+ * breadcrumb and visible catalog in agreement. A factory or size has no page
+ * of its own, so it links to its group's initial category page instead, with
+ * the pick carried as a `?factory=`/`?size=` query param that App reads once
+ * on mount (see App.tsx) to seed the filter -- still a real navigation, just
+ * to the nearest page that exists.
  */
-function MegaMenuSections({
-  groupId,
-  onSelect,
-}: {
-  groupId: ProductGroupId;
-  onSelect: SelectView;
-}) {
+function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
   const state = useCatalogData(loadMenuGroup, groupId);
 
   if (state.status !== "ready") {
@@ -35,17 +34,9 @@ function MegaMenuSections({
       <section className="mega-rebar-types" aria-label={`انواع ${group.label}`}>
         <p className="mega-group-label">انواع {group.label}</p>
         {group.categories.map((category) => (
-          <a
-            href={`/${groupId}/${category.id}/`}
-            key={category.id}
-            onClick={(event) => {
-              event.preventDefault();
-              onSelect({ categoryId: category.id });
-            }}
-          >
+          <a href={`/${groupId}/${category.id}/`} key={category.id}>
             {`قیمت ${category.label}`}
           </a>
-
         ))}
       </section>
 
@@ -59,15 +50,12 @@ function MegaMenuSections({
         </p>
         <div>
           {group.factories.map((factory) => (
-            <button
-              type="button"
+            <a
+              href={`/${groupId}/${group.initialCategoryId}/?factory=${encodeURIComponent(factory)}`}
               key={factory}
-              onClick={() =>
-                onSelect({ categoryId: group.initialCategoryId, factory })
-              }
             >
               {group.label} {factory}
-            </button>
+            </a>
           ))}
         </div>
       </section>
@@ -76,15 +64,12 @@ function MegaMenuSections({
         <p className="mega-group-label">سایزهای {group.label}</p>
         <div>
           {group.sizes.map((size) => (
-            <button
-              type="button"
+            <a
+              href={`/${groupId}/${group.initialCategoryId}/?size=${encodeURIComponent(size)}`}
               key={size}
-              onClick={() =>
-                onSelect({ categoryId: group.initialCategoryId, size })
-              }
             >
               {group.label} {localizeCatalogValue(size)}
-            </button>
+            </a>
           ))}
         </div>
       </section>
@@ -95,17 +80,9 @@ function MegaMenuSections({
 type MegaMenuProps = {
   onMobileClose: () => void;
   activeGroup: ProductGroupId;
-  onNavigate: (
-    groupId: ProductGroupId,
-    view?: Omit<CatalogViewRequest, "requestId">,
-  ) => void;
 };
 
-export function MegaMenu({
-  onMobileClose,
-  activeGroup,
-  onNavigate,
-}: MegaMenuProps) {
+export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
   const [megaProduct, setMegaProduct] = useState<ProductGroupId>("rebar");
 
@@ -141,12 +118,6 @@ export function MegaMenu({
     };
   }, [productsOpen]);
 
-  const selectView: SelectView = (view) => {
-    onNavigate(megaProduct, view);
-    setProductsOpen(false);
-    onMobileClose();
-  };
-
   return (
     <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
       <a href="/" onClick={onMobileClose}>
@@ -172,7 +143,7 @@ export function MegaMenu({
           className="product-dropdown rebar-mega-menu"
           hidden={!productsOpen}
         >
-          <MegaMenuSections groupId={megaProduct} onSelect={selectView} />
+          <MegaMenuSections groupId={megaProduct} />
 
           <section className="mega-other-products" aria-label="گروه محصولات">
             <p className="mega-group-label">گروه محصولات</p>

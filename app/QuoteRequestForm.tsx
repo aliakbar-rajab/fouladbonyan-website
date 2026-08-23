@@ -36,14 +36,23 @@ const disclaimerError =
 
 const itemNumber = (index: number) => (index + 1).toLocaleString("fa-IR");
 
-function validateQuantity(value: string, index: number) {
+// شاخه/عدد count discrete pieces -- calculateRebarWeight (catalog-behavior.mjs)
+// already refuses a non-integer piece count, and a pieceOption is priced
+// per real, indivisible catalog item. Rejecting a fractional value here,
+// before it reaches that pricing, is what keeps the printed quote's
+// unit price × quantity reconciling with its total.
+function validateQuantity(value: string, unit: string, index: number) {
   const label = `مقدار تقریبی کالای ${itemNumber(index)}`;
   const requiredError = validateRequired(value, label);
   if (requiredError) return requiredError;
   const numeric = Number(value);
-  return !Number.isFinite(numeric) || numeric <= 0
-    ? `${label} باید عددی بزرگ‌تر از صفر باشد.`
-    : "";
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return `${label} باید عددی بزرگ‌تر از صفر باشد.`;
+  }
+  if (isPieceUnit(unit) && !Number.isInteger(numeric)) {
+    return `${label} برای واحد ${unit} باید عدد صحیح باشد.`;
+  }
+  return "";
 }
 
 const productOptions = [
@@ -299,11 +308,14 @@ export function QuoteRequestForm() {
             validateRequired(patch.product ?? "", `نوع کالای ${itemNumber(index)}`),
           );
         }
-        if ("quantity" in patch) {
+        // The unit affects the quantity rule (شاخه/عدد must be a whole
+        // number), so a unit change alone can flip a previously valid
+        // quantity into an invalid one and must re-check it too.
+        if ("quantity" in patch || "unit" in patch) {
           setFieldError(
             setErrors,
             `itemQuantity-${itemId}`,
-            validateQuantity(patch.quantity ?? "", index),
+            validateQuantity(next[index].quantity, next[index].unit, index),
           );
         }
       }
@@ -357,6 +369,7 @@ export function QuoteRequestForm() {
       );
       nextErrors[`itemQuantity-${item.id}`] = validateQuantity(
         item.quantity,
+        item.unit,
         index,
       );
     }
@@ -517,9 +530,9 @@ export function QuoteRequestForm() {
                       <input
                         name={quantityField}
                         type="number"
-                        min="0.01"
-                        step="any"
-                        inputMode="decimal"
+                        min={isPieceUnit(item.unit) ? "1" : "0.01"}
+                        step={isPieceUnit(item.unit) ? "1" : "any"}
+                        inputMode={isPieceUnit(item.unit) ? "numeric" : "decimal"}
                         value={item.quantity}
                         onChange={(event) =>
                           updateItem(item.id, {

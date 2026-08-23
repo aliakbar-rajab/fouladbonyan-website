@@ -389,3 +389,53 @@ test("a catalog row carries validated product details into the quote form", asyn
   });
   window.history.replaceState({}, "", "/");
 });
+
+test("a fractional شاخه quantity is rejected instead of producing a printed quote with a mismatched total", async () => {
+  const user = userEvent.setup({ document });
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+  await settle();
+
+  await user.type(
+    screen.getByRole("textbox", { name: "نام و نام خانوادگی" }),
+    "کاربر آزمایشی",
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "شماره تماس" }),
+    "09121234567",
+  );
+  await user.type(
+    screen.getByRole("textbox", { name: "شهر مقصد" }),
+    "تهران",
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "نوع محصول" }),
+    "میلگرد",
+  );
+  await user.selectOptions(
+    document.querySelector('[name="itemUnit-1"]'),
+    "شاخه",
+  );
+  const quantityInput = document.querySelector('[name="itemQuantity-1"]');
+  await user.clear(quantityInput);
+  await user.type(quantityInput, "2.5");
+  await user.click(
+    screen.getByRole("checkbox", { name: "متن بالا را خواندم و می‌پذیرم." }),
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: "بررسی و آماده‌سازی درخواست" }),
+  );
+
+  assert.match(
+    screen.getByText("مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.")
+      .textContent,
+    /عدد صحیح باشد/,
+  );
+  assert.equal(document.activeElement, quantityInput);
+  assert.equal(
+    screen.queryByRole("region", { name: "پیش‌نویس برآورد آماده چاپ" }),
+    null,
+    "an invalid submission must not produce a printed quote document",
+  );
+});

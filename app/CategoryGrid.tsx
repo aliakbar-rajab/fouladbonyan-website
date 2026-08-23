@@ -2,7 +2,6 @@ import { productGroups, type ProductGroupId } from "./category-meta";
 import { getCategoryImageSources } from "./image-utils";
 
 interface CategoryGridProps {
-  onSelectGroup?: (groupId: ProductGroupId) => void;
   activeGroup: ProductGroupId;
 }
 
