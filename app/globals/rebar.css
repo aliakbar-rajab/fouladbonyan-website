@@ -960,7 +960,7 @@
   .filter-fields select {
     grid-row: 2;
     min-width: 0;
-    font-size: 0.76rem;
+    font-size: 1rem;
   }
 
   .clear-rebar-filters {
@@ -1046,14 +1046,24 @@
     font-size: 0.64rem;
   }
 
-  .rebar-price-table,
-  .rebar-price-table tbody,
-  .rebar-price-table tr,
-  .rebar-price-table td {
+  .table-scroll {
+    overflow-x: visible;
+  }
+
+  .rebar-price-table {
+    display: block;
+    width: 100%;
     min-width: 0;
   }
 
+  .rebar-price-table thead {
+    display: none;
+  }
+
   .rebar-price-table tbody {
+    display: grid;
+    width: 100%;
+    min-width: 0;
     gap: 0.55rem;
     padding: 0.65rem;
   }
@@ -1061,6 +1071,7 @@
   .rebar-price-table tbody tr.rebar-row-group {
     display: grid;
     grid-template-columns: 3rem repeat(2, minmax(0, 1fr));
+    min-width: 0;
     border-radius: 9px;
   }
 
@@ -1075,8 +1086,12 @@
   }
 
   .rebar-price-table tbody tr.rebar-row-group td::before {
+    content: attr(data-label);
+    display: block;
     color: #878891;
     font-size: 0.64rem;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
   }
 
   .rebar-price-table tbody tr.rebar-row-group.is-dark-row td::before {
@@ -1094,7 +1109,9 @@
     border-inline-end-color: #56565a !important;
   }
 
-  .rebar-row-group .row-expand-cell::before {
+  .rebar-price-table tbody tr.rebar-row-group td.row-expand-cell::before,
+  .rebar-price-table tbody tr.rebar-row-group td.row-quote-cell::before {
+    content: none;
     display: none;
   }
 

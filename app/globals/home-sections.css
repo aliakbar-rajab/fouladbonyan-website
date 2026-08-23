@@ -426,7 +426,7 @@
     width: 2.5rem;
     pointer-events: none;
     border-radius: 0 11px 11px 0;
-    background: linear-gradient(to left, rgb(59 59 62 / 0%), #3b3b3e 85%);
+    background: linear-gradient(to left, rgb(9 12 15 / 0%), #090c0f 85%);
   }
 }
 
