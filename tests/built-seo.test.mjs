@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readdir } from "node:fs/promises";
 import { productGroups } from "../app/category-meta.ts";
-import { parseBreadcrumbLd, readDist, readJson } from "./helpers/dist.mjs";
+import {
+  loadGroupCatalogs,
+  parseBreadcrumbLd,
+  readDist,
+  readJson,
+} from "./helpers/dist.mjs";
 
 test("category landing pages have unique metadata, a CSP-safe initial tab, and sitemap entries", async () => {
   const categories = [
@@ -312,4 +317,99 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
     /<a href="\/rebar\/simple\/"[^>]*>قیمت میلگرد ساده<\/a>/,
     "MegaMenu must contain crawlable link for rebar/simple",
   );
+});
+
+/*
+ * Title collisions are invisible to the two metadata tests above because each
+ * checks uniqueness only within its own page type (8 category titles against
+ * each other, 46 subcategory titles against each other) -- a category page
+ * and its own subcategory can carry the exact same <title> and neither test
+ * notices. /channel/ and /channel/channel/ did exactly this. Check every
+ * indexable generated page's <title> against every other one, regardless of
+ * type.
+ */
+test("every generated page has a globally unique <title>", async () => {
+  const entries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  const pages = entries
+    .filter((entry) => entry.endsWith("index.html"))
+    .map((entry) => entry.split("\\").join("/"));
+
+  const titlesByPage = new Map();
+  for (const page of pages) {
+    const html = await readDist(page);
+    const title = html.match(/<title>([^<]+)<\/title>/)?.[1];
+    assert.ok(title, `${page} must have a <title>`);
+    titlesByPage.set(page, title);
+  }
+
+  const pagesByTitle = new Map();
+  for (const [page, title] of titlesByPage) {
+    const existing = pagesByTitle.get(title);
+    if (existing) existing.push(page);
+    else pagesByTitle.set(title, [page]);
+  }
+
+  const duplicates = [...pagesByTitle.entries()].filter(
+    ([, pagesForTitle]) => pagesForTitle.length > 1,
+  );
+  assert.deepEqual(
+    duplicates,
+    [],
+    `Duplicate <title> across page types: ${duplicates
+      .map(([title, pagesForTitle]) => `"${title}" -> ${pagesForTitle.join(", ")}`)
+      .join("; ")}`,
+  );
+});
+
+/*
+ * A category landing page (e.g. /channel/) used to silently render the same
+ * PriceCatalog table as its first subcategory (e.g. /channel/channel/) --
+ * identical row count, identical prices, near-duplicate content on two
+ * indexable URLs. It must now render CategoryOverview instead: a distinct
+ * per-subcategory summary that links onward to every one of the group's
+ * subcategory pages, which keep the full PriceCatalog table to themselves.
+ */
+test("category landing pages render a distinct overview and link to every subcategory", async () => {
+  const catalogs = await loadGroupCatalogs();
+
+  for (const catalog of catalogs) {
+    const html = await readDist(`${catalog.id}/index.html`);
+
+    assert.match(
+      html,
+      /class="overview-table"/,
+      `${catalog.id}/ must render CategoryOverview's summary table`,
+    );
+    assert.doesNotMatch(
+      html,
+      /class="rebar-prices"/,
+      `${catalog.id}/ must not render the full PriceCatalog table (that belongs to its subcategory pages only)`,
+    );
+
+    for (const sub of catalog.categories) {
+      assert.match(
+        html,
+        new RegExp(`href="/${catalog.id}/${sub.id}/"`),
+        `${catalog.id}/ must link to its subcategory ${catalog.id}/${sub.id}/`,
+      );
+    }
+
+    // The reverse must still hold: subcategory pages keep their own full
+    // table and never fall back to the group overview.
+    for (const sub of catalog.categories) {
+      const subHtml = await readDist(`${catalog.id}/${sub.id}/index.html`);
+      assert.match(
+        subHtml,
+        /class="rebar-prices"/,
+        `${catalog.id}/${sub.id}/ must render the full PriceCatalog table`,
+      );
+      assert.doesNotMatch(
+        subHtml,
+        /id="category-overview"/,
+        `${catalog.id}/${sub.id}/ must not render CategoryOverview`,
+      );
+    }
+  }
 });

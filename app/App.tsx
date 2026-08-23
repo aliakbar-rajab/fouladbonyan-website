@@ -10,6 +10,7 @@ import { filterProductGroups } from "./site-logic.mjs";
 import { buildCatalogSearchGroups } from "./catalog-search.mjs";
 import { createRetryableLoader } from "./catalog-cache";
 import CatalogPrices from "./CatalogPrices";
+import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
 import { initialCategoryIdOf, loadAllGroupCatalogs } from "./group-catalog";
 import { isProductGroupId, readRouteRequest } from "./root-dataset";
@@ -88,6 +89,10 @@ export default function App({
   // `route.category` is already known to be a real group, so its presence is
   // what makes this a category route.
   const isCategoryRoute = Boolean(route.category);
+  // A category route with no subcategory (e.g. /rebar/) is the group's
+  // overview landing page; it must render distinct content from any of its
+  // subcategory pages, never the same catalog table (see CategoryOverview).
+  const isCategoryOverviewRoute = isCategoryRoute && !route.subcategory;
   const [activeGroup, setActiveGroup] = useState<ProductGroupId>(
     () => route.category ?? productGroups[0].id,
   );
@@ -376,12 +381,16 @@ export default function App({
                   aria-labelledby={`tab-${visibleGroup.id}`}
                   tabIndex={0}
                 >
-                  <CatalogPrices
-                    key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
-                    groupId={visibleGroup.id}
-                    phoneHref={contactHref}
-                    requestedView={activeViewRequest}
-                  />
+                  {isCategoryOverviewRoute && !committedSearch ? (
+                    <CategoryOverview groupId={visibleGroup.id} />
+                  ) : (
+                    <CatalogPrices
+                      key={`${visibleGroup.id}-${activeViewRequest.requestId}`}
+                      groupId={visibleGroup.id}
+                      phoneHref={contactHref}
+                      requestedView={activeViewRequest}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="empty-state" role="status">

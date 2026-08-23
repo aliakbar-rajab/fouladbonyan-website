@@ -164,12 +164,28 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
       }
     }
 
-    // A category landing page prerenders its default subcategory in full; the
-    // siblings live on their own URLs, linked from the tabs.
+    // A category landing page must render CategoryOverview -- one summary
+    // row per subcategory -- never a subcategory's own PriceCatalog rows.
+    // (It used to silently prerender its default subcategory's full table,
+    // making the landing page a near-duplicate of that one subcategory page;
+    // see CategoryOverview.tsx.) The siblings' full tables live on their own
+    // URLs, linked from here.
     const landingHtml = await readDist(`${groupId}/index.html`);
-    assert.ok(
-      categories.some((sub) => sub.rows === countRows(landingHtml)),
-      `${groupId}/ must prerender one full subcategory, found ${countRows(landingHtml)} rows`,
+    assert.equal(
+      countRows(landingHtml),
+      0,
+      `${groupId}/ must not prerender any subcategory's PriceCatalog rows, found ${countRows(landingHtml)}`,
+    );
+    assert.equal(
+      countFactoryCards(landingHtml),
+      0,
+      `${groupId}/ must not prerender any subcategory's factory cards, found ${countFactoryCards(landingHtml)}`,
+    );
+    const overviewRowCount = (landingHtml.match(/class="overview-row"/g) ?? []).length;
+    assert.equal(
+      overviewRowCount,
+      categories.length,
+      `${groupId}/ must prerender one CategoryOverview row per subcategory (${categories.length}), found ${overviewRowCount}`,
     );
     for (const sub of categories) {
       assert.match(
