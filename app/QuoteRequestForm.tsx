@@ -3,73 +3,35 @@ import {
   FieldErrors,
   focusFirstError,
   setFieldError,
-  validateFullName,
-  validatePhone,
-  validateRequired,
 } from "./form-validation";
-import {
-  loadQuotePriceEstimates,
-  priceQuoteItem,
-  resolvePieceOption,
-  type QuotePriceEstimates,
-} from "./quote-pricing";
+import { loadQuotePriceEstimates } from "./quote-pricing";
 import {
   branchLengthLabel,
-  buildGeneratedQuote,
-  buildQuoteMessage,
+  deriveQuotePricing,
+  DISCLAIMER_ERROR,
   formatToman,
-} from "./quote-output";
+  isPieceUnit,
+  itemIndexLabel,
+  prepareQuoteRequest,
+  validateDestination,
+  validateFullName,
+  validatePhone,
+  validateQuantity,
+} from "./quote-engine";
 import { QuoteDocument } from "./QuoteDocument";
 import {
+  isQuoteProduct,
   isQuoteUnit,
   quoteDisclaimer,
+  quoteProductNames,
   quoteUnits,
+  type DerivedQuoteItem,
   type GeneratedQuote,
-  type PricedQuoteItem,
   type QuoteItem,
+  type QuotePriceEstimates,
 } from "./quote-types";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
-
-const disclaimerError =
-  "برای آماده‌سازی درخواست باید متن غیرقطعی‌بودن درخواست را تأیید کنید.";
-
-const itemNumber = (index: number) => (index + 1).toLocaleString("fa-IR");
-
-// شاخه/عدد count discrete pieces -- calculateRebarWeight (catalog-behavior.mjs)
-// already refuses a non-integer piece count, and a pieceOption is priced
-// per real, indivisible catalog item. Rejecting a fractional value here,
-// before it reaches that pricing, is what keeps the printed quote's
-// unit price × quantity reconciling with its total.
-function validateQuantity(value: string, unit: string, index: number) {
-  const label = `مقدار تقریبی کالای ${itemNumber(index)}`;
-  const requiredError = validateRequired(value, label);
-  if (requiredError) return requiredError;
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return `${label} باید عددی بزرگ‌تر از صفر باشد.`;
-  }
-  if (isPieceUnit(unit) && !Number.isInteger(numeric)) {
-    return `${label} برای واحد ${unit} باید عدد صحیح باشد.`;
-  }
-  return "";
-}
-
-const productOptions = [
-  "میلگرد",
-  "تیرآهن",
-  "هاش",
-  "ورق فولادی",
-  "پروفیل و قوطی",
-  "لوله فولادی",
-  "نبشی",
-  "ناودانی",
-  "مفتول و سیم",
-  "سایر محصولات فولادی",
-] as const satisfies readonly QuoteItem["product"][];
-
-const isQuoteProduct = (value: unknown): value is QuoteItem["product"] =>
-  typeof value === "string" && (productOptions as readonly string[]).includes(value);
 
 const MAX_QUOTE_ITEMS = 100;
 
@@ -83,8 +45,6 @@ const createQuoteItem = (id: number): QuoteItem => ({
   pieceOptionKey: "",
 });
 
-const isPieceUnit = (unit: string) => unit === "شاخه" || unit === "عدد";
-
 /**
  * What the buyer is told about one row's price: why it cannot be estimated
  * yet, or the estimate together with the catalog figure it came from.
@@ -94,11 +54,11 @@ function ItemPriceHint({
   loading,
   loadError,
 }: {
-  priced: PricedQuoteItem;
+  priced: DerivedQuoteItem;
   loading: boolean;
   loadError: boolean;
 }) {
-  const { item, estimate, approximateTotal, pieceOption } = priced;
+  const { item, estimate, approximateTotalToman, pieceOption } = priced;
   const byPiece = isPieceUnit(item.unit);
 
   if (loading) {
@@ -141,7 +101,7 @@ function ItemPriceHint({
       </span>
     );
   }
-  if (approximateTotal === null) {
+  if (approximateTotalToman === null) {
     return <span>برای مشاهده برآورد، مقدار معتبر بزرگ‌تر از صفر وارد کنید.</span>;
   }
 
@@ -164,7 +124,7 @@ function ItemPriceHint({
         </span>
       )}
       <span>
-        قیمت تقریبی این کالا: <strong>{formatToman(approximateTotal)}</strong>
+        قیمت تقریبی این کالا: <strong>{formatToman(approximateTotalToman)}</strong>
       </span>
     </>
   );
@@ -186,7 +146,7 @@ export function QuoteRequestForm() {
     const params = new URLSearchParams(window.location.search);
     const requestedProduct = params.get("product");
     const requestedDimensions = params.get("dimensions")?.slice(0, 240) ?? "";
-    const matchedProduct = productOptions.find(
+    const matchedProduct = quoteProductNames.find(
       (product) => product === requestedProduct,
     );
     if (!matchedProduct && !requestedDimensions) return;
@@ -221,16 +181,15 @@ export function QuoteRequestForm() {
       return;
     }
     if (name === "destination") {
-      setFieldError(setErrors, name, validateRequired(value, "شهر مقصد"));
+      setFieldError(setErrors, name, validateDestination(value));
       return;
     }
     if (name === "acceptDisclaimer") {
       const accepted = element instanceof HTMLInputElement && element.checked;
-      setFieldError(setErrors, name, accepted ? "" : disclaimerError);
+      setFieldError(setErrors, name, accepted ? "" : DISCLAIMER_ERROR);
       return;
     }
   };
-
 
   useEffect(() => {
     let active = true;
@@ -251,44 +210,13 @@ export function QuoteRequestForm() {
   }, []);
 
   /*
-   * The one derivation. The price hints, the prepared text and the generated
-   * document all read this, so none of them can disagree about what a row
-   * costs or which unit it is sold in.
+   * Live pricing derivation driven purely by the quote engine.
    */
-  const pricedItems: PricedQuoteItem[] = useMemo(
-    () =>
-      items.map((item) => {
-        const estimate =
-          item.product && priceEstimates
-            ? priceEstimates[item.product]
-            : undefined;
-        const pieceOption = resolvePieceOption(item.pieceOptionKey, estimate);
-
-        return {
-          item,
-          estimate,
-          pieceOption,
-          approximateTotal: priceQuoteItem(item, estimate),
-          effectiveUnit: pieceOption?.unit ?? item.unit,
-        };
-      }),
+  const { items: pricedItems, totals } = useMemo(
+    () => deriveQuotePricing(items, priceEstimates),
     [items, priceEstimates],
   );
 
-  const approximateGrandTotal = useMemo(
-    () =>
-      pricedItems.reduce(
-        (sum, pricedItem) => sum + (pricedItem.approximateTotal ?? 0),
-        0,
-      ),
-    [pricedItems],
-  );
-  const pricedItemCount = pricedItems.filter(
-    (pricedItem) => pricedItem.approximateTotal !== null,
-  ).length;
-
-  // Any edit invalidates the prepared text and the generated document: both
-  // are snapshots of the form at the moment it was submitted.
   const clearDraft = () => {
     prepared.clear();
     setGeneratedQuote(null);
@@ -305,12 +233,9 @@ export function QuoteRequestForm() {
           setFieldError(
             setErrors,
             `itemProduct-${itemId}`,
-            validateRequired(patch.product ?? "", `نوع کالای ${itemNumber(index)}`),
+            patch.product ? "" : `نوع کالای ${itemIndexLabel(index)} را وارد کنید.`,
           );
         }
-        // The unit affects the quantity rule (شاخه/عدد must be a whole
-        // number), so a unit change alone can flip a previously valid
-        // quantity into an invalid one and must re-check it too.
         if ("quantity" in patch || "unit" in patch) {
           setFieldError(
             setErrors,
@@ -323,7 +248,6 @@ export function QuoteRequestForm() {
     });
     clearDraft();
   };
-
 
   const addItem = () => {
     if (items.length >= MAX_QUOTE_ITEMS) return;
@@ -349,36 +273,28 @@ export function QuoteRequestForm() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const contact = {
-      fullName: String(form.get("fullName") ?? "").trim(),
-      phone: String(form.get("phone") ?? "").trim(),
-      destination: String(form.get("destination") ?? "").trim(),
-      notes: String(form.get("notes") ?? "").trim(),
+      fullName: String(form.get("fullName") ?? ""),
+      phone: String(form.get("phone") ?? ""),
+      destination: String(form.get("destination") ?? ""),
+      notes: String(form.get("notes") ?? ""),
     };
 
-    const nextErrors: FieldErrors = {
-      fullName: validateFullName(contact.fullName),
-      phone: validatePhone(contact.phone),
-      destination: validateRequired(contact.destination, "شهر مقصد"),
-      acceptDisclaimer:
-        form.get("acceptDisclaimer") === "on" ? "" : disclaimerError,
-    };
-    for (const [index, { item }] of pricedItems.entries()) {
-      nextErrors[`itemProduct-${item.id}`] = validateRequired(
-        item.product,
-        `نوع کالای ${itemNumber(index)}`,
-      );
-      nextErrors[`itemQuantity-${item.id}`] = validateQuantity(
-        item.quantity,
-        item.unit,
-        index,
-      );
+    const result = prepareQuoteRequest(
+      {
+        contact,
+        items,
+        acceptDisclaimer: form.get("acceptDisclaimer") === "on",
+      },
+      priceEstimates,
+    );
+
+    setErrors(result.validation.errors);
+    if (focusFirstError(event.currentTarget, result.validation.errors)) {
+      return;
     }
 
-    setErrors(nextErrors);
-    if (focusFirstError(event.currentTarget, nextErrors)) return;
-
-    prepared.prepare(buildQuoteMessage(contact, pricedItems));
-    setGeneratedQuote(buildGeneratedQuote(contact, pricedItems));
+    prepared.prepare(result.output.message);
+    setGeneratedQuote(result.output.document);
   };
 
   return (
@@ -468,7 +384,7 @@ export function QuoteRequestForm() {
         <div className="quote-items-list">
           {pricedItems.map((priced, index) => {
             const { item, estimate } = priced;
-            const number = itemNumber(index);
+            const number = itemIndexLabel(index);
             const productField = `itemProduct-${item.id}`;
             const quantityField = `itemQuantity-${item.id}`;
             const productErrorId = `quote-product-${item.id}-error`;
@@ -515,7 +431,7 @@ export function QuoteRequestForm() {
                       <option value="" disabled>
                         انتخاب کنید
                       </option>
-                      {productOptions.map((product) => (
+                      {quoteProductNames.map((product) => (
                         <option key={product}>{product}</option>
                       ))}
                     </select>
@@ -655,13 +571,13 @@ export function QuoteRequestForm() {
       <section className="quote-price-summary" aria-live="polite">
         <span>جمع تقریبی پیش‌فاکتور</span>
         <strong>
-          {pricedItemCount
-            ? formatToman(approximateGrandTotal)
+          {totals.hasAnyPriced
+            ? formatToman(totals.totalToman)
             : "هنوز قابل محاسبه نیست"}
         </strong>
         <p>
-          {pricedItemCount
-            ? `جمع ${pricedItemCount.toLocaleString("fa-IR")} از ${items.length.toLocaleString("fa-IR")} کالا محاسبه شده است. `
+          {totals.hasAnyPriced
+            ? `جمع ${totals.pricedItemCount.toLocaleString("fa-IR")} از ${items.length.toLocaleString("fa-IR")} کالا محاسبه شده است. `
             : ""}
           این مبلغ از داده‌های قیمت فعلی سایت محاسبه می‌شود (برای واحد تن و
           کیلوگرم مستقیم، برای شاخه/عدد میلگرد بر اساس وزن تقریبی، و برای

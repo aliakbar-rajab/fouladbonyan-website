@@ -8,11 +8,14 @@ import {
 } from "../scripts/lib/catalog-source.mjs";
 import {
   buildAllPayloads,
+  buildCatalogSnapshot,
 } from "../scripts/lib/build-price-payloads.mjs";
 import {
   validateCatalogPriceData,
+  validateCatalogSnapshot,
   validateProductPricePayload,
 } from "../app/catalog-validation.mjs";
+
 
 
 function fakeProductItem(index, titlePrefix = "میلگرد") {
@@ -260,4 +263,35 @@ test("buildAllPayloads completes and validates even when some categories use fal
   assert.ok(result.diagnostics.freshCategories > 40);
   assert.equal(result.diagnostics.warnings.length, 2);
 });
+
+test("buildCatalogSnapshot completes and validates even when some categories use fallback", async () => {
+  const fakeAllOkFetch = async () =>
+    new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+
+  const { snapshot: baseline } = await buildCatalogSnapshot({
+    fetchImpl: fakeAllOkFetch,
+  });
+  assert.ok(baseline.catalogs.length >= 8);
+
+  const fakePartialFailFetch = async (url) => {
+    const decoded = decodeURIComponent(url);
+    if (decoded.includes("میلگرد-ساده") || decoded.includes("ورق-ck45")) {
+      return new Response("Upstream Crash", { status: 502 });
+    }
+    return new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+  };
+
+  const { snapshot: result, diagnostics } = await buildCatalogSnapshot({
+    fallbackSnapshot: baseline,
+    attempts: 2,
+    fetchImpl: fakePartialFailFetch,
+  });
+
+  validateCatalogSnapshot(result);
+
+  assert.equal(diagnostics.fallbackCategories, 2);
+  assert.ok(diagnostics.freshCategories > 40);
+  assert.equal(diagnostics.warnings.length, 2);
+});
+
 

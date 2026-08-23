@@ -79,7 +79,7 @@ test("ingestAll rejects a payload missing a dataset and leaves KV untouched", as
   const status = await ingestAll(kv, { rebar: { fetchedAt: "x" }, beam: { fetchedAt: "x" } });
 
   assert.equal(status.ok, false);
-  assert.match(status.error, /product/);
+  assert.match(status.error, /داده‌های قیمت/);
   assert.equal(kv.store.get(KV_KEYS.rebar), '{"fetchedAt":"old"}');
   assert.equal(kv.store.has(KV_KEYS.beam), false);
 });
@@ -101,8 +101,29 @@ test("ingestAll rejects a structurally invalid dataset and leaves KV untouched",
   assert.equal(kv.store.get(KV_KEYS.product), '{"fetchedAt":"old-product"}');
 });
 
+test("ingestAll stores canonical snapshot and all legacy projections", async (t) => {
+  const { buildCatalogSnapshot } = await import(
+    "../../scripts/lib/build-price-payloads.mjs"
+  );
+  t.mock.method(globalThis, "fetch", async () =>
+    new Response(fakeCatalogHtml(), { status: 200 }),
+  );
+  const { snapshot } = await buildCatalogSnapshot();
+  const kv = fakeKv();
+
+  const status = await ingestAll(kv, { snapshot });
+
+  assert.equal(status.ok, true);
+  assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.catalog)), snapshot);
+  assert.ok(kv.store.has(KV_KEYS.rebar));
+  assert.ok(kv.store.has(KV_KEYS.beam));
+  assert.ok(kv.store.has(KV_KEYS.product));
+  assert.equal(JSON.parse(kv.store.get(STATUS_KEY)).ok, true);
+});
+
 test("ingestAll rejects a non-object body", async () => {
   const kv = fakeKv();
   const status = await ingestAll(kv, "not an object");
   assert.equal(status.ok, false);
 });
+

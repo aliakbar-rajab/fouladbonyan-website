@@ -1,14 +1,8 @@
-import {
-  rebarSources,
-  beamSources,
-  productCatalogs,
-} from "../../scripts/price-catalog-config.mjs";
-import {
-  validateCatalogPriceData,
-  validateProductPricePayload,
-} from "../../app/catalog-validation.mjs";
+import { allCatalogConfigs } from "../../scripts/price-catalog-config.mjs";
+import { validateCatalogSnapshot } from "../../app/catalog-validation.mjs";
 
 export const KV_KEYS = {
+  catalog: "catalog-prices",
   rebar: "rebar-prices",
   beam: "beam-prices",
   product: "product-prices",
@@ -20,50 +14,96 @@ function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function validateAll(payloads) {
+function normalizeToSnapshot(payloads) {
   if (!isRecord(payloads)) {
     throw new Error("بدنه درخواست شیء نیست.");
   }
-  for (const key of Object.keys(KV_KEYS)) {
-    if (!isRecord(payloads[key])) {
-      throw new Error(`payload.${key} وجود ندارد یا شیء نیست.`);
-    }
+  if (payloads.snapshot && Array.isArray(payloads.snapshot.catalogs)) {
+    return payloads.snapshot;
   }
-  validateCatalogPriceData(payloads.rebar, {
-    expectedCategoryIds: rebarSources.map((source) => source.id),
-  });
-  validateCatalogPriceData(payloads.beam, {
-    expectedCategoryIds: beamSources.map((source) => source.id),
-  });
-  validateProductPricePayload(payloads.product, {
-    expectedCatalogs: productCatalogs.map((catalog) => ({
+  if (Array.isArray(payloads.catalogs)) {
+    return payloads;
+  }
+  if (payloads.rebar && payloads.beam && payloads.product) {
+    return {
+      fetchedAt: payloads.rebar.fetchedAt || new Date().toISOString(),
+      sourceName: payloads.rebar.sourceName || "فولاد ایرانیان",
+      sourceHome: payloads.rebar.sourceHome || "https://www.fooladiranian.com/",
+      taxRate: payloads.rebar.taxRate ?? 0.1,
+      catalogs: [
+        {
+          id: "rebar",
+          label: "میلگرد",
+          initialCategoryId: "ribbed",
+          categories: payloads.rebar.categories,
+        },
+        {
+          id: "beam",
+          label: "تیرآهن",
+          initialCategoryId: "beam",
+          categories: payloads.beam.categories,
+        },
+        ...(payloads.product.catalogs ?? []),
+      ],
+    };
+  }
+  throw new Error("داده کاتالوگ نامعتبر است: داده‌های قیمت در درخواست یافت نشد.");
+}
+
+export function validateAll(payloads) {
+  const snapshot = normalizeToSnapshot(payloads);
+  validateCatalogSnapshot(snapshot, {
+    expectedCatalogs: allCatalogConfigs.map((catalog) => ({
       id: catalog.id,
       categoryIds: catalog.sources.map((source) => source.id),
     })),
   });
+  return snapshot;
 }
 
 /**
- * Validate a { rebar, beam, product } payload handed to us by the trusted
- * GitHub Actions fetcher/relay and, only if every dataset passes, replace
- * the stored snapshot. Cloudflare's network cannot reach the upstream
- * source itself (fooladiranian.com's DNS is unreachable from Cloudflare's
- * resolvers -- confirmed directly while building this), so the actual
- * scraping now happens in GitHub Actions, which has ordinary internet
- * access; this function keeps the same validate-before-publish,
- * all-or-nothing contract the retired GitHub Actions auto-commit job and
- * the original Worker-does-its-own-fetching design both had. A failure
- * here leaves the last stored snapshot in KV untouched.
+ * Validate a canonical snapshot (or legacy triple payload) and, only if it
+ * passes, replace the stored snapshot in KV.
  */
 export async function ingestAll(kv, payloads) {
   const startedAt = new Date().toISOString();
   try {
-    validateAll(payloads);
-    await Promise.all(
-      Object.entries(KV_KEYS).map(([key, kvKey]) =>
-        kv.put(kvKey, JSON.stringify(payloads[key])),
+    const snapshot = validateAll(payloads);
+    const snapshotJson = JSON.stringify(snapshot);
+
+    const rebarLegacy = JSON.stringify({
+      fetchedAt: snapshot.fetchedAt,
+      sourceName: snapshot.sourceName,
+      sourceHome: snapshot.sourceHome,
+      taxRate: snapshot.taxRate,
+      categories:
+        snapshot.catalogs.find((c) => c.id === "rebar")?.categories ?? [],
+    });
+    const beamLegacy = JSON.stringify({
+      fetchedAt: snapshot.fetchedAt,
+      sourceName: snapshot.sourceName,
+      sourceHome: snapshot.sourceHome,
+      taxRate: snapshot.taxRate,
+      categories:
+        snapshot.catalogs.find((c) => c.id === "beam")?.categories ?? [],
+    });
+    const productLegacy = JSON.stringify({
+      fetchedAt: snapshot.fetchedAt,
+      sourceName: snapshot.sourceName,
+      sourceHome: snapshot.sourceHome,
+      taxRate: snapshot.taxRate,
+      catalogs: snapshot.catalogs.filter(
+        (c) => c.id !== "rebar" && c.id !== "beam",
       ),
-    );
+    });
+
+    await Promise.all([
+      kv.put(KV_KEYS.catalog, snapshotJson),
+      kv.put(KV_KEYS.rebar, rebarLegacy),
+      kv.put(KV_KEYS.beam, beamLegacy),
+      kv.put(KV_KEYS.product, productLegacy),
+    ]);
+
     const status = {
       ok: true,
       at: startedAt,
@@ -83,4 +123,5 @@ export async function ingestAll(kv, payloads) {
     return status;
   }
 }
+
 

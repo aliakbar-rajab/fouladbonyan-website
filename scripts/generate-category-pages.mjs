@@ -7,7 +7,6 @@ import { productGroups } from "../app/category-meta.ts";
 import {
   loadGroupCatalog,
   primeCatalogSnapshot,
-  snapshotTypeOf,
 } from "../app/group-catalog.ts";
 import { loadOverviewSummaries } from "../app/catalog-overview.ts";
 import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
@@ -28,19 +27,10 @@ const readJson = (path) => readFile(path, "utf8").then(JSON.parse);
 
 const homeCrumb = { name: "صفحه اصلی", url: `${SITE_URL}/` };
 
-async function loadSnapshots() {
-  const [rebar, beam, product] = await Promise.all([
-    readJson(resolve(dataDir, "rebar-prices.json")),
-    readJson(resolve(dataDir, "beam-prices.json")),
-    readJson(resolve(dataDir, "product-prices.json")),
-  ]);
-
-  const latestDate = [rebar, beam, product]
-    .map((snapshot) => snapshot.fetchedAt.slice(0, 10))
-    .sort()
-    .at(-1);
-
-  return { snapshots: { rebar, beam, product }, latestDate };
+async function loadSnapshotData() {
+  const snapshot = await readJson(resolve(dataDir, "catalog-prices.json"));
+  const latestDate = snapshot.fetchedAt.slice(0, 10);
+  return { snapshot, latestDate };
 }
 
 function buildHeroPreloadTag(group) {
@@ -73,15 +63,13 @@ function buildHeroPreloadTag(group) {
     />`;
 }
 
-const [baseHtml, { snapshots, latestDate }] = await Promise.all([
+const [baseHtml, { snapshot, latestDate }] = await Promise.all([
   readFile(resolve(distDir, "index.html"), "utf8"),
-  loadSnapshots(),
+  loadSnapshotData(),
 ]);
 
-// Prime the caches every prerender reads through.
-for (const [type, data] of Object.entries(snapshots)) {
-  primeCatalogSnapshot({ type, data });
-}
+// Prime the cache every prerender reads through.
+primeCatalogSnapshot(snapshot);
 
 /*
  * The mega menu renders from this small payload rather than from the price
@@ -111,14 +99,13 @@ const pages = [];
 
 for (const group of productGroups) {
   const catalog = await loadGroupCatalog(group.id);
-  const snapshotType = snapshotTypeOf(group.id);
   // A group is only as fresh as the snapshot it is served from.
   const lastmod = catalog.fetchedAt.slice(0, 10);
   const payloads = [
     menuPayload,
     {
       id: "initial-page-data",
-      data: { type: snapshotType, data: snapshots[snapshotType] },
+      data: snapshot,
     },
   ];
   const heroPreload = buildHeroPreloadTag(group);
@@ -128,6 +115,7 @@ for (const group of productGroups) {
   pages.push({
     outPath: [group.id],
     appProps: { initialCategory: group.id },
+
     lastmod,
     page: {
       title: group.seoTitle,

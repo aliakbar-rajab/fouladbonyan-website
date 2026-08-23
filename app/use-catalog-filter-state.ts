@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { getCategoryPricingState } from "./catalog-behavior.mjs";
-import { INITIAL_FACTORY_COUNT, type CatalogViewRequest } from "./catalog-types";
-import type { GroupCatalog } from "./group-catalog";
+import {
+  INITIAL_FACTORY_COUNT,
+  type CatalogViewRequest,
+  type GroupCatalog,
+} from "./catalog-types";
 
 export function useCatalogFilterState(
   catalog: GroupCatalog,

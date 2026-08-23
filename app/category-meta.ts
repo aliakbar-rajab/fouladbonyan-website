@@ -1,4 +1,12 @@
-import type { ProductCatalogId } from "./product-price-data";
+export type ProductCatalogId =
+  | "sheet"
+  | "profile"
+  | "pipe"
+  | "angle"
+  | "channel"
+  | "wire";
+
+export type ProductGroupId = "rebar" | "beam" | ProductCatalogId;
 
 export type ProductRow = {
   product: string;
@@ -9,8 +17,6 @@ export type ProductRow = {
   size?: string;
   searchText?: string;
 };
-
-export type ProductGroupId = "rebar" | "beam" | ProductCatalogId;
 
 export type ProductGroup = {
   id: ProductGroupId;

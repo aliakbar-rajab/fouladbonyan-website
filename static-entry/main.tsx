@@ -9,7 +9,7 @@ import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
-import { loadAllSnapshots, primeCatalogSnapshot } from "../app/group-catalog";
+import { loadCatalogSnapshot, primeCatalogSnapshot } from "../app/group-catalog";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
 import { isProductGroupId } from "../app/root-dataset";
@@ -82,8 +82,8 @@ async function resolveContent() {
     // snapshots lazily instead of falling back to the homepage for /guide/*.
     const reference: GuideReference =
       guideReference ??
-      (await loadAllSnapshots().then(({ rebar, beam, product }) =>
-        buildGuideReference(rebar, beam, product),
+      (await loadCatalogSnapshot().then((snapshot) =>
+        buildGuideReference(snapshot),
       ));
     const requested = rootElement.dataset.guide || pathSegments[1] || "";
     return (
@@ -93,6 +93,7 @@ async function resolveContent() {
       />
     );
   }
+
   return <App />;
 }
 

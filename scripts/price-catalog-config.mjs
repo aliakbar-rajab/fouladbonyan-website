@@ -144,3 +144,21 @@ export const productCatalogs = [
     ],
   },
 ];
+
+export const allCatalogConfigs = [
+  {
+    id: "rebar",
+    label: "میلگرد",
+    initialCategoryId: "ribbed",
+    sources: rebarSources,
+  },
+  {
+    id: "beam",
+    label: "تیرآهن",
+    initialCategoryId: "beam",
+    sources: beamSources,
+  },
+  ...productCatalogs,
+];
+
+

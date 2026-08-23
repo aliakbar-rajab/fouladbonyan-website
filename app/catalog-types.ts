@@ -1,3 +1,13 @@
+export type ProductCatalogId =
+  | "sheet"
+  | "profile"
+  | "pipe"
+  | "angle"
+  | "channel"
+  | "wire";
+
+export type ProductGroupId = "rebar" | "beam" | ProductCatalogId;
+
 /**
  * Shared contract for validated catalog snapshots and the view requests that
  * select their rows. Keep this free of React so loaders, quote estimates, and
@@ -58,13 +68,27 @@ export type CatalogCategory = {
   factories: CatalogFactory[];
 };
 
-export type CatalogPriceData = {
+export type GroupCatalog = {
+  id: ProductGroupId;
+  label: string;
+  initialCategoryId: string;
   fetchedAt: string;
   sourceName: string;
   sourceHome: string;
   taxRate: number;
   categories: CatalogCategory[];
 };
+
+export type CatalogSnapshot = {
+  fetchedAt: string;
+  sourceName: string;
+  sourceHome: string;
+  taxRate: number;
+  catalogs: GroupCatalog[];
+};
+
+/** @deprecated Use CatalogSnapshot */
+export type CatalogPriceData = CatalogSnapshot;
 
 export type CatalogViewRequest = {
   requestId: number;
@@ -74,3 +98,4 @@ export type CatalogViewRequest = {
 };
 
 export const INITIAL_FACTORY_COUNT = 6;
+

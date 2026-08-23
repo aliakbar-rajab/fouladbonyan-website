@@ -8,10 +8,7 @@
     },
     "scripts": {
         "dev": "vite",
-        "prices:update:rebar": "node scripts/fetch-rebar-prices.mjs",
-        "prices:update:beam": "node scripts/fetch-beam-prices.mjs",
-        "prices:update:products": "node scripts/fetch-product-prices.mjs",
-        "prices:update": "npm run prices:update:rebar && npm run prices:update:beam && npm run prices:update:products && npm run prices:validate",
+        "prices:update": "node scripts/fetch-catalog-prices.mjs && npm run prices:validate",
         "prices:pull": "node scripts/pull-price-data.mjs",
         "prices:refresh-and-publish": "node scripts/refresh-and-publish.mjs",
         "prices:validate": "node scripts/validate-price-data.mjs",

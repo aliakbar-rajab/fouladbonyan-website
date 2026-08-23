@@ -19,9 +19,11 @@ async function serveDataset(kv, kvKey) {
   });
 }
 
-const DATASET_ROUTES = new Map(
-  Object.values(KV_KEYS).map((kvKey) => [`/${kvKey}.json`, kvKey]),
-);
+const DATASET_ROUTES = new Map([
+  ...Object.values(KV_KEYS).map((kvKey) => [`/${kvKey}.json`, kvKey]),
+  ["/catalog-snapshot.json", KV_KEYS.catalog],
+]);
+
 
 function isAuthorized(request, env) {
   const expected = env.INGEST_TOKEN ? `Bearer ${env.INGEST_TOKEN}` : null;

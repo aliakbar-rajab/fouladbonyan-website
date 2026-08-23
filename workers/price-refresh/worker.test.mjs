@@ -59,6 +59,21 @@ async function buildValidPayloads(t) {
   return buildAllPayloads();
 }
 
+test("GET /catalog-prices.json serves the stored canonical snapshot", async () => {
+  const env = {
+    PRICE_DATA: fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"now","catalogs":[]}' }),
+  };
+  const response = await worker.fetch(
+    new Request("https://price.example/catalog-prices.json"),
+    env,
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    fetchedAt: "now",
+    catalogs: [],
+  });
+});
+
 test("GET /rebar-prices.json serves the stored snapshot", async () => {
   const env = { PRICE_DATA: fakeKv({ [KV_KEYS.rebar]: '{"fetchedAt":"now"}' }) };
   const response = await worker.fetch(new Request("https://price.example/rebar-prices.json"), env);

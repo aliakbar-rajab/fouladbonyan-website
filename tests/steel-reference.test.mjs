@@ -19,13 +19,17 @@ const readData = (name) =>
     JSON.parse,
   );
 
-const [rebarData, beamData, productData] = await Promise.all([
-  readData("rebar-prices.json"),
-  readData("beam-prices.json"),
-  readData("product-prices.json"),
-]);
+const snapshotData = await readData("catalog-prices.json");
+const rebarData = snapshotData.catalogs.find((c) => c.id === "rebar");
+const beamData = snapshotData.catalogs.find((c) => c.id === "beam");
+const productData = {
+  catalogs: snapshotData.catalogs.filter(
+    (c) => c.id !== "rebar" && c.id !== "beam",
+  ),
+};
+const reference = buildGuideReference(snapshotData);
 
-const reference = buildGuideReference(rebarData, beamData, productData);
+
 
 test("catalog numbers parse Persian slash decimals and reject non-values", () => {
   assert.equal(parseCatalogNumber("125"), 125);

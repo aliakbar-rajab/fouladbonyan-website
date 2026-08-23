@@ -11,21 +11,17 @@ import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-cache.ts";
 import {
   deriveSummaryFromRows,
-  validateCatalogPriceData,
-  validateProductPricePayload,
+  validateCatalogSnapshot,
 } from "../app/catalog-validation.mjs";
 import { filterProductGroups } from "../app/site-logic.mjs";
 
 const readJson = async (path) =>
   JSON.parse(await readFile(new URL(path, import.meta.url), "utf8"));
 
-const allCategories = ({ rebar, beam, products }) => [
-  ...rebar.categories.map((category) => ["rebar", category]),
-  ...beam.categories.map((category) => ["beam", category]),
-  ...products.catalogs.flatMap((catalog) =>
+const allCategories = (snapshot) =>
+  snapshot.catalogs.flatMap((catalog) =>
     catalog.categories.map((category) => [catalog.id, category]),
-  ),
-];
+  );
 
 const pricedRowsOf = (category) =>
   category.factories
@@ -33,27 +29,16 @@ const pricedRowsOf = (category) =>
     .filter((row) => row.price !== null);
 
 test("committed price payloads pass runtime semantic validation", async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("../app/data/rebar-prices.json"),
-    readJson("../app/data/beam-prices.json"),
-    readJson("../app/data/product-prices.json"),
-  ]);
-
-  assert.equal(validateCatalogPriceData(rebar), rebar);
-  assert.equal(validateCatalogPriceData(beam), beam);
-  assert.equal(validateProductPricePayload(products), products);
+  const snapshot = await readJson("../app/data/catalog-prices.json");
+  assert.equal(validateCatalogSnapshot(snapshot), snapshot);
 });
 
 test("F1: every published summary equals the rows it summarises", async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("../app/data/rebar-prices.json"),
-    readJson("../app/data/beam-prices.json"),
-    readJson("../app/data/product-prices.json"),
-  ]);
+  const snapshot = await readJson("../app/data/catalog-prices.json");
 
   // Relational, not absolute: the numbers change every refresh, the invariant
   // does not. A summary value the table cannot produce is the F1 defect.
-  for (const [group, category] of allCategories({ rebar, beam, products })) {
+  for (const [group, category] of allCategories(snapshot)) {
     const expected = deriveSummaryFromRows(pricedRowsOf(category));
     const where = `${group}/${category.id}`;
     assert.equal(category.summary.min, expected.min, `${where} summary.min`);
@@ -66,17 +51,17 @@ test("F1: every published summary equals the rows it summarises", async () => {
 });
 
 test("F1: validation rejects a summary that drifts from its rows", async () => {
-  const rebar = await readJson("../app/data/rebar-prices.json");
+  const snapshot = await readJson("../app/data/catalog-prices.json");
 
   // The pre-fix scrapers truncated to whole hundreds via floor(value/100)*100,
   // which understates any value that was not already a round hundred. Each of
   // the three fields must be caught on its own.
   for (const field of ["min", "max", "average"]) {
-    const drifted = structuredClone(rebar);
-    const summary = drifted.categories[0].summary;
+    const drifted = structuredClone(snapshot);
+    const summary = drifted.catalogs[0].categories[0].summary;
     summary[field] -= 50;
     assert.throws(
-      () => validateCatalogPriceData(drifted),
+      () => validateCatalogSnapshot(drifted),
       new RegExp(`summary\\.${field}`),
       `a summary.${field} that no row supports must be rejected`,
     );
@@ -84,24 +69,25 @@ test("F1: validation rejects a summary that drifts from its rows", async () => {
 
   // Guard the guard: the unmodified payload must still pass, otherwise the
   // rejections above prove nothing.
-  assert.equal(validateCatalogPriceData(rebar), rebar);
+  assert.equal(validateCatalogSnapshot(snapshot), snapshot);
 });
 
 test("F10: sourceUrl is scheme-checked like sourceHome, since it (not sourceHome) is rendered into an href", async () => {
-  const rebar = await readJson("../app/data/rebar-prices.json");
+  const snapshot = await readJson("../app/data/catalog-prices.json");
 
   for (const badUrl of ["javascript:alert(1)", "", "example.com"]) {
-    const tampered = structuredClone(rebar);
-    tampered.categories[0].sourceUrl = badUrl;
+    const tampered = structuredClone(snapshot);
+    tampered.catalogs[0].categories[0].sourceUrl = badUrl;
     assert.throws(
-      () => validateCatalogPriceData(tampered),
+      () => validateCatalogSnapshot(tampered),
       /sourceUrl/,
       `sourceUrl of ${JSON.stringify(badUrl)} must be rejected`,
     );
   }
 
-  assert.equal(validateCatalogPriceData(rebar), rebar);
+  assert.equal(validateCatalogSnapshot(snapshot), snapshot);
 });
+
 
 test("F3: a failed load is not cached, so the next attempt retries", async () => {
   let attempts = 0;
@@ -152,11 +138,11 @@ test("F3: concurrent callers of a failing load share a single attempt", async ()
 });
 
 test("known source ambiguities are represented honestly", async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("../app/data/rebar-prices.json"),
-    readJson("../app/data/beam-prices.json"),
-    readJson("../app/data/product-prices.json"),
-  ]);
+  const snapshot = await readJson("../app/data/catalog-prices.json");
+
+  const rebar = snapshot.catalogs.find((c) => c.id === "rebar");
+  const beam = snapshot.catalogs.find((c) => c.id === "beam");
+  const profile = snapshot.catalogs.find((c) => c.id === "profile");
 
   const correctedRow = rebar.categories
     .flatMap((category) => category.factories)
@@ -165,7 +151,6 @@ test("known source ambiguities are represented honestly", async () => {
   assert.equal(correctedRow.title, "میلگرد 32 نیشابور آجدار A3");
   assert.equal(correctedRow.size, "32");
 
-  const profile = products.catalogs.find((catalog) => catalog.id === "profile");
   assert.equal(
     profile.categories.find((category) => category.id === "box-profile")
       .groupingLabel,
@@ -182,7 +167,7 @@ test("known source ambiguities are represented honestly", async () => {
   );
   assert.deepEqual(new Set(beamPricing.units), new Set(["شاخه", "کیلوگرم"]));
 
-  const unpriced = products.catalogs
+  const unpriced = snapshot.catalogs
     .flatMap((catalog) => catalog.categories)
     .filter(
       (category) =>

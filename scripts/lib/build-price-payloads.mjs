@@ -1,7 +1,5 @@
 import {
-  rebarSources,
-  beamSources,
-  productCatalogs,
+  allCatalogConfigs,
   productDetailKeys,
 } from "../price-catalog-config.mjs";
 import {
@@ -9,72 +7,35 @@ import {
   fetchCategoriesWithDiagnostics,
   sourceUrl,
 } from "./catalog-source.mjs";
+import { validateCatalogSnapshot } from "../../app/catalog-validation.mjs";
 
-import {
-  validateCatalogPriceData,
-  validateProductPricePayload,
-} from "../../app/catalog-validation.mjs";
-
-// The one place that assembles a full, validated rebar/beam/product payload
-// from the live source. Used by the local manual scripts
-// (scripts/fetch-*-prices.mjs, which write the result to app/data/*.json)
-// and by scripts/refresh-and-publish.mjs (which the scheduled GitHub Actions
-// relay runs, POSTing the result to the Cloudflare Worker instead).
-export async function buildCatalogPayload(sources, expectedCategoryIds, options = {}) {
-  const {
-    fallbackPayload,
-    fallbackCategories = fallbackPayload?.categories ?? [],
-    fetchImpl,
-    attempts,
-    limit,
-    onWarning,
-  } = options;
-
-  const resolved = sources.map((source) => ({
-    ...source,
-    url: sourceUrl(source.slug),
-  }));
-
-  const { categories, diagnostics } = await fetchCategoriesWithDiagnostics(resolved, {
-    fallbackCategories,
-    fetchImpl,
-    attempts,
-    limit,
-    onWarning,
-  });
-
-  const payload = {
-    fetchedAt: new Date().toISOString(),
-    ...SOURCE_ENVELOPE,
-    categories,
+function resolveSource(raw) {
+  return {
+    id: raw.id,
+    label: raw.label,
+    slug: raw.slug,
+    url: sourceUrl(raw.slug),
+    minimumItems: raw.minimumItems,
+    deriveSize: raw.deriveSize,
+    specificationKey:
+      raw.specificationKey ??
+      (raw.groupingLabel === "گرید" ? "گرید" : "ضخامت"),
+    specificationLabel: raw.specificationLabel,
+    groupingLabel: raw.groupingLabel ?? "کارخانه",
+    detailKeys: raw.detailKeys ?? productDetailKeys,
   };
-
-  validateCatalogPriceData(payload, { expectedCategoryIds });
-  return { payload, diagnostics };
 }
 
-export async function buildRebarPayload(options = {}) {
-  const { payload } = await buildCatalogPayload(
-    rebarSources,
-    rebarSources.map((source) => source.id),
-    options,
-  );
-  return payload;
-}
-
-export async function buildBeamPayload(options = {}) {
-  const { payload } = await buildCatalogPayload(
-    beamSources,
-    beamSources.map((source) => source.id),
-    options,
-  );
-  return payload;
-}
-
-async function buildProductPayloadInternal(options = {}) {
+/**
+ * The single canonical place that assembles a full, validated CatalogSnapshot
+ * from the live market source. Used by both local fetch scripts
+ * (scripts/fetch-catalog-prices.mjs) and the scheduled relay
+ * (scripts/refresh-and-publish.mjs).
+ */
+export async function buildCatalogSnapshot(options = {}) {
   const {
-    fallbackPayload,
-    fallbackCategories = fallbackPayload?.catalogs?.flatMap(
+    fallbackSnapshot,
+    fallbackCategories = fallbackSnapshot?.catalogs?.flatMap(
       (catalog) => catalog.categories ?? [],
     ) ?? [],
     fetchImpl,
@@ -83,34 +44,28 @@ async function buildProductPayloadInternal(options = {}) {
     onWarning,
   } = options;
 
-  const source = (raw) => ({
-    id: raw.id,
-    label: raw.label,
-    url: sourceUrl(raw.slug),
-    specificationKey: raw.specificationKey ?? "ضخامت",
-    groupingLabel: raw.groupingLabel ?? "کارخانه",
-    detailKeys: productDetailKeys,
-  });
-
-  const catalogs = productCatalogs.map((catalog) => ({
-    ...catalog,
-    sources: catalog.sources.map(source),
+  const catalogs = allCatalogConfigs.map((catalog) => ({
+    id: catalog.id,
+    label: catalog.label,
+    initialCategoryId: catalog.initialCategoryId,
+    sources: catalog.sources.map(resolveSource),
   }));
 
   const allSources = catalogs.flatMap((catalog) => catalog.sources);
-  const { categories: fetched, diagnostics } = await fetchCategoriesWithDiagnostics(allSources, {
-    fallbackCategories,
-    fetchImpl,
-    attempts,
-    limit,
-    onWarning,
-  });
+  const { categories: fetched, diagnostics } =
+    await fetchCategoriesWithDiagnostics(allSources, {
+      fallbackCategories,
+      fetchImpl,
+      attempts,
+      limit,
+      onWarning,
+    });
 
   const categoriesById = new Map(
     fetched.map((category) => [category.id, category]),
   );
 
-  const payload = {
+  const snapshot = {
     fetchedAt: new Date().toISOString(),
     ...SOURCE_ENVELOPE,
     catalogs: catalogs.map((catalog) => ({
@@ -121,79 +76,61 @@ async function buildProductPayloadInternal(options = {}) {
     })),
   };
 
-  validateProductPricePayload(payload, {
+  validateCatalogSnapshot(snapshot, {
     expectedCatalogs: catalogs.map((catalog) => ({
       id: catalog.id,
       categoryIds: catalog.sources.map((item) => item.id),
     })),
   });
 
-  return { payload, diagnostics };
-}
-
-export async function buildProductPayload(options = {}) {
-  const { payload } = await buildProductPayloadInternal(options);
-  return payload;
-}
-
-/** Fetch and validate all three datasets with fallback support. */
-export async function buildAllPayloads({
-  fallbacks = {},
-  fetchImpl,
-  attempts,
-  limit,
-  onWarning,
-} = {}) {
-  const [rebarRes, beamRes, productRes] = await Promise.all([
-    buildCatalogPayload(rebarSources, rebarSources.map((s) => s.id), {
-      fallbackPayload: fallbacks.rebar,
-      fetchImpl,
-      attempts,
-      limit,
-      onWarning,
-    }),
-    buildCatalogPayload(beamSources, beamSources.map((s) => s.id), {
-      fallbackPayload: fallbacks.beam,
-      fetchImpl,
-      attempts,
-      limit,
-      onWarning,
-    }),
-    buildProductPayloadInternal({
-      fallbackPayload: fallbacks.product,
-      fetchImpl,
-      attempts,
-      limit,
-      onWarning,
-    }),
-  ]);
-
-  const rebar = rebarRes.payload;
-  const beam = beamRes.payload;
-  const product = productRes.payload;
-
-  const rebarDiag = rebarRes.diagnostics ?? { total: 0, freshCount: 0, fallbackCount: 0, warnings: [] };
-  const beamDiag = beamRes.diagnostics ?? { total: 0, freshCount: 0, fallbackCount: 0, warnings: [] };
-  const productDiag = productRes.diagnostics ?? { total: 0, freshCount: 0, fallbackCount: 0, warnings: [] };
-
-  const diagnostics = {
-    totalCategories: rebarDiag.total + beamDiag.total + productDiag.total,
-    freshCategories: rebarDiag.freshCount + beamDiag.freshCount + productDiag.freshCount,
-    fallbackCategories: rebarDiag.fallbackCount + beamDiag.fallbackCount + productDiag.fallbackCount,
-    warnings: [
-      ...(rebarDiag.warnings ?? []),
-      ...(beamDiag.warnings ?? []),
-      ...(productDiag.warnings ?? []),
-    ],
-    datasets: {
-      rebar: rebarDiag,
-      beam: beamDiag,
-      product: productDiag,
-    },
+  const enrichedDiagnostics = {
+    totalCategories: diagnostics.total,
+    freshCategories: diagnostics.freshCount,
+    fallbackCategories: diagnostics.fallbackCount,
+    warnings: diagnostics.warnings ?? [],
   };
 
-  return { rebar, beam, product, diagnostics };
+  return { snapshot, diagnostics: enrichedDiagnostics };
 }
+
+/** @deprecated Use buildCatalogSnapshot */
+export async function buildAllPayloads(options = {}) {
+  const { fallbacks = {}, ...rest } = options;
+  const fallbackCategories = [
+    ...(fallbacks.rebar?.categories ?? []),
+    ...(fallbacks.beam?.categories ?? []),
+    ...(fallbacks.product?.catalogs?.flatMap((c) => c.categories ?? []) ?? []),
+    ...(fallbacks.snapshot?.catalogs?.flatMap((c) => c.categories ?? []) ?? []),
+  ];
+
+  const { snapshot, diagnostics } = await buildCatalogSnapshot({
+    fallbackCategories,
+    ...rest,
+  });
+
+  const rebar = {
+    ...SOURCE_ENVELOPE,
+    fetchedAt: snapshot.fetchedAt,
+    categories:
+      snapshot.catalogs.find((c) => c.id === "rebar")?.categories ?? [],
+  };
+  const beam = {
+    ...SOURCE_ENVELOPE,
+    fetchedAt: snapshot.fetchedAt,
+    categories:
+      snapshot.catalogs.find((c) => c.id === "beam")?.categories ?? [],
+  };
+  const product = {
+    ...SOURCE_ENVELOPE,
+    fetchedAt: snapshot.fetchedAt,
+    catalogs: snapshot.catalogs.filter(
+      (c) => c.id !== "rebar" && c.id !== "beam",
+    ),
+  };
+
+  return { snapshot, rebar, beam, product, diagnostics };
+}
+
 
 
 

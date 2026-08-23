@@ -17,20 +17,12 @@ export const readJson = (path) =>
  * test can assert against the same data the build prerendered from.
  */
 export const loadGroupCatalogs = async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("rebar-prices.json"),
-    readJson("beam-prices.json"),
-    readJson("product-prices.json"),
-  ]);
-
-  return [
-    { id: "rebar", categories: rebar.categories },
-    { id: "beam", categories: beam.categories },
-    ...products.catalogs.map((catalog) => ({
-      id: catalog.id,
-      categories: catalog.categories,
-    })),
-  ];
+  const snapshot = await readJson("catalog-prices.json");
+  return snapshot.catalogs.map((catalog) => ({
+    id: catalog.id,
+    label: catalog.label,
+    categories: catalog.categories,
+  }));
 };
 
 /** The BreadcrumbList JSON-LD a generated page emits, parsed. */

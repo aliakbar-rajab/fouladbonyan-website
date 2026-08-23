@@ -77,40 +77,21 @@ test("category landing pages have unique metadata, a CSP-safe initial tab, and s
 });
 
 test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs, SSG prerendered rows, and sitemap entries", async () => {
-  const [rebar, beam, products] = await Promise.all([
-    readJson("rebar-prices.json"),
-    readJson("beam-prices.json"),
-    readJson("product-prices.json"),
-  ]);
+  const snapshot = await readJson("catalog-prices.json");
 
   const subcategoryList = [];
-  for (const sub of rebar.categories) {
-    subcategoryList.push({
-      groupId: "rebar",
-      groupLabel: "میلگرد",
-      id: sub.id,
-      label: sub.label,
-    });
-  }
-  for (const sub of beam.categories) {
-    subcategoryList.push({
-      groupId: "beam",
-      groupLabel: "تیرآهن",
-      id: sub.id,
-      label: sub.label,
-    });
-  }
-  for (const cat of products.catalogs) {
-    const group = productGroups.find((g) => g.id === cat.id);
-    for (const sub of cat.categories) {
+  for (const catalog of snapshot.catalogs) {
+    const group = productGroups.find((g) => g.id === catalog.id);
+    for (const sub of catalog.categories) {
       subcategoryList.push({
-        groupId: cat.id,
-        groupLabel: group?.label ?? cat.id,
+        groupId: catalog.id,
+        groupLabel: group?.label ?? catalog.id,
         id: sub.id,
         label: sub.label,
       });
     }
   }
+
 
   assert.equal(subcategoryList.length, 46, "Expected exactly 46 product subcategories");
 

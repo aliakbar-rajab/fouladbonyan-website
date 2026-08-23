@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { buildAllPayloads } from "./lib/build-price-payloads.mjs";
+import { buildCatalogSnapshot } from "./lib/build-price-payloads.mjs";
 import { publishPayloads } from "./lib/publish-price-payloads.mjs";
 
 // Entry point for the scheduled GitHub Actions relay
-// (.github/workflows/price-refresh.yml): fetch + validate the three
-// datasets from the live source, then hand them to the Cloudflare Worker,
-// which validates them again and, only if they pass, stores them and
+// (.github/workflows/price-refresh.yml): fetch + validate the canonical
+// catalog snapshot from the live source, then hand it to the Cloudflare Worker,
+// which validates it again and, only if it passes, stores it and
 // triggers a Pages rebuild. This process never touches git -- there is
 // nothing here that reads or writes app/data, and nothing that commits or
 // pushes.
@@ -22,10 +22,10 @@ if (!endpoint || !token) {
 
 const dataDir = resolve(import.meta.dirname, "..", "app", "data");
 
-async function loadFallbackDataset(name, fileName) {
+async function loadFallbackSnapshot() {
   // 1. Try to load from Cloudflare Worker (latest published snapshot)
   try {
-    const response = await fetch(`${endpoint}/${name}.json`, {
+    const response = await fetch(`${endpoint}/catalog-prices.json`, {
       signal: AbortSignal.timeout(10_000),
     });
     if (response.ok) {
@@ -37,27 +37,22 @@ async function loadFallbackDataset(name, fileName) {
 
   // 2. Fall back to local committed seed data in repository
   try {
-    const content = await readFile(resolve(dataDir, fileName), "utf8");
+    const content = await readFile(
+      resolve(dataDir, "catalog-prices.json"),
+      "utf8",
+    );
     return JSON.parse(content);
   } catch {
     return null;
   }
 }
 
-const [rebarFallback, beamFallback, productFallback] = await Promise.all([
-  loadFallbackDataset("rebar-prices", "rebar-prices.json"),
-  loadFallbackDataset("beam-prices", "beam-prices.json"),
-  loadFallbackDataset("product-prices", "product-prices.json"),
-]);
-
-const fallbacks = {
-  rebar: rebarFallback,
-  beam: beamFallback,
-  product: productFallback,
-};
+const fallbackSnapshot = await loadFallbackSnapshot();
 
 console.log("در حال دریافت و اعتبارسنجی قیمت‌ها از منبع...");
-const { rebar, beam, product, diagnostics } = await buildAllPayloads({ fallbacks });
+const { snapshot, diagnostics } = await buildCatalogSnapshot({
+  fallbackSnapshot,
+});
 
 console.log(
   `آمار بروزرسانی: ${diagnostics.freshCategories.toLocaleString("fa-IR")} دسته جدید، ${diagnostics.fallbackCategories.toLocaleString("fa-IR")} دسته از نسخه پشتیبان معتبر.`,
@@ -71,8 +66,11 @@ if (diagnostics.warnings.length > 0) {
 const result = await publishPayloads({
   endpoint,
   token,
-  payloads: { rebar, beam, product, diagnostics },
+  payloads: { snapshot, diagnostics },
 });
 
-console.log(`داده‌های قیمت با موفقیت به Cloudflare ارسال و منتشر شد: ${JSON.stringify(result)}`);
+console.log(
+  `داده‌های قیمت با موفقیت به Cloudflare ارسال و منتشر شد: ${JSON.stringify(result)}`,
+);
+
 

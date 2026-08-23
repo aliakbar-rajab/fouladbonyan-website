@@ -206,10 +206,70 @@ function validateEnvelope(payload, location) {
   );
 }
 
-export function validateCatalogPriceData(
+export function validateCatalogSnapshot(
   payload,
-  { expectedCategoryIds } = {},
+  { expectedCatalogs } = {},
 ) {
+  validateEnvelope(payload, "catalog");
+  assert(Array.isArray(payload.catalogs), "catalog.catalogs آرایه نیست");
+  assert(payload.catalogs.length > 0, "catalog.catalogs خالی است");
+  const catalogIds = new Set();
+  payload.catalogs.forEach((catalog, catalogIndex) => {
+    const location = `catalog.catalogs[${catalogIndex}]`;
+    assert(isRecord(catalog), `${location} شیء نیست`);
+    assert(
+      typeof catalog.id === "string" && catalog.id.trim(),
+      `${location}.id خالی است`,
+    );
+    assert(!catalogIds.has(catalog.id), `شناسه کاتالوگ ${catalog.id} تکراری است`);
+    catalogIds.add(catalog.id);
+    assert(
+      typeof catalog.label === "string" && catalog.label.trim(),
+      `${location}.label خالی است`,
+    );
+    assert(
+      typeof catalog.initialCategoryId === "string",
+      `${location}.initialCategoryId معتبر نیست`,
+    );
+    assert(Array.isArray(catalog.categories), `${location}.categories آرایه نیست`);
+    assert(catalog.categories.length > 0, `${location}.categories خالی است`);
+    catalog.categories.forEach((category, categoryIndex) =>
+      validateCategory(category, `${location}.categories[${categoryIndex}]`),
+    );
+    assert(
+      catalog.categories.some(
+        (category) => category.id === catalog.initialCategoryId,
+      ),
+      `${location}.initialCategoryId در دسته‌ها وجود ندارد`,
+    );
+  });
+
+  if (expectedCatalogs) {
+    assert(
+      payload.catalogs.length === expectedCatalogs.length,
+      "تعداد کاتالوگ‌ها با قرارداد منبع همخوان نیست",
+    );
+    expectedCatalogs.forEach((expected, index) => {
+      const actual = payload.catalogs[index];
+      assert(actual?.id === expected.id, `کاتالوگ ${expected.id} جابه‌جا شده است`);
+      assert(
+        actual.categories.length === expected.categoryIds.length &&
+          expected.categoryIds.every(
+            (id, categoryIndex) =>
+              actual.categories[categoryIndex]?.id === id,
+          ),
+        `دسته‌های کاتالوگ ${expected.id} با قرارداد منبع همخوان نیست`,
+      );
+    });
+  }
+  return payload;
+}
+
+/** @deprecated Use validateCatalogSnapshot */
+export function validateCatalogPriceData(payload, { expectedCategoryIds } = {}) {
+  if (Array.isArray(payload?.catalogs)) {
+    return validateCatalogSnapshot(payload);
+  }
   validateEnvelope(payload, "catalog");
   assert(Array.isArray(payload.categories), "catalog.categories آرایه نیست");
   assert(payload.categories.length > 0, "catalog.categories خالی است");
@@ -227,6 +287,9 @@ export function validateCatalogPriceData(
   }
   return payload;
 }
+
+/** @deprecated Use validateCatalogSnapshot */
+export const validateProductPricePayload = validateCatalogSnapshot;
 
 const MARKET_ITEM_IDS = ["gold", "usd", "tether", "eur"];
 
@@ -281,61 +344,3 @@ export function validateMarketPriceData(payload) {
   return payload;
 }
 
-export function validateProductPricePayload(
-  payload,
-  { expectedCatalogs } = {},
-) {
-  validateEnvelope(payload, "products");
-  assert(Array.isArray(payload.catalogs), "products.catalogs آرایه نیست");
-  assert(payload.catalogs.length > 0, "products.catalogs خالی است");
-  const catalogIds = new Set();
-  payload.catalogs.forEach((catalog, catalogIndex) => {
-    const location = `products.catalogs[${catalogIndex}]`;
-    assert(isRecord(catalog), `${location} شیء نیست`);
-    assert(
-      typeof catalog.id === "string" && catalog.id.trim(),
-      `${location}.id خالی است`,
-    );
-    assert(!catalogIds.has(catalog.id), `شناسه کاتالوگ ${catalog.id} تکراری است`);
-    catalogIds.add(catalog.id);
-    assert(
-      typeof catalog.label === "string" && catalog.label.trim(),
-      `${location}.label خالی است`,
-    );
-    assert(
-      typeof catalog.initialCategoryId === "string",
-      `${location}.initialCategoryId معتبر نیست`,
-    );
-    assert(Array.isArray(catalog.categories), `${location}.categories آرایه نیست`);
-    assert(catalog.categories.length > 0, `${location}.categories خالی است`);
-    catalog.categories.forEach((category, categoryIndex) =>
-      validateCategory(category, `${location}.categories[${categoryIndex}]`),
-    );
-    assert(
-      catalog.categories.some(
-        (category) => category.id === catalog.initialCategoryId,
-      ),
-      `${location}.initialCategoryId در دسته‌ها وجود ندارد`,
-    );
-  });
-
-  if (expectedCatalogs) {
-    assert(
-      payload.catalogs.length === expectedCatalogs.length,
-      "تعداد کاتالوگ‌ها با قرارداد منبع همخوان نیست",
-    );
-    expectedCatalogs.forEach((expected, index) => {
-      const actual = payload.catalogs[index];
-      assert(actual?.id === expected.id, `کاتالوگ ${expected.id} جابه‌جا شده است`);
-      assert(
-        actual.categories.length === expected.categoryIds.length &&
-          expected.categoryIds.every(
-            (id, categoryIndex) =>
-              actual.categories[categoryIndex]?.id === id,
-          ),
-        `دسته‌های کاتالوگ ${expected.id} با قرارداد منبع همخوان نیست`,
-      );
-    });
-  }
-  return payload;
-}

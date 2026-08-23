@@ -149,7 +149,10 @@ test("large live catalogs are split out of the initial JavaScript", async () => 
     mainStats.size < 500_000,
     `initial JavaScript is ${mainStats.size.toLocaleString()} bytes`,
   );
-  assert.ok(javascriptFiles.length >= 4);
+  assert.ok(
+    javascriptFiles.length >= 2,
+    `expected at least 2 JS files (entry + lazy catalog chunk), found ${javascriptFiles.length}`,
+  );
   const lazyJavaScript = (
     await Promise.all(
       javascriptFiles

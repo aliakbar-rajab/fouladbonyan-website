@@ -16,8 +16,12 @@
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
 import { toAsciiDigits } from "./site-logic.mjs";
-import type { CatalogCategory, CatalogPriceData } from "./catalog-types";
-import type { ProductPricePayload } from "./product-price-data";
+import type {
+  CatalogCategory,
+  CatalogSnapshot,
+  GroupCatalog,
+} from "./catalog-types";
+
 
 export type RebarWeightRow = {
   size: string;
@@ -174,7 +178,9 @@ function buildProfile(
  */
 const REBAR_WEIGHT_SUBCATALOGS = ["ribbed", "simple"] as const;
 
-function buildRebarTables(rebar: CatalogPriceData): RebarWeightTable[] {
+function buildRebarTables(rebar: {
+  categories: CatalogCategory[];
+}): RebarWeightTable[] {
   const tables: RebarWeightTable[] = [];
 
   for (const id of REBAR_WEIGHT_SUBCATALOGS) {
@@ -226,7 +232,9 @@ function buildRebarTables(rebar: CatalogPriceData): RebarWeightTable[] {
  * the same nominal size — which is the fact worth publishing. Rows without a
  * stated weight are dropped instead of being filled in from a formula.
  */
-function buildBeamTable(beam: CatalogPriceData): BeamWeightTable {
+function buildBeamTable(beam: {
+  categories: CatalogCategory[];
+}): BeamWeightTable {
   const category = beam.categories.find((item) => item.id === "beam");
   const missingWeightLabels = beam.categories
     .filter(
@@ -353,26 +361,70 @@ function buildUnitUsage(
     }));
 }
 
+function normalizeSnapshotInput(
+  first: CatalogSnapshot | { categories: CatalogCategory[] },
+  second?: { categories: CatalogCategory[] },
+  third?: { catalogs: GroupCatalog[] },
+): CatalogSnapshot {
+  if (first && "catalogs" in first && Array.isArray(first.catalogs)) {
+    return first as CatalogSnapshot;
+  }
+  const rebarCategories = (first as { categories?: CatalogCategory[] })?.categories ?? [];
+  const beamCategories = (second as { categories?: CatalogCategory[] })?.categories ?? [];
+  const productCatalogs = (third as { catalogs?: GroupCatalog[] })?.catalogs ?? [];
+
+  return {
+    fetchedAt:
+      (first as { fetchedAt?: string })?.fetchedAt ||
+      (second as { fetchedAt?: string })?.fetchedAt ||
+      "",
+    sourceName: (first as { sourceName?: string })?.sourceName || "فولاد ایرانیان",
+    sourceHome:
+      (first as { sourceHome?: string })?.sourceHome ||
+      "https://www.fooladiranian.com/",
+    taxRate: (first as { taxRate?: number })?.taxRate ?? 0.1,
+    catalogs: [
+      {
+        id: "rebar",
+        label: "میلگرد",
+        initialCategoryId: "ribbed",
+        fetchedAt: (first as { fetchedAt?: string })?.fetchedAt || "",
+        sourceName: (first as { sourceName?: string })?.sourceName || "",
+        sourceHome: (first as { sourceHome?: string })?.sourceHome || "",
+        taxRate: (first as { taxRate?: number })?.taxRate ?? 0.1,
+        categories: rebarCategories,
+      },
+      {
+        id: "beam",
+        label: "تیرآهن",
+        initialCategoryId: "beam",
+        fetchedAt: (second as { fetchedAt?: string })?.fetchedAt || "",
+        sourceName: (second as { sourceName?: string })?.sourceName || "",
+        sourceHome: (second as { sourceHome?: string })?.sourceHome || "",
+        taxRate: (second as { taxRate?: number })?.taxRate ?? 0.1,
+        categories: beamCategories,
+      },
+      ...productCatalogs,
+    ],
+  };
+}
+
 export function buildGuideReference(
-  rebar: CatalogPriceData,
-  beam: CatalogPriceData,
-  products: ProductPricePayload,
+  snapshotOrRebar: CatalogSnapshot | { categories: CatalogCategory[] },
+  maybeBeam?: { categories: CatalogCategory[] },
+  maybeProducts?: { catalogs: GroupCatalog[] },
 ): GuideReference {
+  const snapshot = normalizeSnapshotInput(
+    snapshotOrRebar,
+    maybeBeam,
+    maybeProducts,
+  );
+  const rebarCatalog = snapshot.catalogs.find((c) => c.id === "rebar");
+  const beamCatalog = snapshot.catalogs.find((c) => c.id === "beam");
+
   const entries: { profile: CatalogProfile; category: CatalogCategory }[] = [];
 
-  for (const category of rebar.categories) {
-    entries.push({
-      profile: buildProfile(category, "rebar", "میلگرد"),
-      category,
-    });
-  }
-  for (const category of beam.categories) {
-    entries.push({
-      profile: buildProfile(category, "beam", "تیرآهن"),
-      category,
-    });
-  }
-  for (const catalog of products.catalogs) {
+  for (const catalog of snapshot.catalogs) {
     for (const category of catalog.categories) {
       entries.push({
         profile: buildProfile(category, catalog.id, catalog.label),
@@ -381,21 +433,32 @@ export function buildGuideReference(
     }
   }
 
+  const allCategories = snapshot.catalogs.flatMap((c) => c.categories);
   const sourceDateLabel =
-    [...rebar.categories, ...beam.categories]
-      .map((category) => category.summary.date)
-      .find(Boolean) ?? "";
-  const sourceDateIso = rebar.fetchedAt || beam.fetchedAt;
+    allCategories.map((category) => category.summary.date).find(Boolean) ?? "";
+  const sourceDateIso = snapshot.fetchedAt;
 
   return {
     sourceDateLabel,
     sourceDateIso,
-    rebarTables: buildRebarTables(rebar),
-    beamTable: buildBeamTable(beam),
+    rebarTables: rebarCatalog ? buildRebarTables(rebarCatalog) : [],
+    beamTable: beamCatalog
+      ? buildBeamTable(beamCatalog)
+      : {
+          id: "beam",
+          label: "تیرآهن",
+          href: "/beam/beam/",
+          rows: [],
+          missingWeightLabels: [],
+        },
     profiles: entries
-      .filter((entry) => entry.profile.groupId === "rebar" || entry.profile.groupId === "beam")
+      .filter(
+        (entry) =>
+          entry.profile.groupId === "rebar" || entry.profile.groupId === "beam",
+      )
       .map((entry) => entry.profile),
     unitUsage: buildUnitUsage(entries),
   };
 }
+
 

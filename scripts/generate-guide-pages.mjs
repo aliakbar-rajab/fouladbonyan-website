@@ -23,14 +23,13 @@ const homeCrumb = { name: "صفحه اصلی", url: `${SITE_URL}/` };
 const indexUrl = `${SITE_URL}${GUIDE_BASE_PATH}`;
 const indexCrumb = { name: guideIndex.title, url: indexUrl };
 
-const [baseHtml, rebar, beam, products] = await Promise.all([
+const [baseHtml, snapshot] = await Promise.all([
   readFile(resolve(distDir, "index.html"), "utf8"),
-  readJson(resolve(dataDir, "rebar-prices.json")),
-  readJson(resolve(dataDir, "beam-prices.json")),
-  readJson(resolve(dataDir, "product-prices.json")),
+  readJson(resolve(dataDir, "catalog-prices.json")),
 ]);
 
-const reference = buildGuideReference(rebar, beam, products);
+const reference = buildGuideReference(snapshot);
+
 
 const pages = [
   {

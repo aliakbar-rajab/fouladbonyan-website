@@ -23,10 +23,9 @@ const readData = (name) =>
   );
 
 const reference = buildGuideReference(
-  await readData("rebar-prices.json"),
-  await readData("beam-prices.json"),
-  await readData("product-prices.json"),
+  await readData("catalog-prices.json"),
 );
+
 
 afterEach(cleanup);
 
