@@ -268,17 +268,20 @@
 
 .legal-confirmation label {
   display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding-block: 0.25rem;
   color: #37312a;
   font-weight: 800;
+  cursor: pointer;
 }
 
 .legal-confirmation input {
   flex: none;
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-top: 0.3rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
   accent-color: #8c6800;
 }
 

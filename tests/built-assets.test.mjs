@@ -218,8 +218,8 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
   const homeHtml = await readDist("index.html");
   assert.match(
     homeHtml,
-    /<link[\s\S]*?id="hero-image-preload"[\s\S]*?href="\/categories\/hero-rebar-1680\.webp"[\s\S]*?imagesrcset="[^"]*"[\s\S]*?imagesizes="100vw"[\s\S]*?fetchpriority="high"\s*\/?>/,
-    "Homepage head must preload active hero WebP variant with imagesrcset",
+    /<link[\s\S]*?id="hero-image-preload"[\s\S]*?href="\/categories\/hero-rebar-1680\.(webp|avif)"[\s\S]*?imagesrcset="[^"]*"[\s\S]*?imagesizes="100vw"[\s\S]*?fetchpriority="high"\s*\/?>/,
+    "Homepage head must preload active hero variant with imagesrcset",
   );
   assert.match(
     homeHtml,
@@ -250,7 +250,7 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
     assert.match(
       catHtml,
       new RegExp(
-        `<link[\\s\\S]*?id="hero-image-preload"[\\s\\S]*?href="${heroBase}-1680\\.webp"`,
+        `<link[\\s\\S]*?id="hero-image-preload"[\\s\\S]*?href="${heroBase}-1680\\.(webp|avif)"`,
       ),
       `${group.id} must have hero-image-preload link in head`,
     );

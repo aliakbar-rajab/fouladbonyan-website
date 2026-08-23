@@ -2,11 +2,11 @@ import { productGroups, type ProductGroupId } from "./category-meta";
 import { getCategoryImageSources } from "./image-utils";
 
 interface CategoryGridProps {
-  onSelectGroup: (groupId: ProductGroupId) => void;
+  onSelectGroup?: (groupId: ProductGroupId) => void;
   activeGroup: ProductGroupId;
 }
 
-export function CategoryGrid({ onSelectGroup, activeGroup }: CategoryGridProps) {
+export function CategoryGrid({ activeGroup }: CategoryGridProps) {
   return (
     <div className="price-family-navigator" id="products">
       <div className="price-family-heading">
@@ -22,10 +22,6 @@ export function CategoryGrid({ onSelectGroup, activeGroup }: CategoryGridProps) 
               href={`/${group.id}/`}
               key={group.id}
               aria-current={group.id === activeGroup ? "true" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                onSelectGroup(group.id);
-              }}
             >
               <picture>
                 <source

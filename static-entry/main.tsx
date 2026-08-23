@@ -12,6 +12,7 @@ import { buildOrganizationStructuredData } from "../app/site-config";
 import { loadAllSnapshots, primeCatalogSnapshot } from "../app/group-catalog";
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
+import { isProductGroupId } from "../app/root-dataset";
 import { readJsonScript } from "../app/read-json-script";
 import "../app/globals.css";
 
@@ -52,6 +53,12 @@ const pathSegments = window.location.pathname
 const pageName = rootElement.dataset.page || pathSegments[0] || "";
 const isOrganizationPage = !pageName || pageName === "about";
 
+const isHeroPage = !pageName || isProductGroupId(pageName);
+const heroPreloadLink = document.getElementById("hero-image-preload");
+if (heroPreloadLink && !isHeroPage) {
+  heroPreloadLink.remove();
+}
+
 const organizationJsonLd = document.getElementById(
   "organization-structured-data",
 );
@@ -73,7 +80,7 @@ async function resolveContent() {
     // Production pages carry a build-time reference payload. The Vite
     // development server has no prerender step, so load the same validated
     // snapshots lazily instead of falling back to the homepage for /guide/*.
-    const reference =
+    const reference: GuideReference =
       guideReference ??
       (await loadAllSnapshots().then(({ rebar, beam, product }) =>
         buildGuideReference(rebar, beam, product),

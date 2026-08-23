@@ -53,8 +53,9 @@ function buildHeroPreloadTag(group) {
       id="hero-image-preload"
       rel="preload"
       as="image"
-      href="${base}-1680.webp"
-      imagesrcset="${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1280.webp 1280w, ${base}-1680.webp 1672w"
+      type="image/avif"
+      href="${base}-1680.avif"
+      imagesrcset="${base}-640.avif 640w, ${base}-960.avif 960w, ${base}-1280.avif 1280w, ${base}-1680.avif 1672w"
       imagesizes="100vw"
       fetchpriority="high"
     />`;
@@ -64,8 +65,9 @@ function buildHeroPreloadTag(group) {
       id="hero-image-preload"
       rel="preload"
       as="image"
-      href="${base}.webp"
-      imagesrcset="${base}-240.webp 240w, ${base}-384.webp 384w"
+      type="image/avif"
+      href="${base}.avif"
+      imagesrcset="${base}-240.avif 240w, ${base}-384.avif 384w"
       imagesizes="100vw"
       fetchpriority="high"
     />`;

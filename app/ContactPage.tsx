@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Breadcrumb } from "./Breadcrumb";
 import { WhatsAppIcon } from "./icons";
 import { localizeCatalogValue } from "./catalog-utils";
@@ -28,6 +29,10 @@ const mapDestinations = [
 ];
 
 export default function ContactPage() {
+  useEffect(() => {
+    document.title = "تماس با ما | بنیان فولاد داریا";
+  }, []);
+
   return (
     <div id="fb-site">
       <a className="skip-link" href="#main-content">

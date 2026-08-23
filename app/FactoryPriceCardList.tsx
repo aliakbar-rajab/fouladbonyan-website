@@ -3,7 +3,7 @@ import { getTrendPresentation } from "./catalog-behavior.mjs";
 import {
   INITIAL_FACTORY_COUNT,
   type CatalogCategory,
-  type CatalogFactoryGroup,
+  type CatalogFactory,
   type CatalogRow,
 } from "./catalog-types";
 import type { ProductGroupId } from "./category-meta";
@@ -134,7 +134,7 @@ export function FactoryPriceCardList({
 }: {
   catalogId: ProductGroupId;
   category: CatalogCategory;
-  filteredFactories: CatalogFactoryGroup[];
+  filteredFactories: CatalogFactory[];
   collapsedFactories: number;
   showAllFactories: boolean;
   factoryListId: string;

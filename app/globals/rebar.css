@@ -275,16 +275,16 @@
 .tax-switch {
   grid-column: 1;
   grid-row: 1;
-  min-height: 2.35rem;
+  min-height: 2.75rem;
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  padding-inline: 0.65rem;
+  padding: 0.35rem 0.65rem;
   border: 0;
   border-radius: 7px;
   background: var(--white);
   color: #42434d;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   cursor: pointer;
 }

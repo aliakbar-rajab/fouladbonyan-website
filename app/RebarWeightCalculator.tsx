@@ -43,6 +43,7 @@ export function RebarWeightCalculator() {
             قطر (میلی‌متر)
             <input
               type="number"
+              inputMode="decimal"
               min="1"
               step="0.1"
               value={diameter}
@@ -53,6 +54,7 @@ export function RebarWeightCalculator() {
             طول هر شاخه (متر)
             <input
               type="number"
+              inputMode="decimal"
               min="0.1"
               step="0.1"
               value={length}
@@ -63,6 +65,7 @@ export function RebarWeightCalculator() {
             تعداد شاخه
             <input
               type="number"
+              inputMode="numeric"
               min="1"
               step="1"
               value={quantity}

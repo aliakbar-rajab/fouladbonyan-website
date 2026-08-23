@@ -337,8 +337,10 @@ export default function App({
                       }}
                       onKeyDown={(event) => moveTabFocus(event, index)}
                       onClick={(event) => {
-                        event.preventDefault();
-                        navigateToCatalog(group.id);
+                        if (committedSearch) {
+                          event.preventDefault();
+                          navigateToCatalog(group.id);
+                        }
                       }}
                     >
                       {group.shortLabel}
