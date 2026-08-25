@@ -252,12 +252,7 @@ export async function fetchCategory(
  * error isolation with fallback support.
  * Returns { categories, diagnostics }.
  */
-export async function fetchCategoriesWithDiagnostics(sources, optionsOrLimit = {}) {
-  const options =
-    typeof optionsOrLimit === "number"
-      ? { limit: optionsOrLimit }
-      : optionsOrLimit;
-
+export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   const {
     limit = 4,
     fallbackCategories = [],

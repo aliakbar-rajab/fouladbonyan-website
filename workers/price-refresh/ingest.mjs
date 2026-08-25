@@ -18,9 +18,6 @@ function normalizeToSnapshot(payloads) {
   if (payloads.snapshot && Array.isArray(payloads.snapshot.catalogs)) {
     return payloads.snapshot;
   }
-  if (Array.isArray(payloads.catalogs)) {
-    return payloads;
-  }
   throw new Error("داده کاتالوگ نامعتبر است: داده‌های قیمت در درخواست یافت نشد.");
 }
 
