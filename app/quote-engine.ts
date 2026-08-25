@@ -25,15 +25,14 @@ import {
   type RawQuoteRequest,
 } from "./quote-types";
 
+import { formatCatalogNumber } from "./catalog-utils";
+
 export const RIAL_PER_TOMAN = 10;
 export const tomanToRial = (toman: number) => toman * RIAL_PER_TOMAN;
 export const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
 
 export const formatToman = (value: number) =>
-  `${value.toLocaleString("fa-IR")} تومان`;
-
-export const formatPersianNumber = (value: number) =>
-  value.toLocaleString("fa-IR");
+  `${formatCatalogNumber(value)} تومان`;
 
 const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   year: "numeric",
@@ -43,37 +42,13 @@ const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
 
 export const persianToday = () => persianDateFormatter.format(new Date());
 
-export const branchLengthLabel = () =>
-  formatPersianNumber(REBAR_STANDARD_BRANCH_LENGTH_M);
-
 export const isPieceUnit = (unit: string): boolean =>
   unit === "شاخه" || unit === "عدد";
 
 export const itemIndexLabel = (index: number) =>
-  formatPersianNumber(index + 1);
+  formatCatalogNumber(index + 1);
 
 export { normalizePhone };
-
-export function calculateApproximateTotal(
-  unitPriceTomanPerKg: number,
-  quantity: number,
-  unit: string,
-): number | null {
-  if (
-    !Number.isFinite(unitPriceTomanPerKg) ||
-    unitPriceTomanPerKg <= 0 ||
-    !Number.isFinite(quantity) ||
-    quantity <= 0
-  ) {
-    return null;
-  }
-
-  const weightInKg =
-    unit === "تن" ? quantity * 1_000 : unit === "کیلوگرم" ? quantity : null;
-  if (weightInKg === null) return null;
-
-  return Math.round(unitPriceTomanPerKg * weightInKg);
-}
 
 export function parsePersianNumber(value: string): number | null {
   if (!value) return null;
@@ -353,10 +328,10 @@ export function buildQuoteMessage(
     `نام: ${contact.fullName}`,
     `شماره تماس: ${contact.phone}`,
     "",
-    `کالاهای درخواست (${formatPersianNumber(items.length)} کالا):`,
+    `کالاهای درخواست (${formatCatalogNumber(items.length)} کالا):`,
     ...items.map(
       (priced, index) =>
-        `${formatPersianNumber(index + 1)}) ${priced.item.product.trim()} | ${priced.item.quantity.trim()} ${priced.effectiveUnit} | ابعاد/استاندارد: ${priced.item.dimensions.trim() || "اعلام نشده"}${priceLineDescription(priced)}`,
+        `${formatCatalogNumber(index + 1)}) ${priced.item.product.trim()} | ${priced.item.quantity.trim()} ${priced.effectiveUnit} | ابعاد/استاندارد: ${priced.item.dimensions.trim() || "اعلام نشده"}${priceLineDescription(priced)}`,
     ),
     "",
     `جمع تقریبی: ${

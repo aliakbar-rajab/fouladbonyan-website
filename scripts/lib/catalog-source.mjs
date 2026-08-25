@@ -317,10 +317,4 @@ export async function fetchCategoriesWithDiagnostics(sources, optionsOrLimit = {
   return { categories, diagnostics };
 }
 
-/** Fetch every source, returning clean categories array for backwards compatibility. */
-export async function fetchCategories(sources, optionsOrLimit = {}) {
-  const { categories } = await fetchCategoriesWithDiagnostics(sources, optionsOrLimit);
-  return categories;
-}
-
 

@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   parseCatalogPage,
   fetchCategory,
-  fetchCategories,
   fetchCategoriesWithDiagnostics,
 } from "../scripts/lib/catalog-source.mjs";
 import { buildCatalogSnapshot } from "../scripts/lib/build-price-payloads.mjs";
@@ -205,7 +204,7 @@ test("fetchCategories isolates single source failures and uses fallback data", a
   assert.match(warnings[0], /ایزوله‌سازی خطا.*دسته دوم/);
 });
 
-test("fetchCategories throws when a category fails and has no fallback", async () => {
+test("fetchCategoriesWithDiagnostics throws when a category fails and has no fallback", async () => {
   const sources = [
     { id: "src-1", label: "دسته اول", url: "https://example.com/1" },
   ];
@@ -213,7 +212,7 @@ test("fetchCategories throws when a category fails and has no fallback", async (
 
   await assert.rejects(
     () =>
-      fetchCategories(sources, {
+      fetchCategoriesWithDiagnostics(sources, {
         attempts: 1,
         fallbackCategories: [],
         fetchImpl: fakeFetch,

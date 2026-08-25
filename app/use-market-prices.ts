@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { isMarketPriceDataStale } from "./market-prices-stale";
 
 export type MarketPriceItem = {
   id: string;
@@ -22,6 +21,26 @@ export type MarketPricesState =
   | { status: "loading" }
   | { status: "unavailable" }
   | { status: "ready"; data: MarketPriceData; isStale: boolean };
+
+// The endpoint's own fresh window is 5 minutes; treating anything past
+// ~15 minutes as stale gives one missed refresh of slack before surfacing
+// it, rather than waiting hours.
+export const STALE_AFTER_MS = 15 * 60 * 1000;
+
+function isTimestampStale(value: unknown, now: number): boolean {
+  if (typeof value !== "string") return true;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return true;
+  return now - time > STALE_AFTER_MS;
+}
+
+export function isMarketPriceDataStale(
+  data: Pick<MarketPriceData, "fetchedAt" | "items">,
+  now: number = Date.now(),
+): boolean {
+  if (isTimestampStale(data.fetchedAt, now)) return true;
+  return data.items.some((item) => isTimestampStale(item?.updatedAt, now));
+}
 
 // Same-origin Cloudflare Pages Function (functions/api/market-prices.js).
 // It fetches tgju.org server-side on every edge cache miss and keeps its

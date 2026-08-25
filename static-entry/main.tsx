@@ -13,8 +13,17 @@ import { loadCatalogSnapshot, primeCatalogSnapshot } from "../app/group-catalog"
 import { loadOverviewSummaries } from "../app/catalog-overview";
 import { setMenuCatalog } from "../app/menu-catalog";
 import { isProductGroupId } from "../app/root-dataset";
-import { readJsonScript } from "../app/read-json-script";
 import "../app/globals.css";
+
+function readJsonScript(id: string) {
+  const element = document.getElementById(id);
+  if (!element?.textContent) return null;
+  try {
+    return JSON.parse(element.textContent);
+  } catch {
+    return null;
+  }
+}
 
 document.documentElement.lang = "fa";
 document.documentElement.dir = "rtl";

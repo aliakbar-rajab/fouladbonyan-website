@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { formatCatalogNumber } from "./catalog-utils";
 import {
   FieldErrors,
   focusFirstError,
@@ -6,13 +7,13 @@ import {
 } from "./form-validation";
 import { loadQuotePriceEstimates } from "./quote-pricing";
 import {
-  branchLengthLabel,
   deriveQuotePricing,
   DISCLAIMER_ERROR,
   formatToman,
   isPieceUnit,
   itemIndexLabel,
   prepareQuoteRequest,
+  REBAR_STANDARD_BRANCH_LENGTH_M,
   validateDestination,
   validateFullName,
   validatePhone,
@@ -119,7 +120,7 @@ function ItemPriceHint({
           <strong>{formatToman(estimate.unitPriceTomanPerKg)}</strong> برای هر
           کیلوگرم
           {estimate.branchWeight && byPiece
-            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${branchLengthLabel()} متر)`
+            ? ` (بر اساس وزن تقریبی هر ${item.unit} با فرمول استاندارد میلگرد و طول شاخه ${formatCatalogNumber(REBAR_STANDARD_BRANCH_LENGTH_M)} متر)`
             : null}
         </span>
       )}

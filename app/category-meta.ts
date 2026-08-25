@@ -1,12 +1,6 @@
-export type ProductCatalogId =
-  | "sheet"
-  | "profile"
-  | "pipe"
-  | "angle"
-  | "channel"
-  | "wire";
+import type { ProductCatalogId, ProductGroupId } from "./catalog-types";
 
-export type ProductGroupId = "rebar" | "beam" | ProductCatalogId;
+export type { ProductCatalogId, ProductGroupId };
 
 export type ProductRow = {
   product: string;

@@ -9,7 +9,7 @@ import {
   validateRequired,
 } from "../app/form-validation.ts";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
-import { calculateApproximateTotal } from "../app/quote-engine.ts";
+import { deriveQuoteItemPricing } from "../app/quote-engine.ts";
 import { loadQuotePriceEstimates } from "../app/quote-pricing.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
@@ -94,15 +94,39 @@ test("homepage navigation reaches the quote form directly", async () => {
 });
 
 test("quote estimates reuse site price data and calculate weight-based totals", async () => {
-  assert.equal(calculateApproximateTotal(67_293, 1, "تن"), 67_293_000);
-  assert.equal(calculateApproximateTotal(67_293, 10, "کیلوگرم"), 672_930);
-  assert.equal(calculateApproximateTotal(67_293, 2, "شاخه"), null);
-  assert.equal(calculateApproximateTotal(67_293, 2, "عدد"), null);
+  const estimate = {
+    product: "میلگرد",
+    unitPriceTomanPerKg: 67_293,
+    minPriceTomanPerKg: 67_293,
+    maxPriceTomanPerKg: 67_293,
+    rowCount: 1,
+    date: "امروز",
+    supportsPieceUnits: false,
+  };
+  const estimates = { میلگرد: estimate };
 
-  const estimates = await loadQuotePriceEstimates();
+  const tonneItem = deriveQuoteItemPricing(
+    { product: "میلگرد", quantity: "1", unit: "تن" },
+    estimates,
+  );
+  assert.equal(tonneItem.approximateTotalToman, 67_293_000);
+
+  const kgItem = deriveQuoteItemPricing(
+    { product: "میلگرد", quantity: "10", unit: "کیلوگرم" },
+    estimates,
+  );
+  assert.equal(kgItem.approximateTotalToman, 672_930);
+
+  const pieceItem = deriveQuoteItemPricing(
+    { product: "میلگرد", quantity: "2", unit: "شاخه" },
+    estimates,
+  );
+  assert.equal(pieceItem.approximateTotalToman, null);
+
+  const loadedEstimates = await loadQuotePriceEstimates();
   for (const product of ["میلگرد", "تیرآهن", "هاش", "ورق فولادی"]) {
-    assert.ok(estimates[product], `missing estimate for ${product}`);
-    assert.ok(estimates[product].unitPriceTomanPerKg > 0);
-    assert.ok(estimates[product].rowCount > 0);
+    assert.ok(loadedEstimates[product], `missing estimate for ${product}`);
+    assert.ok(loadedEstimates[product].unitPriceTomanPerKg > 0);
+    assert.ok(loadedEstimates[product].rowCount > 0);
   }
 });

@@ -13,7 +13,7 @@ import {
 import { loadGroupCatalog, type GroupCatalog } from "./group-catalog";
 import { RebarWeightCalculator } from "./RebarWeightCalculator";
 import { CatalogLoadMessage } from "./site-ui";
-import { nextRovingIndex } from "./roving-tabs";
+import { nextRovingIndex } from "./catalog-utils";
 import { useCatalogData } from "./use-catalog-data";
 import { useCatalogFilterState } from "./use-catalog-filter-state";
 import { CatalogSummaryBanner } from "./CatalogSummaryBanner";

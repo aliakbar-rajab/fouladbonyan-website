@@ -14,7 +14,7 @@ import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
 import { initialCategoryIdOf, loadAllGroupCatalogs } from "./group-catalog";
 import { isProductGroupId, readRouteRequest } from "./root-dataset";
-import { nextRovingIndex } from "./roving-tabs";
+import { nextRovingIndex } from "./catalog-utils";
 import {
   getCategoryById,
   getSubcategoryLabel,
