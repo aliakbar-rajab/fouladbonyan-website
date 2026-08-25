@@ -9,6 +9,10 @@ import {
   validateRequired,
 } from "../app/form-validation.ts";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
+import {
+  calculateApproximateTotal,
+  loadQuotePriceEstimates,
+} from "../app/quote-pricing.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -29,24 +33,22 @@ test("all required informational pages are defined and linked from the footer", 
   }
 });
 
-test("owner-only legal information stays confirmed-or-unset, never guessed", async () => {
+test("owner-only legal information remains explicitly unset, except the confirmed official email", async () => {
   const [config, checklist] = await Promise.all([
     read("../app/site-config.ts"),
     read("../docs/enamad-required-info.md"),
   ]);
 
-  // Legal name and national ID were confirmed by the site owner (see the
-  // pre-invoice builder migration) and recorded here as the single source of
-  // truth; registration number is still genuinely unconfirmed.
-  assert.match(config, /legalName: "بنیان فولاد داریا"/);
-  assert.match(config, /nationalId: "14015483186"/);
+  assert.match(config, /legalName: null/);
+  assert.match(config, /nationalId: null/);
   assert.match(config, /registrationNumber: null/);
   assert.match(config, /workingHours: "۹ الی ۱۸"/);
   assert.match(config, /officialEmail: "info@fouladbonyan\.com"/);
+  assert.match(checklist, /نام حقوقی/);
+  assert.match(checklist, /شناسه ملی/);
   assert.match(checklist, /شماره ثبت/);
-  // Confirmed fields must not still be listed as missing.
-  assert.doesNotMatch(checklist, /نام حقوقی شرکت یا نام کامل صاحب امتیاز/);
-  assert.doesNotMatch(checklist, /شناسه ملی شرکت یا کد ملی صاحب امتیاز/);
+  // The email and working hours are now confirmed, so neither should still
+  // be listed among the still-missing required fields.
   assert.doesNotMatch(
     checklist,
     /ایمیل رسمی و قابل دسترس برای مکاتبات/,
@@ -91,4 +93,18 @@ test("homepage navigation reaches the quote form directly", async () => {
     header,
     /<a\s+className="header-quote"[\s\S]*?href=\{QUOTE_HREF\}[\s\S]*?درخواست پیش‌فاکتور/,
   );
+});
+
+test("quote estimates reuse site price data and calculate weight-based totals", async () => {
+  assert.equal(calculateApproximateTotal(67_293, 1, "تن"), 67_293_000);
+  assert.equal(calculateApproximateTotal(67_293, 10, "کیلوگرم"), 672_930);
+  assert.equal(calculateApproximateTotal(67_293, 2, "شاخه"), null);
+  assert.equal(calculateApproximateTotal(67_293, 2, "عدد"), null);
+
+  const estimates = await loadQuotePriceEstimates();
+  for (const product of ["میلگرد", "تیرآهن", "هاش", "ورق فولادی"]) {
+    assert.ok(estimates[product], `missing estimate for ${product}`);
+    assert.ok(estimates[product].unitPriceTomanPerKg > 0);
+    assert.ok(estimates[product].rowCount > 0);
+  }
 });

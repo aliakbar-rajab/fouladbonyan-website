@@ -1,0 +1,449 @@
+/* A formal A4 pro forma modeled on the supplied paper invoice. */
+.quote-document {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #b9b9b9;
+}
+
+.quote-document-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  color: #353535;
+}
+
+.quote-document-actions button {
+  min-height: 2.9rem;
+  padding-inline: 1.2rem;
+  border: 1px solid #303030;
+  border-radius: 2px;
+  background: #303030;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.quote-document-actions button:hover {
+  background: #111;
+}
+
+.quote-document-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.quote-document-action-buttons .prepared-actions {
+  margin-top: 0;
+}
+
+.quote-document-actions .copy-status {
+  flex-basis: 100%;
+  margin: -0.5rem 0 0;
+}
+
+.quote-print-sheet {
+  width: min(100%, 210mm);
+  min-height: 297mm;
+  margin: auto;
+  padding: 12mm 11mm 9mm;
+  border: 1px solid #777;
+  background: #fff;
+  color: #111;
+  font-size: 9.2pt;
+  line-height: 1.5;
+}
+
+.quote-print-viewport {
+  position: relative;
+}
+
+.quote-print-header {
+  display: grid;
+  direction: ltr;
+  grid-template-columns: 30mm 1fr 40mm;
+  align-items: center;
+  gap: 4mm;
+  min-height: 28mm;
+  padding-bottom: 3mm;
+  border-bottom: 1px solid #222;
+  break-inside: avoid;
+}
+
+.quote-print-header img {
+  width: 27mm;
+  height: 27mm;
+  margin-inline: auto;
+  object-fit: contain;
+}
+
+.quote-print-company,
+.quote-print-header dl {
+  direction: rtl;
+}
+
+.quote-print-company {
+  text-align: center;
+}
+
+.quote-print-header p,
+.quote-print-header h2,
+.quote-print-header span {
+  margin: 0;
+}
+
+.quote-print-header p {
+  font-size: 9pt;
+  font-weight: 500;
+}
+
+.quote-print-header h2 {
+  font-size: 15.5pt;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
+.quote-print-header span {
+  color: #444;
+  font-size: 7.5pt;
+}
+
+.quote-print-header dl {
+  display: grid;
+  gap: 1mm;
+  margin: 0;
+  font-size: 8pt;
+}
+
+.quote-print-header dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5mm;
+}
+
+.quote-print-header dt,
+.quote-print-header dd {
+  margin: 0;
+}
+
+.quote-customer-details {
+  margin-block: 3mm;
+  border: 1px solid #222;
+  border-radius: 0;
+  break-inside: avoid;
+}
+
+.quote-customer-buyer {
+  margin: 0;
+  padding: 2.2mm 3mm;
+  border-bottom: 1px solid #222;
+}
+
+.quote-customer-meta {
+  display: flex;
+}
+
+.quote-customer-meta p {
+  flex: 1;
+  margin: 0;
+  padding: 2.2mm 3mm;
+}
+
+.quote-customer-meta p:first-child {
+  border-inline-end: 1px solid #222;
+}
+
+.quote-print-table {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 8pt;
+}
+
+.quote-print-table th,
+.quote-print-table td {
+  padding: 2mm 1.25mm;
+  border: 0.75px solid #222;
+  vertical-align: middle;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.quote-print-table th {
+  background: #e4e4e4;
+  font-weight: 800;
+}
+
+.quote-col-row { width: 6%; }
+.quote-col-product { width: 25%; }
+.quote-col-qty { width: 9%; }
+.quote-col-unit { width: 9%; }
+.quote-col-unit-price { width: 16%; }
+.quote-col-total { width: 18%; }
+.quote-col-notes { width: 17%; }
+
+.quote-print-empty-row td {
+  height: 8.2mm;
+  padding: 0;
+}
+
+.quote-print-table tr {
+  break-inside: avoid;
+}
+
+.quote-print-table thead {
+  display: table-header-group;
+}
+
+.quote-print-summary {
+  display: grid;
+  direction: ltr;
+  grid-template-columns: 43% 1fr;
+  margin-top: 0;
+  border: 1px solid #222;
+  border-top: 0;
+  break-inside: avoid;
+}
+
+.quote-total-box,
+.quote-print-notes {
+  padding: 0;
+}
+
+.quote-total-box {
+  direction: rtl;
+  border-inline-start: 1px solid #222;
+  background: #f7f7f7;
+}
+
+.quote-total-box > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 3mm;
+  min-height: 8mm;
+  padding: 1.8mm 3mm;
+  border-bottom: 1px solid #aaa;
+}
+
+.quote-total-box > div:last-child {
+  border-bottom: 0;
+}
+
+.quote-total-box span,
+.quote-total-box strong {
+  font-size: 8.2pt;
+}
+
+.quote-total-box strong {
+  white-space: nowrap;
+}
+
+.quote-total-box .quote-total-final {
+  background: #e5e5e5;
+  font-weight: 800;
+}
+
+.quote-total-box .quote-total-final strong {
+  font-size: 10.5pt;
+}
+
+.quote-print-notes p {
+  margin: 0;
+  padding: 2mm 3mm;
+  border-bottom: 1px solid #aaa;
+  font-size: 7.8pt;
+  line-height: 1.7;
+}
+
+.quote-print-notes {
+  direction: rtl;
+}
+
+.quote-print-notes p:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+.quote-print-footer {
+  margin-top: 4mm;
+  padding-top: 2.5mm;
+  border-top: 1px solid #222;
+  font-size: 7.8pt;
+  break-inside: avoid;
+}
+
+.quote-print-footer address {
+  font-style: normal;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  #fb-site {
+    display: block;
+  }
+
+  #fb-site:has(.quote-document) * {
+    visibility: hidden;
+  }
+
+  #fb-site:has(.quote-document) .quote-document,
+  #fb-site:has(.quote-document) .quote-document * {
+    visibility: visible;
+  }
+
+  #fb-site:has(.quote-document) .quote-document {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .quote-document-actions {
+    display: none;
+  }
+
+  .quote-print-scroll {
+    overflow: visible;
+  }
+
+  .quote-print-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .process-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .process-steps li:nth-child(2) {
+    border-inline-end: 0;
+  }
+
+  .process-steps li:nth-child(-n + 2) {
+    border-bottom: 1px solid #d7d7dc;
+  }
+
+  .quote-items-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-item-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-item-grid > label:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .quote-print-scroll {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .quote-print-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quote-print-viewport::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset-block: 0;
+    left: 0;
+    width: 2.5rem;
+    pointer-events: none;
+    background: linear-gradient(to left, rgb(255 255 255 / 0%), #fff 85%);
+  }
+
+  .quote-print-sheet {
+    width: 42rem;
+    min-width: 42rem;
+  }
+
+  .quote-document-actions,
+  .quote-document-action-buttons {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-document-action-buttons,
+  .quote-document-action-buttons .prepared-actions,
+  .quote-document-action-buttons .prepared-actions > * {
+    width: 100%;
+  }
+
+  .info-hero {
+    padding-block: 2.75rem;
+  }
+
+  .info-content {
+    padding-block: 2rem 6rem;
+  }
+
+  .form-grid,
+  .process-steps,
+  .quote-item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .process-steps li,
+  .process-steps li:nth-child(2) {
+    min-height: 0;
+    border-inline-end: 0;
+    border-bottom: 1px solid #d7d7dc;
+  }
+
+  .process-steps li:last-child {
+    border-bottom: 0;
+  }
+
+  .form-wide {
+    grid-column: auto;
+  }
+
+  .quote-item-grid > label:last-child {
+    grid-column: auto;
+  }
+
+  .remove-quote-item {
+    position: static;
+    width: 100%;
+    min-height: 2.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .compound-field {
+    grid-template-columns: 1fr 6.5rem;
+  }
+
+  .form-submit,
+  .prepared-actions > * {
+    width: 100%;
+  }
+}

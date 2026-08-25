@@ -39,8 +39,8 @@ export const siteConfig = {
     whatsappCommunityUrl: "https://chat.whatsapp.com/IXb2LqQ6UQvFq3shgQCRiW",
   },
   business: {
-    legalName: "بنیان فولاد داریا",
-    nationalId: "14015483186" as string | null,
+    legalName: null as string | null,
+    nationalId: null as string | null,
     registrationNumber: null as string | null,
     address: "آجودانیه پورابتهاج نبش لشکری ساختمان سرو واحد ۳۰۳",
     shortAddress: "تهران، آجودانیه، پورابتهاج",

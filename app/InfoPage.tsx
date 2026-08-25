@@ -1,5 +1,5 @@
 import { ComplaintForm } from "./ComplaintForm";
-import { PreInvoiceBuilder } from "./PreInvoiceBuilder";
+import { QuoteRequestForm } from "./QuoteRequestForm";
 import { siteConfig } from "./site-config";
 import { InnerPageLayout } from "./InnerPageLayout";
 import {
@@ -156,17 +156,14 @@ function QuoteProcessContent() {
     <>
       <ol className="process-steps">
         <li>
-          <strong>آماده‌سازی پیش‌نویس</strong>
-          <span>
-            با ابزار زیر، اقلام، مقدار و مبلغ پیشنهادی خودتان را در قالب یک
-            پیش‌فاکتور غیررسمی بنویسید و آن را چاپ یا ذخیره کنید.
-          </span>
+          <strong>آماده‌کردن مشخصات</strong>
+          <span>نوع محصول، گرید، ابعاد، مقدار تقریبی و شهر مقصد را مشخص کنید.</span>
         </li>
         <li>
-          <strong>تماس با واحد فروش</strong>
+          <strong>ارسال برای بررسی</strong>
           <span>
-            پیش‌نویس آماده‌شده را از طریق شماره‌های رسمی با واحد فروش در میان
-            بگذارید.
+            متن درخواست را آماده کنید و از طریق شماره‌های رسمی با واحد فروش در
+            میان بگذارید.
           </span>
         </li>
         <li>
@@ -177,25 +174,20 @@ function QuoteProcessContent() {
           </span>
         </li>
         <li>
-          <strong>صدور پیش‌فاکتور رسمی</strong>
+          <strong>اعلام پیش‌فاکتور</strong>
           <span>
-            قیمت و شرایط نهایی فقط توسط واحد فروش و در پیش‌فاکتور دارای مدت
-            اعتبار اعلام می‌شود.
+            قیمت و شرایط نهایی در پیش‌فاکتور دارای مدت اعتبار اعلام می‌شود.
           </span>
         </li>
       </ol>
       <aside className="important-notice">
         <strong>توجه مهم</strong>
-        <p>
-          سند تولیدشده با ابزار زیر پیش‌نویس غیررسمی است، نه پیش‌فاکتور صادرشده
-          از سوی مجموعه. قیمت و شرایط نهایی فقط پس از تماس با واحد فروش اعلام
-          می‌شود.
-        </p>
+        <p>قیمت و شرایط نهایی پس از تماس با واحد فروش اعلام میشود.</p>
         <a className="important-notice-phones-link" href="#phone-numbers">
           مشاهده شماره‌های تماس
         </a>
       </aside>
-      <PreInvoiceBuilder />
+      <QuoteRequestForm />
     </>
   );
 }

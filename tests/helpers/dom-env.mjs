@@ -31,9 +31,6 @@ export function setupDomEnv({ url, pretendToBeVisual = false } = {}) {
   globalThis.Node = dom.window.Node;
   globalThis.MutationObserver = dom.window.MutationObserver;
   globalThis.getComputedStyle = dom.window.getComputedStyle;
-  // Needs a real http(s) `url` above (jsdom refuses Storage on opaque
-  // origins) -- the pre-invoice builder's save/load panel reads this.
-  globalThis.localStorage = dom.window.localStorage;
   globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
   dom.window.Element.prototype.scrollIntoView = () => {};

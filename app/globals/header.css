@@ -470,7 +470,8 @@
    * needs `--header-bar-h` too (to sit its open panel right under the pinned
    * bar) and is no longer a descendant of `.site-header` -- custom properties
    * only inherit down the DOM, not sideways between siblings. `:has()` is the
-   * sideways link for the compact variant.
+   * sideways link for the compact variant; this codebase already relies on it
+   * (see `#fb-site:has(.quote-document)` in quote-print.css).
    */
   :root {
     --header-bar-h: 3.75rem;
