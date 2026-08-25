@@ -1,0 +1,45 @@
+name: Deploy price-refresh Worker
+
+# Deploys workers/price-refresh to Cloudflare whenever it changes on main.
+# Before this workflow existed, the Worker was only ever deployed by hand
+# (`wrangler deploy`, run locally), so the producer script and the deployed
+# Worker could silently drift out of sync -- the payload contract in this repo
+# could move on without anyone redeploying the Worker that validates it. That
+# drift caused every scheduled refresh to fail with a 422 the repo's own
+# tests never caught, because the tests exercise the *committed* Worker code,
+# not whatever happens to be live on Cloudflare. This workflow removes the
+# manual step so "merged to main" and "deployed" can't fall out of sync again.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "workers/price-refresh/**"
+      - "app/catalog-validation.mjs"
+      - "scripts/price-catalog-config.mjs"
+
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: workers/price-refresh
+          command: deploy

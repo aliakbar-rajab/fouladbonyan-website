@@ -165,6 +165,49 @@ test("POST /ingest with a valid payload stores it and calls the deploy hook", as
   assert.equal(calledUrls.includes("https://deploy.example/hook"), true);
 });
 
+// Regression for the 2026-08-25 production incident: refresh-and-publish.mjs
+// (the real GitHub Actions producer) only ever sends `{ snapshot, diagnostics }`
+// -- it has not sent top-level rebar/beam/product keys since the catalog
+// snapshot migration (commit fc1125c). A Worker still running the pre-migration
+// `validateAll`, which required `payload.rebar` to exist directly, rejected
+// every real publish with "HTTP 422: payload.rebar وجود ندارد یا شیء نیست"
+// even though both sides of *this* repo agreed on the contract -- the deployed
+// Worker had simply never been redeployed after the producer changed. This
+// pins the exact shape the producer sends so the contract can't silently drift
+// again without a test failing here first.
+test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends, with no top-level rebar/beam/product keys", async (t) => {
+  const { buildCatalogSnapshot } = await import(
+    "../../scripts/lib/build-price-payloads.mjs"
+  );
+  t.mock.method(globalThis, "fetch", async () =>
+    new Response(fakeCatalogHtml(), { status: 200 }),
+  );
+  const { snapshot, diagnostics } = await buildCatalogSnapshot();
+  const producerPayload = { snapshot, diagnostics };
+
+  assert.equal(producerPayload.rebar, undefined);
+  assert.equal(producerPayload.beam, undefined);
+  assert.equal(producerPayload.product, undefined);
+
+  const env = { PRICE_DATA: fakeKv(), INGEST_TOKEN: "secret" };
+  const response = await worker.fetch(
+    new Request("https://price.example/ingest", {
+      method: "POST",
+      headers: { authorization: "Bearer secret" },
+      body: JSON.stringify(producerPayload),
+    }),
+    env,
+  );
+
+  const body = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(body.ok, true);
+  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.catalog));
+  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.rebar));
+  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.beam));
+  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.product));
+});
+
 test("POST /ingest with an invalid payload does not call the deploy hook", async (t) => {
   const calledUrls = [];
   t.mock.method(globalThis, "fetch", async (input) => {
