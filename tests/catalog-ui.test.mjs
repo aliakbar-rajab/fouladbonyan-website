@@ -331,32 +331,11 @@ test("calculator rejects fractional branch quantities", async () => {
   assert.match(screen.getByText(/وزن تقریبی/).textContent, /—/);
 });
 
-test("a quote request grows and shrinks one item at a time", async () => {
-  const user = userEvent.setup({ document });
-  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
-  render(React.createElement(QuoteRequestForm));
-  await settle();
-
-  const itemCards = () => screen.getAllByRole("group");
-  assert.equal(itemCards().length, 1);
-
-  await user.click(screen.getByRole("button", { name: /افزودن کالای جدید/ }));
-  assert.equal(itemCards().length, 2);
-  // The new row takes focus so the buyer can keep typing.
-  await waitFor(() =>
-    assert.equal(
-      document.activeElement?.getAttribute("name"),
-      "itemProduct-2",
-    ),
-  );
-
-  await user.click(screen.getByRole("button", { name: "حذف کالای ۲" }));
-  assert.equal(itemCards().length, 1);
-  // The last row is never removable.
-  assert.equal(screen.queryByRole("button", { name: /حذف کالای/ }), null);
-});
-
-test("a catalog row carries validated product details into the quote form", async () => {
+test("a catalog row's quote link carries validated product and dimension details to the pre-invoice builder", async () => {
+  // Row add/remove and the deep link's effect once it reaches the builder
+  // (prefilling the first item's description) are covered in
+  // tests/preinvoice.test.mjs; this test only owns the URL this catalog row
+  // itself builds.
   render(
     React.createElement(PriceCatalog, {
       catalog,
@@ -371,71 +350,5 @@ test("a catalog row carries validated product details into the quote form", asyn
   assert.equal(quoteUrl.pathname, "/quote-process/");
   assert.equal(quoteUrl.searchParams.get("product"), "میلگرد");
   assert.equal(quoteUrl.searchParams.get("dimensions"), "محصول 1");
-
-  cleanup();
-  window.history.replaceState({}, "", quoteUrl.href);
-  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
-  render(React.createElement(QuoteRequestForm));
-
-  await waitFor(() => {
-    assert.equal(
-      screen.getByRole("combobox", { name: "نوع محصول" }).value,
-      "میلگرد",
-    );
-    assert.equal(
-      screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
-      "محصول 1",
-    );
-  });
-  window.history.replaceState({}, "", "/");
-});
-
-test("a fractional شاخه quantity is rejected instead of producing a printed quote with a mismatched total", async () => {
-  const user = userEvent.setup({ document });
-  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
-  render(React.createElement(QuoteRequestForm));
-  await settle();
-
-  await user.type(
-    screen.getByRole("textbox", { name: "نام و نام خانوادگی" }),
-    "کاربر آزمایشی",
-  );
-  await user.type(
-    screen.getByRole("textbox", { name: "شماره تماس" }),
-    "09121234567",
-  );
-  await user.type(
-    screen.getByRole("textbox", { name: "شهر مقصد" }),
-    "تهران",
-  );
-  await user.selectOptions(
-    screen.getByRole("combobox", { name: "نوع محصول" }),
-    "میلگرد",
-  );
-  await user.selectOptions(
-    document.querySelector('[name="itemUnit-1"]'),
-    "شاخه",
-  );
-  const quantityInput = document.querySelector('[name="itemQuantity-1"]');
-  await user.clear(quantityInput);
-  await user.type(quantityInput, "2.5");
-  await user.click(
-    screen.getByRole("checkbox", { name: "متن بالا را خواندم و می‌پذیرم." }),
-  );
-
-  await user.click(
-    screen.getByRole("button", { name: "بررسی و آماده‌سازی درخواست" }),
-  );
-
-  assert.match(
-    screen.getByText("مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.")
-      .textContent,
-    /عدد صحیح باشد/,
-  );
-  assert.equal(document.activeElement, quantityInput);
-  assert.equal(
-    screen.queryByRole("region", { name: "پیش‌نویس برآورد آماده چاپ" }),
-    null,
-    "an invalid submission must not produce a printed quote document",
-  );
+  assert.equal(quoteUrl.hash, "#quote-form");
 });

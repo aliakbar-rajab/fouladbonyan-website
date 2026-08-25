@@ -27,8 +27,7 @@
   gap: 1.1rem 1.25rem;
 }
 
-.form-grid label,
-.quote-item-grid label {
+.form-grid label {
   min-width: 0;
   display: grid;
   align-content: start;
@@ -40,8 +39,6 @@
 .form-grid input,
 .form-grid select,
 .form-grid textarea,
-.quote-item-grid input,
-.quote-item-grid select,
 .prepared-request textarea {
   width: 100%;
   min-height: 3rem;
@@ -62,15 +59,12 @@
 .form-grid input:focus,
 .form-grid select:focus,
 .form-grid textarea:focus,
-.quote-item-grid input:focus,
-.quote-item-grid select:focus,
 .prepared-request textarea:focus {
   outline: 3px solid #946d00;
   border-color: #9b7200;
 }
 
-.form-grid [aria-invalid="true"],
-.quote-item-grid [aria-invalid="true"] {
+.form-grid [aria-invalid="true"] {
   border-color: #b3261e;
   background: #fff8f7;
 }
@@ -79,210 +73,10 @@
   grid-column: 1 / -1;
 }
 
-.compound-field {
-  display: grid;
-  grid-template-columns: 1fr 7rem;
-  gap: 0.5rem;
-}
-
-.quote-items {
-  margin-top: 2rem;
-  padding-top: 1.75rem;
-  border-top: 1px solid #d7d7dc;
-}
-
-.quote-items-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.quote-items-heading > div:first-child > span {
-  color: #846200;
-  font-size: 0.8rem;
-  font-weight: 900;
-}
-
-.quote-items-heading h3 {
-  margin: 0.35rem 0 0.45rem;
-  color: var(--ink);
-  font-size: clamp(1.1rem, 2vw, 1.45rem);
-}
-
-.quote-items-heading p {
-  margin: 0;
-  color: #5c5c62;
-  line-height: 1.8;
-}
-
-.add-quote-item,
-.remove-quote-item {
-  min-height: 2.8rem;
-  padding-inline: 1rem;
-  border: 1px solid #343439;
-  border-radius: 8px;
-  background: #343439;
-  color: var(--white);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.quote-items-list {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.quote-item-card {
-  position: relative;
-  min-width: 0;
-  margin: 0;
-  padding: 1.25rem;
-  border: 1px solid #d3d3d8;
-  border-radius: 10px;
-  background: var(--white);
-}
-
-.quote-item-card legend {
-  padding-inline: 0.65rem;
-  color: #765800;
-  font-weight: 900;
-}
-
-.remove-quote-item {
-  position: absolute;
-  inset-inline-end: 1rem;
-  top: 0.75rem;
-  min-height: 2.3rem;
-  border-color: #b9b9bf;
-  background: transparent;
-  color: #6b3030;
-  font-size: 0.78rem;
-}
-
-.remove-quote-item:hover {
-  border-color: #9d211b;
-  color: #9d211b;
-}
-
-.quote-item-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr 1.2fr;
-  gap: 1rem;
-  padding-top: 0.4rem;
-}
-
-.quote-item-rebar-size {
-  grid-column: 1 / -1;
-  max-width: 16rem;
-}
-
-.quote-item-price {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem 1.25rem;
-  margin-top: 1rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid #e3d8b4;
-  border-radius: 8px;
-  background: #fffaf0;
-  color: #55451c;
-  font-size: 0.86rem;
-  line-height: 1.8;
-}
-
-.quote-item-price strong {
-  color: #322600;
-  font-size: 0.94rem;
-}
-
-.add-quote-item {
-  margin-top: 1rem;
-  border-color: #9d7500;
-  background: #fff7dc;
-  color: #5f4800;
-}
-
-.add-quote-item:hover {
-  background: #ffefb8;
-}
-
-.add-quote-item:disabled {
-  border-color: #c8c8cd;
-  background: #ededf0;
-  color: #7b7b81;
-  cursor: not-allowed;
-}
-
-.quote-price-summary {
-  display: grid;
-  gap: 0.45rem;
-  margin-top: 1.5rem;
-  padding: 1.25rem 1.4rem;
-  border: 1px solid #c99800;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fff8dc, #fffdf5);
-  color: #4c3c0c;
-}
-
-.quote-price-summary > span {
-  font-size: 0.85rem;
-  font-weight: 900;
-}
-
-.quote-price-summary > strong {
-  color: #2f2507;
-  font-size: clamp(1.35rem, 3vw, 2rem);
-}
-
-.quote-price-summary p {
-  margin: 0;
-  color: #5c512e;
-  font-size: 0.88rem;
-  line-height: 1.9;
-}
-
 .field-error {
   color: #9d211b;
   font-size: 0.82rem;
   font-weight: 700;
-}
-
-.legal-confirmation {
-  margin-top: 1.5rem;
-  padding: 1.2rem;
-  border: 1px solid #d0a52e;
-  border-radius: 10px;
-  background: #fff8e5;
-}
-
-.legal-confirmation p {
-  margin: 0 0 0.8rem;
-  color: #473b1a;
-  font-weight: 700;
-  line-height: 2;
-}
-
-.legal-confirmation label {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 2.75rem;
-  padding-block: 0.25rem;
-  color: #37312a;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.legal-confirmation input {
-  flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0;
-  accent-color: #8c6800;
 }
 
 .form-submit {
@@ -341,4 +135,3 @@
   font-size: 0.85rem;
   font-weight: 800;
 }
-
