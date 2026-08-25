@@ -68,9 +68,6 @@ export type RawQuoteItem = {
   pieceOptionKey: string;
 };
 
-/** Alias for backward-compatibility */
-export type QuoteItem = RawQuoteItem;
-
 /** Raw contact info. */
 export type RawQuoteContact = {
   fullName: string;
@@ -78,8 +75,6 @@ export type RawQuoteContact = {
   destination: string;
   notes: string;
 };
-
-export type QuoteContact = RawQuoteContact;
 
 /** Full raw form input. */
 export type RawQuoteRequest = {
@@ -120,15 +115,6 @@ export type DerivedQuoteItem = {
   approximateTotalRial: number | null;
   unitPriceRial: number | null;
   weightInKg: number | null;
-};
-
-/** Backwards-compatible alias for PricedQuoteItem */
-export type PricedQuoteItem = {
-  item: QuoteItem;
-  estimate: QuotePriceEstimate | undefined;
-  approximateTotal: number | null;
-  pieceOption: QuotePieceOption | undefined;
-  effectiveUnit: string;
 };
 
 /** Aggregated pricing totals across all items. */

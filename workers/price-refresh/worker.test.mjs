@@ -53,10 +53,12 @@ function fakeCatalogHtml() {
   return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script></body></html>`;
 }
 
-async function buildValidPayloads(t) {
-  const { buildAllPayloads } = await import("../../scripts/lib/build-price-payloads.mjs");
+async function buildValidPayload(t) {
+  const { buildCatalogSnapshot } = await import(
+    "../../scripts/lib/build-price-payloads.mjs"
+  );
   t.mock.method(globalThis, "fetch", async () => new Response(fakeCatalogHtml(), { status: 200 }));
-  return buildAllPayloads();
+  return buildCatalogSnapshot();
 }
 
 test("GET /catalog-prices.json serves the stored canonical snapshot", async () => {
@@ -74,16 +76,16 @@ test("GET /catalog-prices.json serves the stored canonical snapshot", async () =
   });
 });
 
-test("GET /rebar-prices.json serves the stored snapshot", async () => {
-  const env = { PRICE_DATA: fakeKv({ [KV_KEYS.rebar]: '{"fetchedAt":"now"}' }) };
-  const response = await worker.fetch(new Request("https://price.example/rebar-prices.json"), env);
+test("GET /catalog-snapshot.json serves the stored snapshot", async () => {
+  const env = { PRICE_DATA: fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"now","catalogs":[]}' }) };
+  const response = await worker.fetch(new Request("https://price.example/catalog-snapshot.json"), env);
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { fetchedAt: "now" });
+  assert.deepEqual(await response.json(), { fetchedAt: "now", catalogs: [] });
 });
 
 test("GET a dataset that has never been written returns 503", async () => {
   const env = { PRICE_DATA: fakeKv() };
-  const response = await worker.fetch(new Request("https://price.example/beam-prices.json"), env);
+  const response = await worker.fetch(new Request("https://price.example/catalog-prices.json"), env);
   assert.equal(response.status, 503);
 });
 
@@ -138,7 +140,7 @@ test("POST /ingest with a malformed JSON body is rejected without touching KV", 
 });
 
 test("POST /ingest with a valid payload stores it and calls the deploy hook", async (t) => {
-  const payloads = await buildValidPayloads(t);
+  const { snapshot, diagnostics } = await buildValidPayload(t);
   const calledUrls = [];
   t.mock.method(globalThis, "fetch", async (input) => {
     const url = typeof input === "string" ? input : input.url;
@@ -155,39 +157,19 @@ test("POST /ingest with a valid payload stores it and calls the deploy hook", as
     new Request("https://price.example/ingest", {
       method: "POST",
       headers: { authorization: "Bearer secret" },
-      body: JSON.stringify(payloads),
+      body: JSON.stringify({ snapshot, diagnostics }),
     }),
     env,
   );
 
   assert.equal(response.status, 200);
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.rebar));
+  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.catalog));
   assert.equal(calledUrls.includes("https://deploy.example/hook"), true);
 });
 
-// Regression for the 2026-08-25 production incident: refresh-and-publish.mjs
-// (the real GitHub Actions producer) only ever sends `{ snapshot, diagnostics }`
-// -- it has not sent top-level rebar/beam/product keys since the catalog
-// snapshot migration (commit fc1125c). A Worker still running the pre-migration
-// `validateAll`, which required `payload.rebar` to exist directly, rejected
-// every real publish with "HTTP 422: payload.rebar وجود ندارد یا شیء نیست"
-// even though both sides of *this* repo agreed on the contract -- the deployed
-// Worker had simply never been redeployed after the producer changed. This
-// pins the exact shape the producer sends so the contract can't silently drift
-// again without a test failing here first.
-test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends, with no top-level rebar/beam/product keys", async (t) => {
-  const { buildCatalogSnapshot } = await import(
-    "../../scripts/lib/build-price-payloads.mjs"
-  );
-  t.mock.method(globalThis, "fetch", async () =>
-    new Response(fakeCatalogHtml(), { status: 200 }),
-  );
-  const { snapshot, diagnostics } = await buildCatalogSnapshot();
+test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends", async (t) => {
+  const { snapshot, diagnostics } = await buildValidPayload(t);
   const producerPayload = { snapshot, diagnostics };
-
-  assert.equal(producerPayload.rebar, undefined);
-  assert.equal(producerPayload.beam, undefined);
-  assert.equal(producerPayload.product, undefined);
 
   const env = { PRICE_DATA: fakeKv(), INGEST_TOKEN: "secret" };
   const response = await worker.fetch(
@@ -203,9 +185,6 @@ test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and
   assert.equal(response.status, 200, JSON.stringify(body));
   assert.equal(body.ok, true);
   assert.ok(env.PRICE_DATA.store.has(KV_KEYS.catalog));
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.rebar));
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.beam));
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.product));
 });
 
 test("POST /ingest with an invalid payload does not call the deploy hook", async (t) => {
@@ -225,12 +204,12 @@ test("POST /ingest with an invalid payload does not call the deploy hook", async
     new Request("https://price.example/ingest", {
       method: "POST",
       headers: { authorization: "Bearer secret" },
-      body: JSON.stringify({ rebar: {}, beam: {}, product: {} }),
+      body: JSON.stringify({ invalid: true }),
     }),
     env,
   );
 
   assert.equal(response.status, 422);
-  assert.equal(env.PRICE_DATA.store.has(KV_KEYS.rebar), false);
+  assert.equal(env.PRICE_DATA.store.has(KV_KEYS.catalog), false);
   assert.equal(calledUrls.includes("https://deploy.example/hook"), false);
 });

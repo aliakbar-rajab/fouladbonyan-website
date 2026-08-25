@@ -2,15 +2,6 @@ import { createRetryableLoader } from "./catalog-cache";
 import { loadAllGroupCatalogs } from "./group-catalog";
 import type { CatalogCategory, GroupCatalog } from "./catalog-types";
 import { localizeCatalogValue } from "./catalog-utils";
-import {
-  calculateApproximateTotal,
-  deriveQuoteItemPricing,
-  deriveQuotePricing,
-  REBAR_STANDARD_BRANCH_LENGTH_M,
-  resolvePieceOption,
-  RIAL_PER_TOMAN,
-  tomanToRial,
-} from "./quote-engine";
 import type {
   QuotePieceOption,
   QuotePriceEstimate,
@@ -25,16 +16,6 @@ export type {
   QuotePriceEstimates,
   QuoteProductName,
   QuoteUnit,
-};
-
-export {
-  RIAL_PER_TOMAN,
-  tomanToRial,
-  REBAR_STANDARD_BRANCH_LENGTH_M,
-  calculateApproximateTotal,
-  resolvePieceOption,
-  deriveQuoteItemPricing,
-  deriveQuotePricing,
 };
 
 import type { ProductGroupId } from "./category-meta";
@@ -196,30 +177,4 @@ export const loadQuotePriceEstimates = createRetryableLoader(async () => {
   const catalogs = await loadAllGroupCatalogs();
   return deriveQuoteEstimates(catalogs);
 });
-
-/** @deprecated Use deriveQuoteItemPricing in quote-engine.ts */
-export function priceQuoteItem(
-  item: {
-    unit: string;
-    quantity: string;
-    rebarDiameterMm?: string;
-    pieceOptionKey?: string;
-    product?: QuoteProductName | "";
-  },
-  estimate: QuotePriceEstimate | undefined,
-): number | null {
-  const derived = deriveQuoteItemPricing(
-    {
-      id: 1,
-      product: estimate?.product ?? "",
-      quantity: item.quantity,
-      unit: (item.unit as QuoteUnit) ?? "تن",
-      dimensions: "",
-      rebarDiameterMm: item.rebarDiameterMm ?? "",
-      pieceOptionKey: item.pieceOptionKey ?? "",
-    },
-    estimate ? { [estimate.product]: estimate } : {},
-  );
-  return derived.approximateTotalToman;
-}
 

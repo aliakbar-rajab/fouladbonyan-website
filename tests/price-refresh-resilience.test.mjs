@@ -6,15 +6,8 @@ import {
   fetchCategories,
   fetchCategoriesWithDiagnostics,
 } from "../scripts/lib/catalog-source.mjs";
-import {
-  buildAllPayloads,
-  buildCatalogSnapshot,
-} from "../scripts/lib/build-price-payloads.mjs";
-import {
-  validateCatalogPriceData,
-  validateCatalogSnapshot,
-  validateProductPricePayload,
-} from "../app/catalog-validation.mjs";
+import { buildCatalogSnapshot } from "../scripts/lib/build-price-payloads.mjs";
+import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
 
 
 
@@ -229,40 +222,7 @@ test("fetchCategories throws when a category fails and has no fallback", async (
   );
 });
 
-test("buildAllPayloads completes and validates even when some categories use fallback", async () => {
-  // First generate a baseline valid dataset
-  const fakeAllOkFetch = async () =>
-    new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
 
-  const baseline = await buildAllPayloads({ fetchImpl: fakeAllOkFetch });
-  assert.ok(baseline.rebar);
-  assert.ok(baseline.beam);
-  assert.ok(baseline.product);
-
-  // Now simulate a failure in 1 rebar source and 1 product source
-  const fakePartialFailFetch = async (url) => {
-    const decoded = decodeURIComponent(url);
-    if (decoded.includes("میلگرد-ساده") || decoded.includes("ورق-ck45")) {
-      return new Response("Upstream Crash", { status: 502 });
-    }
-    return new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
-  };
-
-  const result = await buildAllPayloads({
-    fallbacks: baseline,
-    attempts: 2,
-    fetchImpl: fakePartialFailFetch,
-  });
-
-  // Validations must pass!
-  validateCatalogPriceData(result.rebar);
-  validateCatalogPriceData(result.beam);
-  validateProductPricePayload(result.product);
-
-  assert.equal(result.diagnostics.fallbackCategories, 2);
-  assert.ok(result.diagnostics.freshCategories > 40);
-  assert.equal(result.diagnostics.warnings.length, 2);
-});
 
 test("buildCatalogSnapshot completes and validates even when some categories use fallback", async () => {
   const fakeAllOkFetch = async () =>

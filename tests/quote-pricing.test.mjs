@@ -1,14 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { deriveQuoteEstimates } from "../app/quote-pricing.ts";
 import {
-  deriveQuoteEstimates,
-  priceQuoteItem,
-} from "../app/quote-pricing.ts";
-import {
-  buildGeneratedQuote,
   buildQuoteMessage,
-} from "../app/quote-output.ts";
-import {
   deriveQuoteItemPricing,
   deriveQuotePricing,
   normalizePhone,
@@ -73,20 +67,14 @@ const allEstimates = {
 };
 
 function buildOneItemQuote(item, estimate) {
-  const approximateTotal = priceQuoteItem(item, estimate);
-  const priced = {
-    item,
-    estimate,
-    pieceOption: item.pieceOptionKey
-      ? estimate?.pieceOptions?.find((option) => option.key === item.pieceOptionKey)
-      : undefined,
-    approximateTotal,
-    effectiveUnit: item.pieceOptionKey
-      ? (estimate?.pieceOptions?.find((option) => option.key === item.pieceOptionKey)
-          ?.unit ?? item.unit)
-      : item.unit,
+  const result = prepareQuoteRequest(
+    { contact, items: [item], acceptDisclaimer: true },
+    estimate ? { [estimate.product]: estimate } : {},
+  );
+  return {
+    approximateTotal: result.pricing.items[0].approximateTotalToman,
+    quote: result.output.document,
   };
-  return { approximateTotal, quote: buildGeneratedQuote(contact, [priced]) };
 }
 
 test("a whole-number شاخه quantity priced by branch weight reconciles unit price x quantity with the total", () => {
@@ -304,7 +292,11 @@ test("buildQuoteMessage formats a clean, human-readable Persian quote summary", 
     allEstimates,
   );
 
-  const message = buildQuoteMessage(contact, pricing.items, pricing.totals);
+  const message = buildQuoteMessage(
+    normalizeQuoteContact(contact),
+    pricing.items,
+    pricing.totals,
+  );
   assert.match(message, /درخواست پیش‌فاکتور غیرقطعی/);
   assert.match(message, /نام: کاربر آزمایشی/);
   assert.match(message, /شماره تماس: 09121234567/);

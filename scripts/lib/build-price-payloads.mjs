@@ -93,44 +93,6 @@ export async function buildCatalogSnapshot(options = {}) {
   return { snapshot, diagnostics: enrichedDiagnostics };
 }
 
-/** @deprecated Use buildCatalogSnapshot */
-export async function buildAllPayloads(options = {}) {
-  const { fallbacks = {}, ...rest } = options;
-  const fallbackCategories = [
-    ...(fallbacks.rebar?.categories ?? []),
-    ...(fallbacks.beam?.categories ?? []),
-    ...(fallbacks.product?.catalogs?.flatMap((c) => c.categories ?? []) ?? []),
-    ...(fallbacks.snapshot?.catalogs?.flatMap((c) => c.categories ?? []) ?? []),
-  ];
-
-  const { snapshot, diagnostics } = await buildCatalogSnapshot({
-    fallbackCategories,
-    ...rest,
-  });
-
-  const rebar = {
-    ...SOURCE_ENVELOPE,
-    fetchedAt: snapshot.fetchedAt,
-    categories:
-      snapshot.catalogs.find((c) => c.id === "rebar")?.categories ?? [],
-  };
-  const beam = {
-    ...SOURCE_ENVELOPE,
-    fetchedAt: snapshot.fetchedAt,
-    categories:
-      snapshot.catalogs.find((c) => c.id === "beam")?.categories ?? [],
-  };
-  const product = {
-    ...SOURCE_ENVELOPE,
-    fetchedAt: snapshot.fetchedAt,
-    catalogs: snapshot.catalogs.filter(
-      (c) => c.id !== "rebar" && c.id !== "beam",
-    ),
-  };
-
-  return { snapshot, rebar, beam, product, diagnostics };
-}
-
 
 
 

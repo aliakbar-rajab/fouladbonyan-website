@@ -8,6 +8,22 @@ export type ResponsiveImageSources = {
   sizes: string;
 };
 
+function buildStandardImageSources(
+  imagePath: string,
+  sizes: string,
+): ResponsiveImageSources {
+  const base = imagePath.replace(/\.(jpg|webp|avif)$/, "");
+  return {
+    avifSrcSet: `${base}-240.avif 240w, ${base}-384.avif 384w`,
+    webpSrcSet: `${base}-240.webp 240w, ${base}-384.webp 384w`,
+    jpgSrcSet: `${base}-240.jpg 240w, ${base}.jpg 384w`,
+    fallbackSrc: imagePath,
+    width: 384,
+    height: 512,
+    sizes,
+  };
+}
+
 /**
  * Returns responsive srcset, sizes, and dimensions for hero images.
  */
@@ -29,16 +45,7 @@ export function getHeroImageSources(imagePath: string): ResponsiveImageSources {
   }
 
   // Category image used as hero fallback (e.g. /categories/04-profile.jpg)
-  const base = imagePath.replace(/\.(jpg|webp|avif)$/, "");
-  return {
-    avifSrcSet: `${base}-240.avif 240w, ${base}-384.avif 384w`,
-    webpSrcSet: `${base}-240.webp 240w, ${base}-384.webp 384w`,
-    jpgSrcSet: `${base}-240.jpg 240w, ${base}.jpg 384w`,
-    fallbackSrc: imagePath,
-    width: 384,
-    height: 512,
-    sizes: "100vw",
-  };
+  return buildStandardImageSources(imagePath, "100vw");
 }
 
 /**
@@ -47,17 +54,10 @@ export function getHeroImageSources(imagePath: string): ResponsiveImageSources {
 export function getCategoryImageSources(
   imagePath: string,
 ): ResponsiveImageSources {
-  const base = imagePath.replace(/\.(jpg|webp|avif)$/, "");
-  return {
-    avifSrcSet: `${base}-240.avif 240w, ${base}-384.avif 384w`,
-    webpSrcSet: `${base}-240.webp 240w, ${base}-384.webp 384w`,
-    jpgSrcSet: `${base}-240.jpg 240w, ${base}.jpg 384w`,
-    fallbackSrc: imagePath,
-    width: 384,
-    height: 512,
-    sizes:
-      "(max-width: 560px) 128px, (max-width: 768px) 50vw, (max-width: 1080px) 33vw, 280px",
-  };
+  return buildStandardImageSources(
+    imagePath,
+    "(max-width: 560px) 128px, (max-width: 768px) 50vw, (max-width: 1080px) 33vw, 280px",
+  );
 }
 
 /**

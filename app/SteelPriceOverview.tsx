@@ -4,16 +4,16 @@ import {
   loadOverviewSummaries,
   type CategoryPriceOverview,
 } from "./catalog-overview";
-import { localizeCatalogValue } from "./catalog-utils";
+import { formatCatalogNumber } from "./catalog-utils";
 import { getThumbnailSources } from "./image-utils";
 
 function formatStatusText(status: string, percent: number): string {
   const absPercent = Math.abs(percent);
   if (status === "up" && absPercent > 0) {
-    return `افزایشی (${localizeCatalogValue(absPercent.toFixed(1))}٪)`;
+    return `افزایشی (${formatCatalogNumber(absPercent, 1)}٪)`;
   }
   if (status === "down" && absPercent > 0) {
-    return `کاهشی (${localizeCatalogValue(absPercent.toFixed(1))}٪)`;
+    return `کاهشی (${formatCatalogNumber(absPercent, 1)}٪)`;
   }
   return "ثابت / بدون تغییر";
 }
@@ -107,13 +107,8 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                   <td className="overview-cell-price">
                     {item.minPrice && item.maxPrice ? (
                       <span className="price-range" dir="rtl">
-                        {localizeCatalogValue(
-                          item.minPrice.toLocaleString("fa-IR"),
-                        )}{" "}
-                        تا{" "}
-                        {localizeCatalogValue(
-                          item.maxPrice.toLocaleString("fa-IR"),
-                        )}{" "}
+                        {formatCatalogNumber(item.minPrice)} تا{" "}
+                        {formatCatalogNumber(item.maxPrice)}{" "}
                         <small>تومان</small>
                       </span>
                     ) : loaded ? (
@@ -179,14 +174,8 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                   <small>حدود قیمت:</small>
                   {item.minPrice && item.maxPrice ? (
                     <strong>
-                      {localizeCatalogValue(
-                        item.minPrice.toLocaleString("fa-IR"),
-                      )}{" "}
-                      تا{" "}
-                      {localizeCatalogValue(
-                        item.maxPrice.toLocaleString("fa-IR"),
-                      )}{" "}
-                      تومان
+                      {formatCatalogNumber(item.minPrice)} تا{" "}
+                      {formatCatalogNumber(item.maxPrice)} تومان
                     </strong>
                   ) : (
                     <strong>تماس بگیرید</strong>

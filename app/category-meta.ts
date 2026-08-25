@@ -36,19 +36,6 @@ export type ProductGroup = {
   seoDescription: string;
 };
 
-const liveProductCatalogIds: ProductCatalogId[] = [
-  "sheet",
-  "profile",
-  "pipe",
-  "angle",
-  "channel",
-  "wire",
-];
-
-export function isProductCatalogId(value: string): value is ProductCatalogId {
-  return liveProductCatalogIds.includes(value as ProductCatalogId);
-}
-
 // rows is filled in by buildCatalogSearchGroups from the live catalogs. It is
 // deliberately empty here: search only ever runs once those have loaded, so any
 // placeholder listed at this level would be unreachable.

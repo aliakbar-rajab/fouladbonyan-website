@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ingestAll, KV_KEYS, STATUS_KEY } from "./ingest.mjs";
-import { buildAllPayloads } from "../../scripts/lib/build-price-payloads.mjs";
+import { buildCatalogSnapshot } from "../../scripts/lib/build-price-payloads.mjs";
 
 function fakeProductItem(index) {
   return {
@@ -55,70 +55,43 @@ function fakeKv(seed = {}) {
   };
 }
 
-async function buildValidPayloads(t) {
+async function buildValidPayload(t) {
   t.mock.method(globalThis, "fetch", async () => new Response(fakeCatalogHtml(), { status: 200 }));
-  return buildAllPayloads();
+  return buildCatalogSnapshot();
 }
 
-test("ingestAll stores all three datasets and a success status for a valid payload", async (t) => {
-  const payloads = await buildValidPayloads(t);
+test("ingestAll stores the canonical catalog dataset and a success status for a valid payload", async (t) => {
+  const { snapshot, diagnostics } = await buildValidPayload(t);
   const kv = fakeKv();
 
-  const status = await ingestAll(kv, payloads);
-
-  assert.equal(status.ok, true);
-  assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.rebar)), payloads.rebar);
-  assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.beam)), payloads.beam);
-  assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.product)), payloads.product);
-  assert.equal(JSON.parse(kv.store.get(STATUS_KEY)).ok, true);
-});
-
-test("ingestAll rejects a payload missing a dataset and leaves KV untouched", async () => {
-  const kv = fakeKv({ [KV_KEYS.rebar]: '{"fetchedAt":"old"}' });
-
-  const status = await ingestAll(kv, { rebar: { fetchedAt: "x" }, beam: { fetchedAt: "x" } });
-
-  assert.equal(status.ok, false);
-  assert.match(status.error, /داده‌های قیمت/);
-  assert.equal(kv.store.get(KV_KEYS.rebar), '{"fetchedAt":"old"}');
-  assert.equal(kv.store.has(KV_KEYS.beam), false);
-});
-
-test("ingestAll rejects a structurally invalid dataset and leaves KV untouched", async (t) => {
-  const payloads = await buildValidPayloads(t);
-  payloads.rebar.categories[0].summary.min = -1; // structurally invalid
-  const kv = fakeKv({
-    [KV_KEYS.rebar]: '{"fetchedAt":"old-rebar"}',
-    [KV_KEYS.beam]: '{"fetchedAt":"old-beam"}',
-    [KV_KEYS.product]: '{"fetchedAt":"old-product"}',
-  });
-
-  const status = await ingestAll(kv, payloads);
-
-  assert.equal(status.ok, false);
-  assert.equal(kv.store.get(KV_KEYS.rebar), '{"fetchedAt":"old-rebar"}');
-  assert.equal(kv.store.get(KV_KEYS.beam), '{"fetchedAt":"old-beam"}');
-  assert.equal(kv.store.get(KV_KEYS.product), '{"fetchedAt":"old-product"}');
-});
-
-test("ingestAll stores canonical snapshot and all legacy projections", async (t) => {
-  const { buildCatalogSnapshot } = await import(
-    "../../scripts/lib/build-price-payloads.mjs"
-  );
-  t.mock.method(globalThis, "fetch", async () =>
-    new Response(fakeCatalogHtml(), { status: 200 }),
-  );
-  const { snapshot } = await buildCatalogSnapshot();
-  const kv = fakeKv();
-
-  const status = await ingestAll(kv, { snapshot });
+  const status = await ingestAll(kv, { snapshot, diagnostics });
 
   assert.equal(status.ok, true);
   assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.catalog)), snapshot);
-  assert.ok(kv.store.has(KV_KEYS.rebar));
-  assert.ok(kv.store.has(KV_KEYS.beam));
-  assert.ok(kv.store.has(KV_KEYS.product));
   assert.equal(JSON.parse(kv.store.get(STATUS_KEY)).ok, true);
+});
+
+test("ingestAll rejects a payload missing price data and leaves KV untouched", async () => {
+  const kv = fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"old"}' });
+
+  const status = await ingestAll(kv, { invalid: true });
+
+  assert.equal(status.ok, false);
+  assert.match(status.error, /داده‌های قیمت/);
+  assert.equal(kv.store.get(KV_KEYS.catalog), '{"fetchedAt":"old"}');
+});
+
+test("ingestAll rejects a structurally invalid dataset and leaves KV untouched", async (t) => {
+  const { snapshot, diagnostics } = await buildValidPayload(t);
+  snapshot.catalogs[0].categories[0].summary.min = -1; // structurally invalid
+  const kv = fakeKv({
+    [KV_KEYS.catalog]: '{"fetchedAt":"old-catalog"}',
+  });
+
+  const status = await ingestAll(kv, { snapshot, diagnostics });
+
+  assert.equal(status.ok, false);
+  assert.equal(kv.store.get(KV_KEYS.catalog), '{"fetchedAt":"old-catalog"}');
 });
 
 test("ingestAll rejects a non-object body", async () => {

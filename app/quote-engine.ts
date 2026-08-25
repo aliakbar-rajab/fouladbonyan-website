@@ -1,4 +1,9 @@
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
+import {
+  normalizePhone,
+  validateFullName,
+  validatePhone,
+} from "./form-validation";
 import { toAsciiDigits } from "./site-logic.mjs";
 import {
   quoteDisclaimer,
@@ -47,11 +52,7 @@ export const isPieceUnit = (unit: string): boolean =>
 export const itemIndexLabel = (index: number) =>
   formatPersianNumber(index + 1);
 
-const iranianPhonePattern = /^(?:\+98|0098|98|0)?(?:9\d{9}|21\d{8})$/;
-
-export function normalizePhone(value: string): string {
-  return toAsciiDigits(value ?? "").replace(/[\s()-]/g, "");
-}
+export { normalizePhone };
 
 export function calculateApproximateTotal(
   unitPriceTomanPerKg: number,
@@ -153,21 +154,7 @@ export function normalizeQuoteRequest(
 export const DISCLAIMER_ERROR =
   "برای آماده‌سازی درخواست باید متن غیرقطعی‌بودن درخواست را تأیید کنید.";
 
-export function validateFullName(value: string): string {
-  const normalized = value.trim();
-  if (!normalized) return "نام و نام خانوادگی را وارد کنید.";
-  if (normalized.length < 3) return "نام واردشده باید حداقل ۳ حرف باشد.";
-  return "";
-}
-
-export function validatePhone(value: string): string {
-  const normalized = normalizePhone(value);
-  if (!normalized) return "شماره تماس را وارد کنید.";
-  if (!iranianPhonePattern.test(normalized)) {
-    return "شماره تماس معتبر ایرانی وارد کنید؛ مانند ۰۹۱۲۱۲۳۴۵۶۷.";
-  }
-  return "";
-}
+export { validateFullName, validatePhone };
 
 export function validateDestination(value: string): string {
   return value.trim() ? "" : "شهر مقصد را وارد کنید.";

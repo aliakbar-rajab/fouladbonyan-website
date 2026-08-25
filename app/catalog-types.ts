@@ -87,9 +87,6 @@ export type CatalogSnapshot = {
   catalogs: GroupCatalog[];
 };
 
-/** @deprecated Use CatalogSnapshot */
-export type CatalogPriceData = CatalogSnapshot;
-
 export type CatalogViewRequest = {
   requestId: number;
   categoryId?: string;

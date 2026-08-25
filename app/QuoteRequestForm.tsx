@@ -27,15 +27,15 @@ import {
   quoteUnits,
   type DerivedQuoteItem,
   type GeneratedQuote,
-  type QuoteItem,
   type QuotePriceEstimates,
+  type RawQuoteItem,
 } from "./quote-types";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
 
 const MAX_QUOTE_ITEMS = 100;
 
-const createQuoteItem = (id: number): QuoteItem => ({
+const createQuoteItem = (id: number): RawQuoteItem => ({
   id,
   product: "",
   quantity: "",
@@ -132,7 +132,7 @@ function ItemPriceHint({
 
 export function QuoteRequestForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [items, setItems] = useState<QuoteItem[]>([createQuoteItem(1)]);
+  const [items, setItems] = useState<RawQuoteItem[]>([createQuoteItem(1)]);
   const [priceEstimates, setPriceEstimates] =
     useState<QuotePriceEstimates | null>(null);
   const [priceLoadError, setPriceLoadError] = useState(false);
@@ -222,7 +222,7 @@ export function QuoteRequestForm() {
     setGeneratedQuote(null);
   };
 
-  const updateItem = (itemId: number, patch: Partial<QuoteItem>) => {
+  const updateItem = (itemId: number, patch: Partial<RawQuoteItem>) => {
     setItems((current) => {
       const next = current.map((item) =>
         item.id === itemId ? { ...item, ...patch } : item,

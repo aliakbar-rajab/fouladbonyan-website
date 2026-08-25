@@ -9,10 +9,8 @@ import {
   validateRequired,
 } from "../app/form-validation.ts";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
-import {
-  calculateApproximateTotal,
-  loadQuotePriceEstimates,
-} from "../app/quote-pricing.ts";
+import { calculateApproximateTotal } from "../app/quote-engine.ts";
+import { loadQuotePriceEstimates } from "../app/quote-pricing.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 

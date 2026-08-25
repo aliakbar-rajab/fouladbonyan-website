@@ -265,32 +265,6 @@ export function validateCatalogSnapshot(
   return payload;
 }
 
-/** @deprecated Use validateCatalogSnapshot */
-export function validateCatalogPriceData(payload, { expectedCategoryIds } = {}) {
-  if (Array.isArray(payload?.catalogs)) {
-    return validateCatalogSnapshot(payload);
-  }
-  validateEnvelope(payload, "catalog");
-  assert(Array.isArray(payload.categories), "catalog.categories آرایه نیست");
-  assert(payload.categories.length > 0, "catalog.categories خالی است");
-  payload.categories.forEach((category, index) =>
-    validateCategory(category, `catalog.categories[${index}]`),
-  );
-  if (expectedCategoryIds) {
-    assert(
-      payload.categories.length === expectedCategoryIds.length &&
-        expectedCategoryIds.every(
-          (id, index) => payload.categories[index]?.id === id,
-        ),
-      "ترتیب یا تعداد دسته‌ها با قرارداد منبع همخوان نیست",
-    );
-  }
-  return payload;
-}
-
-/** @deprecated Use validateCatalogSnapshot */
-export const validateProductPricePayload = validateCatalogSnapshot;
-
 const MARKET_ITEM_IDS = ["gold", "usd", "tether", "eur"];
 
 export function validateMarketPriceData(payload) {
