@@ -285,9 +285,9 @@ body {
   z-index: 3;
   padding-block: clamp(5rem, 8vw, 8rem);
   background:
-    radial-gradient(ellipse at 82% 8%, rgb(246 181 0 / 4%), transparent 36rem),
-    radial-gradient(ellipse at 15% 45%, rgb(68 88 104 / 6%), transparent 40rem),
-    linear-gradient(180deg, #0b0f12 0%, #10151a 24%, #0f1418 70%, #11161a 100%);
+    radial-gradient(ellipse 65% 35% at 78% 12%, rgb(246 181 0 / 6%), transparent 42rem),
+    radial-gradient(ellipse 55% 45% at 18% 48%, rgb(68 88 104 / 8%), transparent 44rem),
+    linear-gradient(180deg, #0b0f12 0%, #0f1418 20%, #10151a 50%, #0e1317 80%, #11161a 100%);
   color: var(--steel-100);
 }
 
@@ -296,12 +296,21 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.6;
-  background:
-    radial-gradient(circle at 50% 0%, rgb(255 212 90 / 3%), transparent 48rem),
-    linear-gradient(145deg, rgb(255 255 255 / 1.5%) 0%, transparent 50%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  opacity: 0.18;
+  background-image:
+    linear-gradient(135deg, rgb(16 21 25 / 75%), rgb(11 15 18 / 92%)),
+    url("/textures/dark-chequered-plate.webp");
+  background-size: 3800px auto;
+  background-position: center 10%;
+  background-repeat: repeat-y;
+  mask-image:
+    radial-gradient(ellipse 75% 55% at 75% 22%, #000 0%, #000 30%, transparent 70%),
+    linear-gradient(180deg, transparent 0%, #000 14%, #000 82%, transparent 100%);
+  -webkit-mask-image:
+    radial-gradient(ellipse 75% 55% at 75% 22%, #000 0%, #000 30%, transparent 70%),
+    linear-gradient(180deg, transparent 0%, #000 14%, #000 82%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
   pointer-events: none;
 }
 
