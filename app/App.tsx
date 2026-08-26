@@ -409,42 +409,6 @@ export default function App({
           </div>
         </section>
 
-        <section className="about section" id="about">
-          <div className="shell about-grid">
-            <div className="about-copy">
-              <SectionTitle
-                title="از انتخاب محصول تا هماهنگی تحویل"
-                description="بنیان فولاد داریا مسیر بررسی مشخصات، استعلام موجودی، مقایسه گزینه‌های تأمین و هماهنگی تحویل را برای متقاضیان ساختمانی و صنعتی یکپارچه می‌کند."
-              />
-              <ul className="feature-list">
-                <li>
-                  <strong>استعلام شفاف</strong>
-                  <span>
-                    قیمت نهایی پس از مشخص‌شدن نوع، ابعاد، مقدار و محل تحویل
-                    اعلام می‌شود.
-                  </span>
-                </li>
-                <li>
-                  <strong>راهنمایی پیش از درخواست</strong>
-                  <span>
-                    مشخصات محصول پیش از صدور پیش‌فاکتور با متقاضی مرور می‌شود.
-                  </span>
-                </li>
-                <li>
-                  <strong>پیگیری هماهنگ</strong>
-                  <span>
-                    هماهنگی موجودی و تحویل پس از استعلام از طریق واحد فروش انجام
-                    می‌شود.
-                  </span>
-                </li>
-              </ul>
-              <a className="about-more-link" href="/about/">
-                آشنایی بیشتر با بنیان فولاد داریا
-              </a>
-            </div>
-          </div>
-        </section>
-
         <section className="knowledge-section section" aria-labelledby="knowledge-heading">
           <div className="shell knowledge-layout">
             <div className="knowledge-intro">

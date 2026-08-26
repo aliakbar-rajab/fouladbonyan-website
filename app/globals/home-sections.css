@@ -2,8 +2,7 @@
   padding-block: clamp(4rem, 8vw, 7rem);
 }
 
-.products,
-.about {
+.products {
   background-color: #3b3b3e;
 }
 
@@ -32,28 +31,6 @@
 .products > .shell {
   position: relative;
   z-index: 2;
-}
-
-.about {
-  position: relative;
-  isolation: isolate;
-  padding-block: calc(clamp(4rem, 8vw, 7rem) + 3rem) clamp(4rem, 8vw, 7rem);
-  background-color: #34353a;
-  background-image: none;
-}
-
-.about::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background-image: radial-gradient(circle at 18% 30%, rgb(246 181 0 / 5%), transparent 40rem);
-  pointer-events: none;
-}
-
-.about > .shell {
-  position: relative;
-  z-index: 1;
 }
 
 /*
@@ -93,15 +70,11 @@
   z-index: 2;
 }
 
-.products .section-heading h2,
-.about .section-heading h2,
-.about .feature-list strong {
+.products .section-heading h2 {
   color: var(--white);
 }
 
-.products .section-heading p,
-.about .section-heading p,
-.about .feature-list span {
+.products .section-heading p {
   color: #e1e1e4;
 }
 
@@ -240,10 +213,10 @@
 }
 
 /*
- * Ramps .prices' own dark tone into .about's background colour so the two
- * sections hand off without a visible seam. Must track .about's current
- * background-color (cinematic.css) -- it drifted out of sync once and left
- * a stale grey band here (#34353a) against .about's much darker tone.
+ * Ramps .prices' own dark tone into .knowledge-section's background colour
+ * so the two sections hand off without a visible seam. Must track
+ * .knowledge-section's current top colour (cinematic.css) -- it drifted out
+ * of sync once and left a stale grey band here against a much darker tone.
  */
 .prices::after {
   content: "";
@@ -252,7 +225,7 @@
   inset-block-end: 0;
   inset-inline: 0;
   height: clamp(4rem, 8vw, 6rem);
-  background: linear-gradient(180deg, transparent 0%, #11161a 100%);
+  background: linear-gradient(180deg, transparent 0%, #10161a 100%);
   pointer-events: none;
 }
 
