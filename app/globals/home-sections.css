@@ -279,10 +279,10 @@
 }
 
 /*
- * Used to end in a rounded, shadowed "card" edge that overlapped .about --
- * the rounded corner and shadow line landed on the mesh below as a hard
- * ring. Replaced with the same flat-colour ramp used elsewhere so the two
- * (near-identical) dark tones hand off without a visible seam.
+ * Ramps .prices' own dark tone into .about's background colour so the two
+ * sections hand off without a visible seam. Must track .about's current
+ * background-color (cinematic.css) -- it drifted out of sync once and left
+ * a stale grey band here (#34353a) against .about's much darker tone.
  */
 .prices::after {
   content: "";
@@ -291,7 +291,7 @@
   inset-block-end: 0;
   inset-inline: 0;
   height: clamp(4rem, 8vw, 6rem);
-  background: linear-gradient(180deg, transparent 0%, #34353a 100%);
+  background: linear-gradient(180deg, transparent 0%, #11161a 100%);
   pointer-events: none;
 }
 
@@ -626,6 +626,12 @@
   max-width: 200px;
 }
 
+.price-range-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .overview-cell-price .price-range {
   font-weight: 800;
   color: var(--white);
@@ -900,8 +906,13 @@ tbody tr:hover {
   }
 
   .overview-card-price strong {
+    display: block;
     color: #fff;
     font-size: 0.92rem;
+  }
+
+  .overview-card-price strong + strong {
+    margin-top: 0.3rem;
   }
 
   .overview-card-price span {

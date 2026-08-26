@@ -105,11 +105,19 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                     <span>{item.subTypes}</span>
                   </td>
                   <td className="overview-cell-price">
-                    {item.minPrice && item.maxPrice ? (
-                      <span className="price-range" dir="rtl">
-                        {formatCatalogNumber(item.minPrice)} تا{" "}
-                        {formatCatalogNumber(item.maxPrice)}{" "}
-                        <small>تومان</small>
+                    {item.priceRanges.length ? (
+                      <span className="price-range-group">
+                        {item.priceRanges.map((range) => (
+                          <span
+                            className="price-range"
+                            dir="rtl"
+                            key={range.unit}
+                          >
+                            {formatCatalogNumber(range.min)} تا{" "}
+                            {formatCatalogNumber(range.max)}{" "}
+                            <small>تومان / {range.unit}</small>
+                          </span>
+                        ))}
                       </span>
                     ) : loaded ? (
                       <span className="price-call">تماس بگیرید</span>
@@ -118,7 +126,10 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                     )}
                   </td>
                   <td className="overview-cell-unit">
-                    <span>{item.unit}</span>
+                    <span>
+                      {item.priceRanges.map((range) => range.unit).join(" / ") ||
+                        "—"}
+                    </span>
                   </td>
                   <td className="overview-cell-status">
                     <span
@@ -172,15 +183,17 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
               <div className="overview-card-details">
                 <div className="overview-card-price">
                   <small>حدود قیمت:</small>
-                  {item.minPrice && item.maxPrice ? (
-                    <strong>
-                      {formatCatalogNumber(item.minPrice)} تا{" "}
-                      {formatCatalogNumber(item.maxPrice)} تومان
-                    </strong>
+                  {item.priceRanges.length ? (
+                    item.priceRanges.map((range) => (
+                      <strong key={range.unit}>
+                        {formatCatalogNumber(range.min)} تا{" "}
+                        {formatCatalogNumber(range.max)} تومان
+                        <span> ({range.unit})</span>
+                      </strong>
+                    ))
                   ) : (
                     <strong>تماس بگیرید</strong>
                   )}
-                  <span>({item.unit})</span>
                 </div>
                 <a href={`/${item.id}/`} className="overview-card-btn">
                   مشاهده جدول کامل
