@@ -323,8 +323,37 @@ body {
   background-position: center top;
   background-repeat: repeat;
   filter: contrast(1.25) brightness(1.15);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%) !important;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 8%, #000 92%, transparent 100%) !important;
+  /*
+   * Eased over a much longer run than a plain linear fade -- the plate's
+   * diagonal lines are high-frequency detail, so even a "faint" linear
+   * opacity reads as a sudden pattern the instant it's above ~30%. Extra
+   * intermediate stops slow the first climb so the eye finds a gradual
+   * emergence instead of a texture switching on.
+   */
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(0 0 0 / 6%) 8%,
+    rgb(0 0 0 / 16%) 16%,
+    rgb(0 0 0 / 34%) 24%,
+    rgb(0 0 0 / 62%) 30%,
+    #000 36%,
+    #000 74%,
+    rgb(0 0 0 / 55%) 84%,
+    transparent 100%
+  ) !important;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(0 0 0 / 6%) 8%,
+    rgb(0 0 0 / 16%) 16%,
+    rgb(0 0 0 / 34%) 24%,
+    rgb(0 0 0 / 62%) 30%,
+    #000 36%,
+    #000 74%,
+    rgb(0 0 0 / 55%) 84%,
+    transparent 100%
+  ) !important;
   pointer-events: none;
 }
 
@@ -833,7 +862,26 @@ body {
   background: #0b0f12;
 }
 
+/*
+ * Carries the hero's warm accent glow down across the section seam instead
+ * of letting it hard-stop into flat colour. Bleeds slightly above this
+ * section's own top edge so the light already feels present before the
+ * boundary, not switched on after it.
+ */
+.market-context::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset-inline: 0;
+  inset-block-start: -9rem;
+  height: 18rem;
+  background: radial-gradient(ellipse 85% 100% at 50% 0%, rgb(246 181 0 / 22%), transparent 78%);
+  pointer-events: none;
+}
+
 .market-context .shell {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(15rem, 0.75fr) minmax(0, 1.8fr);
   gap: clamp(2rem, 5vw, 5rem);
@@ -943,8 +991,20 @@ body {
 
 .knowledge-section {
   position: relative;
+  /*
+   * .prices carries z-index: 3, so without an explicit, higher value here
+   * this section would paint *beneath* it wherever the two overlap --
+   * silently hiding the ::before glow below that bleeds backward across
+   * the seam.
+   */
+  z-index: 4;
   isolation: isolate;
-  overflow: hidden;
+  /*
+   * Was `hidden` -- switched to `visible` so ::before below can bleed
+   * upward into .prices; nothing here relies on the section clipping its
+   * own children.
+   */
+  overflow: visible;
   padding-block: clamp(5rem, 8vw, 7.5rem);
   background:
     radial-gradient(circle at 12% 20%, rgb(246 181 0 / 10%), transparent 32rem),
@@ -952,7 +1012,26 @@ body {
   color: var(--steel-100);
 }
 
+/*
+ * Extends this section's own warm glow backward across the seam, into
+ * .prices' tail, so the knowledge card's light reads as a continuation of
+ * an already-warming background rather than a new source switching on
+ * right after the boundary.
+ */
+.knowledge-section::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset-inline: 0;
+  top: -13rem;
+  height: 20rem;
+  background: radial-gradient(ellipse 80% 100% at 40% 100%, rgb(246 181 0 / 24%), transparent 80%);
+  pointer-events: none;
+}
+
 .knowledge-layout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(15rem, 0.7fr) minmax(0, 1.7fr);
   gap: clamp(2rem, 6vw, 6rem);
@@ -1026,11 +1105,31 @@ body {
 
 .quote-section {
   position: relative;
+  /* Same reasoning as .knowledge-section's z-index: 4 -- stay above the
+     section before it so this one's bleed-back glow isn't hidden beneath
+     it. */
+  z-index: 5;
   isolation: isolate;
   padding-block: clamp(6rem, 10vw, 9rem);
   background:
     radial-gradient(ellipse at 50% 25%, rgb(246 181 0 / 12%), transparent 38rem),
     linear-gradient(180deg, #090d10 0%, #0c1014 45%, #050709 85%, #000000 100%);
+}
+
+/*
+ * Lets this section's golden glow start gathering before the boundary
+ * instead of appearing to switch on with quote-inner's own lit border --
+ * bleeds upward into .knowledge-section's tail.
+ */
+.quote-section::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset-inline: 0;
+  top: -14rem;
+  height: 22rem;
+  background: radial-gradient(ellipse 75% 100% at 50% 100%, rgb(246 181 0 / 22%), transparent 82%);
+  pointer-events: none;
 }
 
 .quote-inner {
