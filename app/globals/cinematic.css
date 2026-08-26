@@ -279,6 +279,22 @@ body {
   margin-bottom: 1.4rem;
 }
 
+/*
+ * Dissolves the hero photograph into the next section's flat tone well
+ * before the section edge, so the image fades out instead of cutting off
+ * against .market-context's solid background.
+ */
+.hero::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: clamp(10rem, 22vw, 17rem);
+  background: linear-gradient(180deg, transparent 0%, rgb(11 15 18 / 60%) 55%, #0b0f12 100%);
+  pointer-events: none;
+}
+
 /* Steel price workspace ------------------------------------------------- */
 
 .prices {
