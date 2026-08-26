@@ -4,9 +4,7 @@
  */
 .info-main {
   min-height: 60vh;
-  background:
-    linear-gradient(rgb(31 32 35 / 96%), rgb(31 32 35 / 96%)),
-    url("/textures/dark-chequered-plate.webp");
+  background: linear-gradient(180deg, rgb(31 32 35) 0%, rgb(20 22 25) 100%);
 }
 
 .info-hero {

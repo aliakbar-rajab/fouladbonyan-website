@@ -285,8 +285,9 @@ body {
   z-index: 3;
   padding-block: clamp(5rem, 8vw, 8rem);
   background:
-    linear-gradient(180deg, #0a0d0f, #101519 38%, #0b0f12),
-    var(--steel-950);
+    radial-gradient(ellipse at 82% 8%, rgb(246 181 0 / 4%), transparent 36rem),
+    radial-gradient(ellipse at 15% 45%, rgb(68 88 104 / 6%), transparent 40rem),
+    linear-gradient(180deg, #0b0f12 0%, #10151a 24%, #0f1418 70%, #11161a 100%);
   color: var(--steel-100);
 }
 
@@ -295,10 +296,12 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.16;
-  background-image: url("/textures/dark-chequered-plate.webp");
-  background-size: 1700px auto;
-  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 72%, transparent);
+  opacity: 0.6;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(255 212 90 / 3%), transparent 48rem),
+    linear-gradient(145deg, rgb(255 255 255 / 1.5%) 0%, transparent 50%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
   pointer-events: none;
 }
 
@@ -917,14 +920,23 @@ body {
 
 .about {
   padding-block: clamp(5rem, 9vw, 8rem);
-  background-color: #11161a;
+  background:
+    radial-gradient(circle at 85% 20%, rgb(246 181 0 / 4%), transparent 32rem),
+    linear-gradient(180deg, #11161a 0%, #12181d 50%, #10161a 100%);
 }
 
 .about::before {
-  opacity: 0.28;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.5;
   background-image:
-    linear-gradient(90deg, rgb(17 22 26 / 18%), rgb(17 22 26 / 90%) 72%),
-    url("/textures/woven-metal.webp");
+    radial-gradient(circle at 18% 35%, rgb(246 181 0 / 6%), transparent 36rem),
+    linear-gradient(145deg, rgb(255 255 255 / 2%) 0%, transparent 40%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  pointer-events: none;
 }
 
 @media (min-width: 901px) {
@@ -980,19 +992,14 @@ body {
   color: var(--bronze-300);
 }
 
-/*
- * Deliberately textureless: .about (just above) already owns the
- * woven-metal surface. Repeating that same image here read as the pattern
- * "restarting" at the section boundary, so this section stays a plain
- * graded surface instead of a second instance of it.
- */
 .knowledge-section {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  padding-block: clamp(5rem, 8vw, 7.5rem);
   background:
-    radial-gradient(circle at 12% 20%, rgb(246 181 0 / 12%), transparent 32rem),
-    linear-gradient(180deg, #10161a, #090d10);
+    radial-gradient(circle at 12% 20%, rgb(246 181 0 / 10%), transparent 32rem),
+    linear-gradient(180deg, #10161a 0%, #0d1215 50%, #090d10 100%);
   color: var(--steel-100);
 }
 
@@ -1069,37 +1076,69 @@ body {
 }
 
 .quote-section {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(6rem, 10vw, 9rem);
   background:
-    radial-gradient(circle at 15% 20%, rgb(246 181 0 / 14%), transparent 30rem),
-    #0a0e11;
+    radial-gradient(ellipse at 50% 25%, rgb(246 181 0 / 12%), transparent 38rem),
+    linear-gradient(180deg, #090d10 0%, #0c1014 45%, #050709 85%, #000000 100%);
 }
 
 .quote-inner {
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-lg);
+  padding: clamp(2.75rem, 5vw, 4.25rem) clamp(2rem, 5vw, 4rem);
+  border: 1px solid rgb(255 215 100 / 18%);
+  border-top: 1px solid rgb(255 235 180 / 35%);
+  border-radius: 24px;
   background:
-    radial-gradient(circle at 15% 0%, rgb(255 212 90 / 9%), transparent 24rem),
-    linear-gradient(135deg, rgb(255 255 255 / 9%), transparent 42%),
-    rgb(14 18 21 / 68%);
-  -webkit-backdrop-filter: blur(26px) saturate(1.18);
-  backdrop-filter: blur(26px) saturate(1.18);
+    radial-gradient(circle at 85% 0%, rgb(246 181 0 / 14%), transparent 30rem),
+    linear-gradient(145deg, rgb(255 255 255 / 8%) 0%, rgb(255 255 255 / 2%) 45%, transparent 100%),
+    rgb(14 18 22 / 85%);
+  -webkit-backdrop-filter: blur(32px) saturate(1.25);
+  backdrop-filter: blur(32px) saturate(1.25);
   color: #fff;
   box-shadow:
-    inset 0 1px var(--surface-highlight),
-    0 30px 80px rgb(0 0 0 / 28%);
+    0 35px 90px -10px rgb(0 0 0 / 65%),
+    0 0 50px -10px rgb(246 181 0 / 12%),
+    inset 0 1px 1px rgb(255 255 255 / 25%);
 }
 
 .quote-inner h2 {
   margin-top: 0;
+  font-size: clamp(2rem, 3.8vw, 2.85rem);
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  color: #ffffff;
 }
 
 .quote-inner p {
-  color: #aeb7bc;
+  margin-top: 0.85rem;
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.8;
+  color: #c2cbd0;
+  max-width: 40rem;
 }
 
 .quote-inner > a {
-  background: linear-gradient(135deg, var(--bronze-300), var(--bronze-500));
-  color: #111417;
+  min-width: 14.5rem;
+  min-height: 3.85rem;
+  padding: 0.9rem 2.25rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffd55a 0%, #f6b500 50%, #d99600 100%);
+  color: #0b0f12;
+  font-size: 1.08rem;
+  font-weight: 900;
+  box-shadow:
+    0 10px 32px rgb(246 181 0 / 42%),
+    inset 0 1px 1px rgb(255 255 255 / 70%);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease;
+}
+
+.quote-inner > a:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 16px 42px rgb(246 181 0 / 60%),
+    inset 0 1px 1px #fff;
 }
 
 .mobile-action-icon {

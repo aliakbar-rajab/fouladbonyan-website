@@ -25,20 +25,7 @@
   position: absolute;
   z-index: 0;
   inset: 0;
-  background-image:
-    linear-gradient(rgb(59 59 62 / 28%), rgb(59 59 62 / 28%)),
-    url("/textures/dark-chequered-plate.webp");
-  background-position:
-    center,
-    center top;
-  background-repeat:
-    no-repeat,
-    repeat-y;
-  background-size:
-    auto,
-    2752px auto;
-  mask-image: linear-gradient(180deg, #000 0%, #000 78%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 78%, transparent 100%);
+  background-image: linear-gradient(180deg, transparent 0%, rgb(59 59 62 / 40%) 100%);
   pointer-events: none;
 }
 
@@ -55,38 +42,12 @@
   background-image: none;
 }
 
-/*
- * The weave texture lives on its own layer, masked so it dissolves into
- * the section's flat colour before both box edges. Without this the mesh
- * pattern stays crisp right up to the border and then just stops, which
- * reads as a hard seam against whatever comes next (.prices' lifted card
- * above, the quote banner below).
- */
 .about::before {
   content: "";
   position: absolute;
   z-index: 0;
   inset: 0;
-  background-image:
-    linear-gradient(rgb(20 21 24 / 56%), rgb(20 21 24 / 56%)),
-    url("/textures/woven-metal.webp");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 14%,
-    #000 78%,
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 14%,
-    #000 78%,
-    transparent 100%
-  );
+  background-image: radial-gradient(circle at 18% 30%, rgb(246 181 0 / 5%), transparent 40rem);
   pointer-events: none;
 }
 
