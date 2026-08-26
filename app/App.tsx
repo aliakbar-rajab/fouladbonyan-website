@@ -292,6 +292,8 @@ export default function App({
           subcategory={subcategoryInfo}
         />
 
+        <MarketPrices />
+
         <section className="prices section" id="prices">
           <div className="shell">
             <SectionTitle
@@ -406,8 +408,6 @@ export default function App({
             )}
           </div>
         </section>
-
-        <MarketPrices />
 
         <section className="about section" id="about">
           <div className="shell about-grid">

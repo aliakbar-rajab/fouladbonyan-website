@@ -1,8 +1,7 @@
 /*
- * Sits directly between .products (chequered-plate texture) and .prices,
- * both of which share the same flat #3b3b3e tone at their edges -- using
- * that same colour here keeps the three sections reading as one continuous
- * dark band instead of introducing a visible seam.
+ * Sits directly between the hero and .prices, which shares this section's
+ * flat #3b3b3e tone -- using the same colour here keeps the hand-off to
+ * .prices seamless.
  */
 .market-prices {
   position: relative;
