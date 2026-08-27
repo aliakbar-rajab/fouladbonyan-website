@@ -33,6 +33,7 @@ import { MegaMenu } from "./MegaMenu";
 import { SiteHeader } from "./SiteHeader";
 import { useMediaQuery } from "./use-media-query";
 import { PhoneIcon } from "./icons";
+import { QuoteCtaSection } from "./QuoteCtaSection";
 
 const loadCatalogSearchGroups = createRetryableLoader<ProductGroup[]>(() =>
   loadAllGroupCatalogs().then((catalogs) =>
@@ -435,21 +436,7 @@ export default function App({
           </div>
         </section>
 
-        <section
-          className="quote-section section"
-          aria-labelledby="quote-heading"
-        >
-          <div className="shell quote-inner">
-            <div>
-              <h2 id="quote-heading">مشخصات محصول موردنیاز را آماده کنید</h2>
-              <p>
-                نوع محصول، ابعاد، مقدار و شهر مقصد را آماده کنید تا واحد فروش
-                بتواند استعلام دقیق‌تری ارائه کند.
-              </p>
-            </div>
-            <a href="/quote-process/#quote-form">تکمیل فرم پیش‌فاکتور</a>
-          </div>
-        </section>
+        <QuoteCtaSection />
       </main>
 
       <SiteFooter />

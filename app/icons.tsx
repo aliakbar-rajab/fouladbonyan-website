@@ -193,3 +193,118 @@ export function ArrowIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function IsometricCubeIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon
+        points="24,7 39,15.5 24,24 9,15.5"
+        fill="rgba(246, 181, 0, 0.12)"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      <polygon
+        points="9,15.5 24,24 24,41 9,32.5"
+        fill="rgba(246, 181, 0, 0.04)"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      <polygon
+        points="24,24 39,15.5 39,32.5 24,41"
+        fill="rgba(246, 181, 0, 0.2)"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+    </svg>
+  );
+}
+
+export function TargetPrecisionIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+      <line x1="12" y1="1" x2="12" y2="4.5" />
+      <line x1="12" y1="19.5" x2="12" y2="23" />
+      <line x1="1" y1="12" x2="4.5" y2="12" />
+      <line x1="19.5" y1="12" x2="23" y2="12" />
+    </svg>
+  );
+}
+
+export function ClockFastIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="9.5" />
+      <polyline points="12 6.5 12 12 15.5 14" />
+    </svg>
+  );
+}
+
+export function ShieldSecurityIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2.5 4.5 5.8v6.2c0 5.2 3.2 10.1 7.5 11.5 4.3-1.4 7.5-6.3 7.5-11.5V5.8L12 2.5z" />
+      <path d="m9 12 2.2 2.2 4.3-4.4" />
+    </svg>
+  );
+}
+
+export function ChevronLeftBoldIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m14 7-5 5 5 5" />
+    </svg>
+  );
+}
+
