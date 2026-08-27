@@ -1,19 +1,7 @@
 .quote-section {
   position: relative;
   isolation: isolate;
-  padding-block: clamp(5.5rem, 9vw, 8.5rem);
   color: var(--white);
-}
-
-.quote-section::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset-block-end: 0;
-  inset-inline: 0;
-  height: clamp(5rem, 12vw, 9rem);
-  background: linear-gradient(180deg, transparent 0%, #000 100%);
-  pointer-events: none;
 }
 
 .quote-inner {
