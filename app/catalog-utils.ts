@@ -1,6 +1,11 @@
-import { toPersianDigits } from "./site-logic.mjs";
+import {
+  formatPersianNumber,
+  toPersianDigits,
+} from "./persian-numbers.mjs";
 
 export { toPersianDigits };
+
+export const formatCatalogNumber = formatPersianNumber;
 
 export function localizeCatalogValue(value: string | null | undefined) {
   if (!value) return "—";
@@ -8,17 +13,6 @@ export function localizeCatalogValue(value: string | null | undefined) {
   // money -- money goes through formatCatalogNumber. Grouping must stay off
   // here, or "1250" (a length in mm) becomes "۱٬۲۵۰".
   return toPersianDigits(value);
-}
-
-/**
- * Persian-formatted number for catalog figures: prices, counts, percentages.
- *
- * Percent change is passed maximumFractionDigits: 2, matching the precision
- * the source publishes. At 0 any move under half a percent renders as "۰٪"
- * next to an up/down arrow, which reads as no change at all.
- */
-export function formatCatalogNumber(value: number, maximumFractionDigits = 0) {
-  return value.toLocaleString("fa-IR", { maximumFractionDigits });
 }
 
 /** The source publishes `updatedAt` as Unix seconds, for `<time dateTime>` markup. */

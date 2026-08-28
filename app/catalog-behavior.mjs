@@ -1,14 +1,13 @@
-import { toAsciiDigits } from "./site-logic.mjs";
+import { parsePersianNumber } from "./persian-numbers.mjs";
 
 export function calculateRebarWeight(diameter, length, quantity) {
-  const clean = (val) =>
-    Number(toAsciiDigits(String(val ?? "")).replace(/[/٫]/g, ".").trim());
-  const parsedDiameter = clean(diameter);
-  const parsedLength = clean(length);
-  const parsedQuantity = clean(quantity);
+  const parsedDiameter = parsePersianNumber(diameter);
+  const parsedLength = parsePersianNumber(length);
+  const parsedQuantity = parsePersianNumber(quantity);
   if (
-    !Number.isFinite(parsedDiameter) ||
-    !Number.isFinite(parsedLength) ||
+    parsedDiameter === null ||
+    parsedLength === null ||
+    parsedQuantity === null ||
     !Number.isInteger(parsedQuantity) ||
     parsedDiameter <= 0 ||
     parsedLength <= 0 ||

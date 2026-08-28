@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import { PreparedRequestActions } from "./request-form-shared";
 import { siteConfig } from "./site-config";
-import { rialToWords } from "./persian-numbers";
+import {
+  parsePersianNumber,
+  rialToWords,
+  toPersianDigits,
+} from "./persian-numbers.mjs";
 import { quoteDisclaimer, type GeneratedQuote } from "./quote-types";
-import { toPersianDigits } from "./catalog-utils";
-import { parsePersianNumber } from "./quote-engine";
 
 const formatRial = (value: number) => `${value.toLocaleString("fa-IR")} ریال`;
 

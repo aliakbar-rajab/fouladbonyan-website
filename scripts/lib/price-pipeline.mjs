@@ -1,7 +1,10 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { toAsciiDigits, toPersianDigits } from "../../app/site-logic.mjs";
+import {
+  parsePersianNumber,
+  toPersianDigits,
+} from "../../app/persian-numbers.mjs";
 import {
   deriveSummaryFromRows,
   validateCatalogSnapshot,
@@ -60,20 +63,12 @@ function formatPersianDate(unixTimestamp) {
 
 /** Numeric where both sides are numeric, Persian collation otherwise. */
 function compareSizeValues(first, second) {
-  const firstNumber = Number.parseFloat(
-    toAsciiDigits(String(first ?? ""))
-      .replace(/[/٫]/g, ".")
-      .replace(/[^\d.]/g, ""),
-  );
-  const secondNumber = Number.parseFloat(
-    toAsciiDigits(String(second ?? ""))
-      .replace(/[/٫]/g, ".")
-      .replace(/[^\d.]/g, ""),
-  );
-  if (Number.isFinite(firstNumber) && Number.isFinite(secondNumber)) {
+  const firstNumber = parsePersianNumber(first);
+  const secondNumber = parsePersianNumber(second);
+  if (firstNumber !== null && secondNumber !== null) {
     return firstNumber - secondNumber;
   }
-  return String(first).localeCompare(String(second), "fa");
+  return String(first ?? "").localeCompare(String(second ?? ""), "fa");
 }
 
 function resolveSource(raw) {

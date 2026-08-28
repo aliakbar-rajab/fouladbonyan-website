@@ -15,7 +15,7 @@
  * hydrate against exactly the bytes they were prerendered from.
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
-import { toAsciiDigits } from "./site-logic.mjs";
+import { parsePersianNumber } from "./persian-numbers.mjs";
 import type {
   CatalogCategory,
   CatalogSnapshot,
@@ -102,10 +102,8 @@ export type GuideReference = {
  * number comes back null so the caller can drop the row.
  */
 export function parseCatalogNumber(value: string | undefined): number | null {
-  if (!value) return null;
-  const normalised = toAsciiDigits(value).replace("/", ".").trim();
-  const parsed = Number(normalised);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  const parsed = parsePersianNumber(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
 }
 
 const round = (value: number, digits: number) => {

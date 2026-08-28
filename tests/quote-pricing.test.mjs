@@ -479,7 +479,7 @@ test("validateQuantity accepts Persian decimal and integer inputs properly", () 
 });
 
 test("rialToWords handles zero, negative, and normal values safely", async () => {
-  const { rialToWords } = await import("../app/persian-numbers.ts");
+  const { rialToWords } = await import("../app/persian-numbers.mjs");
   assert.equal(rialToWords(0), "صفر ریال");
   assert.equal(rialToWords(-100), "صفر ریال");
   assert.equal(rialToWords(1_000_000), "یک میلیون ریال");

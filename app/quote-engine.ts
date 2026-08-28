@@ -4,7 +4,7 @@ import {
   validateFullName,
   validatePhone,
 } from "./form-validation";
-import { toAsciiDigits } from "./site-logic.mjs";
+import { parsePersianNumber } from "./persian-numbers.mjs";
 import {
   quoteDisclaimer,
   quoteProductNames,
@@ -48,16 +48,7 @@ export const isPieceUnit = (unit: string): boolean =>
 export const itemIndexLabel = (index: number) =>
   formatCatalogNumber(index + 1);
 
-export { normalizePhone };
-
-export function parsePersianNumber(value: string): number | null {
-  if (!value) return null;
-  const ascii = toAsciiDigits(value.trim())
-    .replace(/[/٫]/g, ".")
-    .replace(/[,٬]/g, "");
-  const parsed = Number(ascii);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+export { normalizePhone, parsePersianNumber };
 
 // ---------------------------------------------------------------------------
 // 1. NORMALIZATION

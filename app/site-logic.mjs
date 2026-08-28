@@ -1,27 +1,6 @@
-/**
- * Convert Persian and Arabic digits to ASCII digits. Both blocks (U+06F0 and
- * U+0660) run 0-9 in order, so the digit's value is the low nibble.
- */
-export function toAsciiDigits(value = "") {
-  return String(value).replace(/[۰-۹٠-٩]/g, (digit) =>
-    String(digit.charCodeAt(0) & 0xf),
-  );
-}
+import { toAsciiDigits, toPersianDigits } from "./persian-numbers.mjs";
 
-/**
- * Convert ASCII and Arabic-Indic digits to Persian digits. Both target blocks
- * run 0-9 in order, so each digit is a fixed offset from its source.
- */
-export function toPersianDigits(value) {
-  if (value === null || value === undefined) return "";
-  return String(value)
-    .replace(/[0-9]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 1728),
-    )
-    .replace(/[٠-٩]/g, (digit) =>
-      String.fromCharCode(digit.charCodeAt(0) + 144),
-    );
-}
+export { toAsciiDigits, toPersianDigits };
 
 export function normalizeSearchText(value = "") {
   return toAsciiDigits(value)
