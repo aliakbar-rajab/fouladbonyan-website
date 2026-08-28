@@ -6,7 +6,7 @@ import {
   getCategoryPricingState,
   getTrendPresentation,
 } from "../app/catalog-behavior.mjs";
-import { buildCatalogSearchGroups } from "../app/catalog-search.mjs";
+import { buildCatalogSearchGroups } from "../app/catalog-search-coordinator.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-reader.ts";
 import {
