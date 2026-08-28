@@ -70,11 +70,9 @@ const App = (await import("../../app/App.tsx")).default;
 const ContactPage = (await import("../../app/ContactPage.tsx")).default;
 const InfoPage = (await import("../../app/InfoPage.tsx")).default;
 const GuidePage = (await import("../../app/GuidePage.tsx")).default;
-const { primeCatalogSnapshot } = await import(
-  "../../app/group-catalog.ts"
+const { primeCatalogReader } = await import(
+  "../../app/catalog-reader.ts"
 );
-const { loadOverviewSummaries } = await import("../../app/catalog-overview.ts");
-const { setMenuCatalog } = await import("../../app/menu-catalog.ts");
 
 const root = document.getElementById("root");
 
@@ -88,15 +86,13 @@ function readJsonScript(id) {
   }
 }
 
-const menuCatalog = readJsonScript("initial-menu-data");
-if (menuCatalog) setMenuCatalog(menuCatalog);
+primeCatalogReader({
+  snapshot: readJsonScript("initial-page-data"),
+  menu: readJsonScript("initial-menu-data"),
+  overview: readJsonScript("initial-overview-data"),
+});
 
 const guideReference = readJsonScript("initial-guide-data");
-
-const overview = readJsonScript("initial-overview-data");
-if (overview) loadOverviewSummaries.setCached(overview);
-
-primeCatalogSnapshot(readJsonScript("initial-page-data"));
 
 
 const page = root.dataset.page ?? "";

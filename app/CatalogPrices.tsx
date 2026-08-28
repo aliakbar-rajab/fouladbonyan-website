@@ -6,11 +6,7 @@ import {
 } from "react";
 import type { CatalogViewRequest } from "./catalog-types";
 import { getCategoryById, type ProductGroupId } from "./category-meta";
-import {
-  catalogPresentation,
-  type CatalogPresentation,
-} from "./catalog-presentation";
-import { loadGroupCatalog, type GroupCatalog } from "./group-catalog";
+import { loadGroupCatalog, type GroupCatalog } from "./catalog-reader";
 import { RebarWeightCalculator } from "./RebarWeightCalculator";
 import { CatalogLoadMessage } from "./site-ui";
 import { nextRovingIndex } from "./catalog-utils";
@@ -19,6 +15,16 @@ import { useCatalogFilterState } from "./use-catalog-filter-state";
 import { CatalogSummaryBanner } from "./CatalogSummaryBanner";
 import { FactoryPriceCardList } from "./FactoryPriceCardList";
 import { CatalogFilterSidebar } from "./CatalogFilterSidebar";
+
+const tabClassNames: Partial<Record<ProductGroupId, string>> = {
+  beam: "beam-kind-tabs",
+  sheet: "product-kind-tabs",
+  profile: "product-kind-tabs",
+  pipe: "product-kind-tabs",
+  angle: "product-kind-tabs",
+  channel: "product-kind-tabs",
+  wire: "product-kind-tabs",
+};
 
 /**
  * The price table for one product group's catalog: category tabs, the summary,
@@ -29,13 +35,11 @@ import { CatalogFilterSidebar } from "./CatalogFilterSidebar";
  */
 export function PriceCatalog({
   catalog,
-  presentation,
   phoneHref,
   requestedView,
   sidebarExtra,
 }: {
   catalog: GroupCatalog;
-  presentation: CatalogPresentation;
   phoneHref: string;
   requestedView?: CatalogViewRequest;
   sidebarExtra?: ReactNode;
@@ -92,7 +96,7 @@ export function PriceCatalog({
   return (
     <div className="rebar-prices">
       <div
-        className={`rebar-kind-tabs ${presentation.tabClassName ?? ""}`.trim()}
+        className={`rebar-kind-tabs ${tabClassNames[catalog.id] ?? ""}`.trim()}
         role="tablist"
         aria-label={`نوع ${catalog.label}`}
       >
@@ -210,7 +214,6 @@ export default function CatalogPrices({
   return (
     <PriceCatalog
       catalog={state.data}
-      presentation={catalogPresentation(groupId)}
       phoneHref={phoneHref}
       requestedView={requestedView}
       sidebarExtra={sidebarExtras[groupId]}

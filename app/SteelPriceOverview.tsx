@@ -3,7 +3,7 @@ import {
   buildFallbackOverviews,
   loadOverviewSummaries,
   type CategoryPriceOverview,
-} from "./catalog-overview";
+} from "./catalog-reader";
 import { formatCatalogNumber } from "./catalog-utils";
 import { getThumbnailSources } from "./image-utils";
 

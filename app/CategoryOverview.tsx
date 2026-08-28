@@ -2,7 +2,7 @@ import { getCategoryPricingState, getTrendPresentation } from "./catalog-behavio
 import type { CatalogCategory } from "./catalog-types";
 import { formatCatalogNumber } from "./catalog-utils";
 import { getCategoryById, type ProductGroupId } from "./category-meta";
-import { loadGroupCatalog, type GroupCatalog } from "./group-catalog";
+import { loadGroupCatalog, type GroupCatalog } from "./catalog-reader";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
 

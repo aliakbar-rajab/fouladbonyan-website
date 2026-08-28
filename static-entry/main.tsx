@@ -9,9 +9,10 @@ import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
-import { loadCatalogSnapshot, primeCatalogSnapshot } from "../app/group-catalog";
-import { loadOverviewSummaries } from "../app/catalog-overview";
-import { setMenuCatalog } from "../app/menu-catalog";
+import {
+  loadCatalogSnapshot,
+  primeCatalogReader,
+} from "../app/catalog-reader";
 import { isProductGroupId } from "../app/root-dataset";
 import "../app/globals.css";
 
@@ -35,24 +36,15 @@ if (!root) {
 }
 const rootElement = root;
 
-primeCatalogSnapshot(readJsonScript("initial-page-data"));
+primeCatalogReader({
+  snapshot: readJsonScript("initial-page-data"),
+  menu: readJsonScript("initial-menu-data"),
+  overview: readJsonScript("initial-overview-data"),
+});
 
 // Derived reference tables for /guide/*, computed at build time so the page
 // hydrates against exactly the bytes it was prerendered from.
 const guideReference: GuideReference | null = readJsonScript("initial-guide-data");
-
-// The mega menu renders from this, so it has to be seeded before hydrateRoot:
-// seeding it later would leave the client's first render showing the loading
-// state against a server-rendered menu, which is a hydration mismatch.
-const menuCatalog = readJsonScript("initial-menu-data");
-if (menuCatalog) {
-  setMenuCatalog(menuCatalog);
-}
-
-const overviewData = readJsonScript("initial-overview-data");
-if (overviewData) {
-  loadOverviewSummaries.setCached(overviewData);
-}
 
 const pathSegments = window.location.pathname
   .replace(/^\/|\/$/g, "")

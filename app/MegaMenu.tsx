@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
 import { productGroups, type ProductGroupId } from "./category-meta";
-import { loadMenuGroup } from "./menu-catalog";
+import { loadMenuGroup } from "./catalog-reader";
 import { CatalogLoadMessage } from "./site-ui";
 import { ChevronDownIcon } from "./icons";
 import { useCatalogData } from "./use-catalog-data";
 
 /*
- * Driven by the small menu payload (see menu-catalog.ts), never by the price
+ * Driven by the small menu payload (see catalog-reader.ts), never by the price
  * snapshots. The build embeds that payload on every page rendering <App />, and
  * static-entry/main.tsx seeds it before hydrateRoot, so this subtree renders
  * identically on the server and on the client for every route.

@@ -20,7 +20,7 @@ const { act, cleanup, render, screen, waitFor } = await import(
 );
 const userEvent = (await import("@testing-library/user-event")).default;
 const App = (await import("../app/App.tsx")).default;
-const { loadGroupCatalog } = await import("../app/group-catalog.ts");
+const { loadGroupCatalog } = await import("../app/catalog-reader.ts");
 
 const settle = () =>
   act(async () => {

@@ -8,11 +8,14 @@ import {
 } from "react";
 import { filterProductGroups } from "./site-logic.mjs";
 import { buildCatalogSearchGroups } from "./catalog-search.mjs";
-import { createRetryableLoader } from "./catalog-cache";
+import {
+  createRetryableLoader,
+  initialCategoryIdOf,
+  loadAllGroupCatalogs,
+} from "./catalog-reader";
 import CatalogPrices from "./CatalogPrices";
 import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
-import { initialCategoryIdOf, loadAllGroupCatalogs } from "./group-catalog";
 import { isProductGroupId, readRouteRequest } from "./root-dataset";
 import { nextRovingIndex } from "./catalog-utils";
 import {

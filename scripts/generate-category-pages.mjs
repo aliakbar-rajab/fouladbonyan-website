@@ -5,11 +5,12 @@ import { renderToString } from "react-dom/server";
 import App from "../app/App.tsx";
 import { productGroups } from "../app/category-meta.ts";
 import {
+  buildMenuCatalog,
   loadGroupCatalog,
+  loadOverviewSummaries,
   primeCatalogSnapshot,
-} from "../app/group-catalog.ts";
-import { loadOverviewSummaries } from "../app/catalog-overview.ts";
-import { buildMenuCatalog, setMenuCatalog } from "../app/menu-catalog.ts";
+  setMenuCatalog,
+} from "../app/catalog-reader.ts";
 import { siteConfig } from "../app/site-config.ts";
 import {
   appendPayloads,

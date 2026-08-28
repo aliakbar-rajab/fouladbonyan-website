@@ -1,5 +1,7 @@
-import { createRetryableLoader } from "./catalog-cache";
-import { loadAllGroupCatalogs } from "./group-catalog";
+import {
+  createRetryableLoader,
+  loadAllGroupCatalogs,
+} from "./catalog-reader";
 import type { CatalogCategory, GroupCatalog } from "./catalog-types";
 import { localizeCatalogValue } from "./catalog-utils";
 import type {

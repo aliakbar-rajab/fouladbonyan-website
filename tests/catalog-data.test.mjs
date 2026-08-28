@@ -8,7 +8,7 @@ import {
 } from "../app/catalog-behavior.mjs";
 import { buildCatalogSearchGroups } from "../app/catalog-search.mjs";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
-import { createRetryableLoader } from "../app/catalog-cache.ts";
+import { createRetryableLoader } from "../app/catalog-reader.ts";
 import {
   deriveSummaryFromRows,
   validateCatalogSnapshot,
