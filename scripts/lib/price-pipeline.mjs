@@ -1,12 +1,22 @@
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { toAsciiDigits, toPersianDigits } from "../../app/site-logic.mjs";
-import { deriveSummaryFromRows } from "../../app/catalog-validation.mjs";
+import {
+  deriveSummaryFromRows,
+  validateCatalogSnapshot,
+} from "../../app/catalog-validation.mjs";
+import {
+  allCatalogConfigs,
+  productDetailKeys,
+} from "../price-catalog-config.mjs";
 
-// Every price snapshot comes from the same Next.js-rendered source, so the
-// scraping and shaping live here once; each caller only declares which pages
-// to read. No node built-ins here on purpose -- this module runs both in
-// Node fetch scripts (scripts/fetch-*-prices.mjs) and in the Cloudflare
-// Worker (workers/price-refresh) that replaced them as the scheduled source.
+/*
+ * ===========================================================================
+ * 1. SOURCE DEFINITIONS & NORMALIZATION
+ * ===========================================================================
+ */
+
 export const SOURCE_ENVELOPE = {
   sourceName: "فولاد ایرانیان",
   sourceHome: "https://www.fooladiranian.com/",
@@ -17,8 +27,10 @@ const SOURCE_ROOT = "https://www.fooladiranian.com/productlist/";
 
 /** Build a source URL from a Persian slug, keeping hyphens unescaped. */
 export function sourceUrl(slug) {
-  return new URL(`${encodeURIComponent(slug).replaceAll("%2D", "-")}/`, SOURCE_ROOT)
-    .href;
+  return new URL(
+    `${encodeURIComponent(slug).replaceAll("%2D", "-")}/`,
+    SOURCE_ROOT,
+  ).href;
 }
 
 const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
@@ -64,17 +76,25 @@ function compareSizeValues(first, second) {
   return String(first).localeCompare(String(second), "fa");
 }
 
+function resolveSource(raw) {
+  return {
+    id: raw.id,
+    label: raw.label,
+    slug: raw.slug,
+    url: sourceUrl(raw.slug),
+    minimumItems: raw.minimumItems,
+    deriveSize: raw.deriveSize,
+    specificationKey:
+      raw.specificationKey ??
+      (raw.groupingLabel === "گرید" ? "گرید" : "ضخامت"),
+    specificationLabel: raw.specificationLabel,
+    groupingLabel: raw.groupingLabel ?? "کارخانه",
+    detailKeys: raw.detailKeys ?? productDetailKeys,
+  };
+}
+
 /**
- * @param {object} source
- * @param {string} source.id
- * @param {string} source.label
- * @param {string} source.url
- * @param {number} [source.minimumItems] reject a page that lost most of its rows
- * @param {string} [source.groupingLabel] what the factory column is called
- * @param {string} [source.specificationKey] meta published as row.specification
- * @param {string} [source.specificationLabel] header for the spec column
- * @param {string[]} [source.detailKeys] extra metas to publish per row
- * @param {(item: object) => string} [source.deriveSize] override the size meta
+ * Parse Next.js __NEXT_DATA__ from an HTML page into a structured category model.
  */
 export function parseCatalogPage(html, source) {
   const match = html.match(
@@ -88,11 +108,11 @@ export function parseCatalogPage(html, source) {
   try {
     nextData = JSON.parse(match[1]);
   } catch (error) {
-    throw new Error(`تجزیه JSON ساختاریافته صفحه ${source.label} ناموفق بود: ${error.message}`, {
-      cause: error,
-    });
+    throw new Error(
+      `تجزیه JSON ساختاریافته صفحه ${source.label} ناموفق بود: ${error.message}`,
+      { cause: error },
+    );
   }
-
 
   const shopData = nextData?.props?.pageProps?.shopData;
   if (!shopData?.products || !shopData?.price_compare) {
@@ -160,9 +180,6 @@ export function parseCatalogPage(html, source) {
     sourceUrl: source.url,
     summary: {
       date: toPersianDigits(String(compare.date ?? "")),
-      // Derived from the rows, never from compare.min_price/max_price/avg_price:
-      // the upstream fields are rial and rounding them to hundreds of toman
-      // produced prices that appear in no row of the table.
       ...deriveSummaryFromRows(rows),
       percent: Number(compare.percent) || 0,
       status: String(compare.status ?? "same"),
@@ -177,7 +194,16 @@ export function parseCatalogPage(html, source) {
   };
 }
 
-export async function fetchCategoryOnce(source, { timeoutMs = 25_000, fetchImpl = fetch } = {}) {
+/*
+ * ===========================================================================
+ * 2. RESILIENT FETCHING & CATEGORY FAULT ISOLATION
+ * ===========================================================================
+ */
+
+export async function fetchCategoryOnce(
+  source,
+  { timeoutMs = 25_000, fetchImpl = fetch } = {},
+) {
   const response = await fetchImpl(source.url, {
     headers: {
       accept: "text/html,application/xhtml+xml",
@@ -204,9 +230,6 @@ export async function fetchCategoryOnce(source, { timeoutMs = 25_000, fetchImpl 
   return parseCatalogPage(html, source);
 }
 
-// Requests through edge networks hit upstreams and CDNs (such as ArvanCloud)
-// with transient 5xx or 429 rate limits. An exponential backoff with jitter
-// handles temporary spikes cleanly without failing immediately.
 export async function fetchCategory(
   source,
   {
@@ -246,11 +269,6 @@ export async function fetchCategory(
   throw lastError;
 }
 
-/**
- * Fetch every source with concurrency control, robust retries, and category-level
- * error isolation with fallback support.
- * Returns { categories, diagnostics }.
- */
 export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   const {
     limit = 4,
@@ -289,9 +307,13 @@ export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
             } else {
               console.warn(warningMsg);
             }
-            return { category: fallback, fresh: false, fallback: true, error: error.message };
+            return {
+              category: fallback,
+              fresh: false,
+              fallback: true,
+              error: error.message,
+            };
           }
-          // No fallback available: fail explicitly rather than silently omitting
           throw error;
         }
       }),
@@ -311,4 +333,203 @@ export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   return { categories, diagnostics };
 }
 
+/*
+ * ===========================================================================
+ * 3. CANONICAL SNAPSHOT ASSEMBLY & SEMANTIC VALIDATION
+ * ===========================================================================
+ */
 
+export async function buildCatalogSnapshot(options = {}) {
+  const {
+    fallbackSnapshot,
+    fallbackCategories = fallbackSnapshot?.catalogs?.flatMap(
+      (catalog) => catalog.categories ?? [],
+    ) ?? [],
+    fetchImpl,
+    attempts,
+    limit,
+    onWarning,
+  } = options;
+
+  const catalogs = allCatalogConfigs.map((catalog) => ({
+    id: catalog.id,
+    label: catalog.label,
+    initialCategoryId: catalog.initialCategoryId,
+    sources: catalog.sources.map(resolveSource),
+  }));
+
+  const allSources = catalogs.flatMap((catalog) => catalog.sources);
+  const { categories: fetched, diagnostics } =
+    await fetchCategoriesWithDiagnostics(allSources, {
+      fallbackCategories,
+      fetchImpl,
+      attempts,
+      limit,
+      onWarning,
+    });
+
+  const categoriesById = new Map(
+    fetched.map((category) => [category.id, category]),
+  );
+
+  const snapshot = {
+    fetchedAt: new Date().toISOString(),
+    ...SOURCE_ENVELOPE,
+    catalogs: catalogs.map((catalog) => ({
+      id: catalog.id,
+      label: catalog.label,
+      initialCategoryId: catalog.initialCategoryId,
+      categories: catalog.sources.map((item) => categoriesById.get(item.id)),
+    })),
+  };
+
+  validateCatalogSnapshot(snapshot, {
+    expectedCatalogs: catalogs.map((catalog) => ({
+      id: catalog.id,
+      categoryIds: catalog.sources.map((item) => item.id),
+    })),
+  });
+
+  const enrichedDiagnostics = {
+    totalCategories: diagnostics.total,
+    freshCategories: diagnostics.freshCount,
+    fallbackCategories: diagnostics.fallbackCount,
+    warnings: diagnostics.warnings ?? [],
+  };
+
+  return { snapshot, diagnostics: enrichedDiagnostics };
+}
+
+/*
+ * ===========================================================================
+ * 4. STORAGE ADAPTERS (CLOUDFLARE WORKER & LOCAL DISK)
+ * ===========================================================================
+ */
+
+/**
+ * Post a fetched+validated payload set to Cloudflare Worker ingest endpoint.
+ */
+export async function publishPayloads({
+  endpoint,
+  token,
+  payloads,
+  fetchImpl = fetch,
+}) {
+  const response = await fetchImpl(`${endpoint}/ingest`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payloads),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      `Cloudflare این داده را نپذیرفت (HTTP ${response.status}): ${body.error ?? JSON.stringify(body)}`,
+    );
+  }
+  return body;
+}
+
+/**
+ * Pull one dataset from Cloudflare Worker and validate before overwriting outputPath.
+ */
+export async function pullDataset({
+  endpoint,
+  name,
+  outputPath,
+  validate,
+  fetchImpl = fetch,
+}) {
+  try {
+    const response = await fetchImpl(`${endpoint}/${name}.json`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    if (validate) validate(data);
+    await writeFile(outputPath, `${JSON.stringify(data)}\n`);
+    return { ok: true, fetchedAt: data.fetchedAt };
+  } catch (error) {
+    return { ok: false, error: String(error?.message ?? error) };
+  }
+}
+
+/**
+ * High-level operation: Fetch, validate, and publish live prices to Cloudflare Worker.
+ */
+export async function refreshAndPublishSnapshot({
+  endpoint,
+  token,
+  fallbackSnapshot = null,
+  fetchImpl = fetch,
+  onWarning = null,
+}) {
+  const { snapshot, diagnostics } = await buildCatalogSnapshot({
+    fallbackSnapshot,
+    fetchImpl,
+    onWarning,
+  });
+
+  const publishResult = await publishPayloads({
+    endpoint,
+    token,
+    payloads: { snapshot, diagnostics },
+    fetchImpl,
+  });
+
+  return { snapshot, diagnostics, publishResult };
+}
+
+/**
+ * High-level operation: Pull snapshot from Cloudflare Worker during build and save to disk.
+ */
+export async function pullPriceSnapshot({
+  endpoint,
+  outputPath,
+  fetchImpl = fetch,
+}) {
+  return pullDataset({
+    endpoint,
+    name: "catalog-prices",
+    outputPath,
+    validate: (data) =>
+      validateCatalogSnapshot(data, {
+        expectedCatalogs: allCatalogConfigs.map((catalog) => ({
+          id: catalog.id,
+          categoryIds: catalog.sources.map((source) => source.id),
+        })),
+      }),
+    fetchImpl,
+  });
+}
+
+/**
+ * High-level operation: Fetch live prices and update local snapshot file atomically.
+ */
+export async function updateLocalPriceSnapshot({
+  outputPath,
+  fetchImpl = fetch,
+  onWarning = null,
+}) {
+  const fallbackSnapshot = await readFile(outputPath, "utf8")
+    .then((data) => JSON.parse(data))
+    .catch(() => null);
+
+  const { snapshot, diagnostics } = await buildCatalogSnapshot({
+    fallbackSnapshot,
+    fetchImpl,
+    onWarning,
+  });
+
+  await mkdir(dirname(outputPath), { recursive: true });
+  const temporaryPath = `${outputPath}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(snapshot)}\n`);
+  await rename(temporaryPath, outputPath);
+
+  return { snapshot, diagnostics };
+}

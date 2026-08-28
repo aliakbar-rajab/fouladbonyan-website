@@ -4,11 +4,13 @@ import {
   parseCatalogPage,
   fetchCategory,
   fetchCategoriesWithDiagnostics,
-} from "../scripts/lib/catalog-source.mjs";
-import { buildCatalogSnapshot } from "../scripts/lib/build-price-payloads.mjs";
+  buildCatalogSnapshot,
+  updateLocalPriceSnapshot,
+} from "../scripts/lib/price-pipeline.mjs";
 import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
-
-
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 function fakeProductItem(index, titlePrefix = "میلگرد") {
   return {
@@ -37,7 +39,9 @@ function fakeProductItem(index, titlePrefix = "میلگرد") {
 }
 
 function fakeCatalogHtml({ length = 120, title = "تست" } = {}) {
-  const products = Array.from({ length }, (_, index) => fakeProductItem(index, title));
+  const products = Array.from({ length }, (_, index) =>
+    fakeProductItem(index, title),
+  );
   const shopData = {
     title,
     products: [{ title: "کارخانه تست", productsitem: products }],
@@ -47,8 +51,13 @@ function fakeCatalogHtml({ length = 120, title = "تست" } = {}) {
   return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script></body></html>`;
 }
 
-function fakeCatalogHtmlReversedAttributes({ length = 120, title = "تست" } = {}) {
-  const products = Array.from({ length }, (_, index) => fakeProductItem(index, title));
+function fakeCatalogHtmlReversedAttributes({
+  length = 120,
+  title = "تست",
+} = {}) {
+  const products = Array.from({ length }, (_, index) =>
+    fakeProductItem(index, title),
+  );
   const shopData = {
     title,
     products: [{ title: "کارخانه تست", productsitem: products }],
@@ -96,7 +105,11 @@ test("fetchCategory retries on transient 500/503 errors with exponential backoff
     return new Response(fakeCatalogHtml(), { status: 200 });
   };
 
-  const source = { id: "test-src", label: "دسته تستی", url: "https://example.com/test" };
+  const source = {
+    id: "test-src",
+    label: "دسته تستی",
+    url: "https://example.com/test",
+  };
   const result = await fetchCategory(source, {
     attempts: 4,
     baseDelayMs: 10,
@@ -124,7 +137,11 @@ test("fetchCategory respects retry-after header on 429 Too Many Requests", async
     return new Response(fakeCatalogHtml(), { status: 200 });
   };
 
-  const source = { id: "rate-limited", label: "تست محدودیت", url: "https://example.com" };
+  const source = {
+    id: "rate-limited",
+    label: "تست محدودیت",
+    url: "https://example.com",
+  };
   const result = await fetchCategory(source, {
     attempts: 2,
     baseDelayMs: 10,
@@ -143,7 +160,6 @@ test("fetchCategories isolates single source failures and uses fallback data", a
     { id: "src-3", label: "دسته سوم", url: "https://example.com/3" },
   ];
 
-  // Pre-existing valid fallback category for src-2
   const fallbackForSrc2 = {
     id: "src-2",
     label: "دسته دوم",
@@ -151,7 +167,14 @@ test("fetchCategories isolates single source failures and uses fallback data", a
     specificationLabel: "استاندارد",
     sourceTitle: "دسته دوم قدیمی",
     sourceUrl: "https://example.com/2",
-    summary: { min: 1000, max: 2000, average: 1500, percent: 0, status: "same", date: "1404/01/01" },
+    summary: {
+      min: 1000,
+      max: 2000,
+      average: 1500,
+      percent: 0,
+      status: "same",
+      date: "1404/01/01",
+    },
     filters: { sizes: ["12"], factories: ["کارخانه قدیمی"] },
     factories: [
       {
@@ -183,18 +206,21 @@ test("fetchCategories isolates single source failures and uses fallback data", a
   };
 
   const warnings = [];
-  const { categories, diagnostics } = await fetchCategoriesWithDiagnostics(sources, {
-    limit: 2,
-    attempts: 2,
-    fallbackCategories: [fallbackForSrc2],
-    fetchImpl: fakeFetch,
-    onWarning: (msg) => warnings.push(msg),
-  });
+  const { categories, diagnostics } = await fetchCategoriesWithDiagnostics(
+    sources,
+    {
+      limit: 2,
+      attempts: 2,
+      fallbackCategories: [fallbackForSrc2],
+      fetchImpl: fakeFetch,
+      onWarning: (msg) => warnings.push(msg),
+    },
+  );
 
   assert.equal(categories.length, 3);
   assert.equal(categories[0].id, "src-1");
   assert.equal(categories[1].id, "src-2");
-  assert.equal(categories[1].sourceTitle, "دسته دوم قدیمی"); // Used fallback!
+  assert.equal(categories[1].sourceTitle, "دسته دوم قدیمی");
   assert.equal(categories[2].id, "src-3");
 
   assert.equal(diagnostics.total, 3);
@@ -220,8 +246,6 @@ test("fetchCategoriesWithDiagnostics throws when a category fails and has no fal
     /HTTP 404/,
   );
 });
-
-
 
 test("buildCatalogSnapshot completes and validates even when some categories use fallback", async () => {
   const fakeAllOkFetch = async () =>
@@ -253,4 +277,40 @@ test("buildCatalogSnapshot completes and validates even when some categories use
   assert.equal(diagnostics.warnings.length, 2);
 });
 
+test("updateLocalPriceSnapshot writes atomically to disk using fallback on partial failure", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "update-local-snapshot-"));
+  const outputPath = join(dir, "catalog-prices.json");
 
+  try {
+    const fakeAllOkFetch = async () =>
+      new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+
+    const { snapshot: initial } = await updateLocalPriceSnapshot({
+      outputPath,
+      fetchImpl: fakeAllOkFetch,
+    });
+
+    assert.ok(initial.catalogs.length >= 8);
+
+    const fakePartialFailFetch = async (url) => {
+      const decoded = decodeURIComponent(url);
+      if (decoded.includes("میلگرد-ساده")) {
+        return new Response("Upstream 503", { status: 503 });
+      }
+      return new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+    };
+
+    const warnings = [];
+    const { snapshot: updated, diagnostics } = await updateLocalPriceSnapshot({
+      outputPath,
+      fetchImpl: fakePartialFailFetch,
+      onWarning: (msg) => warnings.push(msg),
+    });
+
+    assert.equal(diagnostics.fallbackCategories, 1);
+    const diskContent = JSON.parse(await readFile(outputPath, "utf8"));
+    assert.deepEqual(diskContent.fetchedAt, updated.fetchedAt);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

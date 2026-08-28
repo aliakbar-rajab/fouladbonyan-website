@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ingestAll, KV_KEYS, STATUS_KEY } from "./ingest.mjs";
-import { buildCatalogSnapshot } from "../../scripts/lib/build-price-payloads.mjs";
+import { buildCatalogSnapshot } from "../../scripts/lib/price-pipeline.mjs";
 
 function fakeProductItem(index) {
   return {

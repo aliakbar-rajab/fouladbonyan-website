@@ -55,7 +55,7 @@ function fakeCatalogHtml() {
 
 async function buildValidPayload(t) {
   const { buildCatalogSnapshot } = await import(
-    "../../scripts/lib/build-price-payloads.mjs"
+    "../../scripts/lib/price-pipeline.mjs"
   );
   t.mock.method(globalThis, "fetch", async () => new Response(fakeCatalogHtml(), { status: 200 }));
   return buildCatalogSnapshot();
