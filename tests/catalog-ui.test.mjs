@@ -83,7 +83,7 @@ const catalog = {
   ],
 };
 
-const presentation = { categoryIcons: { first: "۱", second: "۲" } };
+const presentation = {};
 
 const phoneHref = "tel:+982100000000";
 
@@ -114,7 +114,7 @@ const renderWide = () =>
         initialCategoryId: "wide",
         categories: [wideCategory()],
       },
-      presentation: { categoryIcons: { wide: "۱" } },
+      presentation: {},
       phoneHref,
     }),
   );

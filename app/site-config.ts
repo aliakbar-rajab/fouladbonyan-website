@@ -11,7 +11,6 @@ export const siteConfig = {
   brand: {
     name: "بنیان فولاد داریا",
     alternateName: "Bonyan Foulad Daria",
-    aliases: ["فولاد بنیان داریا", "بنیان فولاد", "فولاد بنیان"],
   },
   siteUrl: "https://fouladbonyan.com",
   contact: {

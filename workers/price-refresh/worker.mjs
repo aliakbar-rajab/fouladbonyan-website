@@ -20,7 +20,7 @@ async function serveDataset(kv, kvKey) {
 }
 
 const DATASET_ROUTES = new Map([
-  ...Object.values(KV_KEYS).map((kvKey) => [`/${kvKey}.json`, kvKey]),
+  [`/${KV_KEYS.catalog}.json`, KV_KEYS.catalog],
   ["/catalog-snapshot.json", KV_KEYS.catalog],
 ]);
 

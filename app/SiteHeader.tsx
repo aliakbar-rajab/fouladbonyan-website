@@ -18,7 +18,6 @@ import { siteConfig } from "./site-config";
  */
 type SiteHeaderProps = {
   brandHref?: string;
-  navLabel?: string;
   renderNav: (args: {
     mobileOpen: boolean;
     closeMobileNav: () => void;

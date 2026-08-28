@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { toAsciiDigits, toPersianDigits } from "../../app/site-logic.mjs";
 import { deriveSummaryFromRows } from "../../app/catalog-validation.mjs";
 
@@ -175,8 +176,6 @@ export function parseCatalogPage(html, source) {
     factories,
   };
 }
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function fetchCategoryOnce(source, { timeoutMs = 25_000, fetchImpl = fetch } = {}) {
   const response = await fetchImpl(source.url, {

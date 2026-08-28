@@ -210,7 +210,7 @@ export default function CatalogPrices({
   return (
     <PriceCatalog
       catalog={state.data}
-      presentation={catalogPresentation(groupId, state.data.categories)}
+      presentation={catalogPresentation(groupId)}
       phoneHref={phoneHref}
       requestedView={requestedView}
       sidebarExtra={sidebarExtras[groupId]}
