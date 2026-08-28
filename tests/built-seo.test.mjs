@@ -217,12 +217,10 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
 });
 
 /*
- * generate-contact-page.mjs reads dist/index.html *after* the homepage has been
- * prerendered into it, so #root holds a deep tree of nested <div>s. Its lazy
- * `<div id="root">[\s\S]*?</div>` match stopped at the first inner closing tag
- * and left the rest of the homepage sitting after each page's own content:
- * every info page and /contact/ shipped a second <h1> and ~60 KB of the wrong
- * page. Assert against every generated page, not just the ones that regressed.
+ * Previously, separate generator scripts read dist/index.html after the homepage
+ * had already been prerendered into it, risking nested markup if a lazy match
+ * stopped at an inner closing tag. Prerender pipeline transforms from pristine
+ * template and renders each page in a clean pass. Assert against every generated page.
  */
 test("every generated page contains only its own content and exactly one H1", async () => {
   const entries = await readdir(new URL("../dist", import.meta.url), {

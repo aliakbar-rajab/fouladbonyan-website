@@ -24,7 +24,7 @@ export type ProductGroup = {
   intro: string;
   subTypes: string;
   rows: ProductRow[];
-  /** <title> for this category's landing page (scripts/generate-category-pages.mjs). */
+  /** <title> for this category's landing page (scripts/lib/prerender-pipeline.mjs). */
   seoTitle: string;
   /** <meta name="description"> for this category's landing page. */
   seoDescription: string;
@@ -35,7 +35,7 @@ export type ProductGroup = {
 // placeholder listed at this level would be unreachable.
 //
 // This module has no React exports, so it also doubles as the source of truth
-// for build-time tooling (see scripts/generate-category-pages.mjs) that needs
+// for build-time tooling (see scripts/lib/prerender-pipeline.mjs) that needs
 // each category's slug, label, and description without pulling in the app.
 export const productGroups: ProductGroup[] = [
   {
