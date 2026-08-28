@@ -308,3 +308,95 @@ export function ChevronLeftBoldIcon({ className }: IconProps) {
   );
 }
 
+export function RebarChartIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 19.5v-15" />
+      <path d="M4 19.5h16" />
+      <path d="M8 15v-4" />
+      <path d="M12 15V7" />
+      <path d="M16 15v-6" />
+      <path d="M20 15V4" />
+    </svg>
+  );
+}
+
+export function BeamIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 4h14" />
+      <path d="M5 20h14" />
+      <path d="M12 4v16" />
+      <path d="M8 8h8" />
+      <path d="M8 16h8" />
+    </svg>
+  );
+}
+
+export function QuoteSpecsIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <path d="M9 12h6" />
+      <path d="M9 16h4" />
+    </svg>
+  );
+}
+
+export function TechnicalGuideIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      className={className}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path
+        d="M8 10c0-2.2 1.8-4 4-4h24c2.2 0 4 1.8 4 4v28c0 2.2-1.8 4-4 4H12c-2.2 0-4-1.8-4-4V10Z"
+        strokeWidth="2.2"
+        fill="rgba(246, 181, 0, 0.08)"
+      />
+      <path d="M14 6v36" strokeWidth="2.2" />
+      <path d="M20 14h14" strokeWidth="2.2" />
+      <path d="M20 22h14" strokeWidth="2.2" />
+      <path d="M20 30h8" strokeWidth="2.2" />
+      <circle cx="34" cy="30" r="3" strokeWidth="2.2" fill="rgba(246, 181, 0, 0.3)" />
+    </svg>
+  );
+}
+

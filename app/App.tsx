@@ -33,6 +33,7 @@ import { MegaMenu } from "./MegaMenu";
 import { SiteHeader } from "./SiteHeader";
 import { useMediaQuery } from "./use-media-query";
 import { PhoneIcon } from "./icons";
+import { KnowledgeSection } from "./KnowledgeSection";
 import { QuoteCtaSection } from "./QuoteCtaSection";
 
 const loadCatalogSearchGroups = createRetryableLoader<ProductGroup[]>(() =>
@@ -410,31 +411,7 @@ export default function App({
           </div>
         </section>
 
-        <section className="knowledge-section section" aria-labelledby="knowledge-heading">
-          <div className="shell knowledge-layout">
-            <div className="knowledge-intro">
-              <h2 id="knowledge-heading">دانش فنی، پیش از استعلام</h2>
-              <p>
-                ابزارها و جدول‌های مرجع برای آماده‌کردن مشخصات خرید پیش از تماس
-                با واحد فروش.
-              </p>
-            </div>
-            <div className="knowledge-links">
-              <a href="/guide/rebar-weight-chart/">
-                <strong>جدول وزن میلگرد</strong>
-                <span>بررسی قطر، طول و وزن تقریبی</span>
-              </a>
-              <a href="/guide/beam-weight-chart/">
-                <strong>جدول وزن تیرآهن</strong>
-                <span>مرجع وزن شاخه و سایز</span>
-              </a>
-              <a href="/guide/units-and-quote-specs/">
-                <strong>واحدها و مشخصات استعلام</strong>
-                <span>آماده‌سازی اطلاعات خرید</span>
-              </a>
-            </div>
-          </div>
-        </section>
+        <KnowledgeSection />
 
         <QuoteCtaSection />
       </main>
