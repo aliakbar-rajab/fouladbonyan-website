@@ -3,8 +3,6 @@ import {
   toPersianDigits,
 } from "./persian-numbers.mjs";
 
-export { toPersianDigits };
-
 export const formatCatalogNumber = formatPersianNumber;
 
 export function localizeCatalogValue(value: string | null | undefined) {

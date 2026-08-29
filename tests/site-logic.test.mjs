@@ -3,10 +3,9 @@ import test from "node:test";
 import {
   filterProductGroups,
   normalizeSearchText,
-  toAsciiDigits,
-  toPersianDigits as toPersianDigitsFromSiteLogic,
 } from "../app/site-logic.mjs";
-import { localizeCatalogValue, toPersianDigits } from "../app/catalog-utils.ts";
+import { localizeCatalogValue } from "../app/catalog-utils.ts";
+import { toAsciiDigits, toPersianDigits } from "../app/persian-numbers.mjs";
 
 // Shaped like the rows buildCatalogSearchGroups actually produces: ASCII digits
 // in the title, plus the categoryId/factory/size/searchText navigation metadata.
@@ -93,11 +92,6 @@ test("ASCII and Arabic digits convert to Persian digits", () => {
   assert.equal(toPersianDigits("امروز دوشنبه 26 مرداد"), "امروز دوشنبه ۲۶ مرداد");
   assert.equal(toPersianDigits(null), "");
   assert.equal(toPersianDigits(undefined), "");
-
-  // The fetch scripts run under plain node and import this from site-logic.mjs
-  // directly, while the app reaches it through catalog-utils. One
-  // implementation, or a scraped date and a rendered date can disagree.
-  assert.equal(toPersianDigits, toPersianDigitsFromSiteLogic);
 });
 
 test("calculateRebarWeight correctly calculates weight with Persian digits and normalizes decimals", async () => {

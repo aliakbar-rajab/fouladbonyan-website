@@ -1,4 +1,5 @@
-import { formatCatalogNumber as fa, toPersianDigits } from "../catalog-utils";
+import { formatCatalogNumber as fa } from "../catalog-utils";
+import { toPersianDigits } from "../persian-numbers.mjs";
 import type { CatalogProfile, GuideReference } from "../steel-reference";
 
 export { fa };

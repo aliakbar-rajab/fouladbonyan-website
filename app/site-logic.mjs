@@ -1,6 +1,4 @@
-import { toAsciiDigits, toPersianDigits } from "./persian-numbers.mjs";
-
-export { toAsciiDigits, toPersianDigits };
+import { toAsciiDigits } from "./persian-numbers.mjs";
 
 export function normalizeSearchText(value = "") {
   return toAsciiDigits(value)

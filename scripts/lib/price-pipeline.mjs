@@ -429,32 +429,6 @@ async function publishPayloads({
 }
 
 /**
- * Pull one dataset from Cloudflare Worker and validate before overwriting outputPath.
- */
-async function pullDataset({
-  endpoint,
-  name,
-  outputPath,
-  validate,
-  fetchImpl = fetch,
-}) {
-  try {
-    const response = await fetchImpl(`${endpoint}/${name}.json`, {
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    if (validate) validate(data);
-    await writeFile(outputPath, `${JSON.stringify(data)}\n`);
-    return { ok: true, fetchedAt: data.fetchedAt };
-  } catch (error) {
-    return { ok: false, error: String(error?.message ?? error) };
-  }
-}
-
-/**
  * High-level operation: Fetch, validate, and publish live prices to Cloudflare Worker.
  */
 export async function refreshAndPublishSnapshot({
@@ -488,19 +462,25 @@ export async function pullPriceSnapshot({
   outputPath,
   fetchImpl = fetch,
 }) {
-  return pullDataset({
-    endpoint,
-    name: "catalog-prices",
-    outputPath,
-    validate: (data) =>
-      validateCatalogSnapshot(data, {
-        expectedCatalogs: allCatalogConfigs.map((catalog) => ({
-          id: catalog.id,
-          categoryIds: catalog.sources.map((source) => source.id),
-        })),
-      }),
-    fetchImpl,
-  });
+  try {
+    const response = await fetchImpl(`${endpoint}/catalog-prices.json`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    validateCatalogSnapshot(data, {
+      expectedCatalogs: allCatalogConfigs.map((catalog) => ({
+        id: catalog.id,
+        categoryIds: catalog.sources.map((source) => source.id),
+      })),
+    });
+    await writeFile(outputPath, `${JSON.stringify(data)}\n`);
+    return { ok: true, fetchedAt: data.fetchedAt };
+  } catch (error) {
+    return { ok: false, error: String(error?.message ?? error) };
+  }
 }
 
 /**

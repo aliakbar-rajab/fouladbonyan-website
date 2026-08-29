@@ -1,4 +1,4 @@
-import { toPersianDigits } from "../catalog-utils";
+import { toPersianDigits } from "../persian-numbers.mjs";
 import { guidePageUrl } from "../guide-page-data";
 import { siteConfig } from "../site-config";
 import type { GuideReference } from "../steel-reference";
@@ -34,7 +34,7 @@ export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
       </section>
 
       <section className="content-card">
-        <h2>{`وزن شاخه تیرآهن ${toPersianDigits("IPE")} به تفکیک کارخانه`}</h2>
+        <h2>وزن شاخه تیرآهن IPE به تفکیک کارخانه</h2>
         <div className="guide-table-wrap">
           <table className="guide-table">
             <caption>
@@ -56,7 +56,7 @@ export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
             <tbody>
               {beamTable.rows.map((row) => (
                 <tr key={`${row.standard}-${row.size}-${row.branchLengthM}`}>
-                  <th scope="row">{toPersianDigits(row.standard)}</th>
+                  <th scope="row">{row.standard}</th>
                   <td>{toPersianDigits(row.size)}</td>
                   <td>{toPersianDigits(String(row.branchLengthM))}</td>
                   <td>
@@ -97,7 +97,7 @@ export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
         <div className="inline-actions">
           <a href={beamTable.href}>{`قیمت روز ${beamTable.label}`}</a>
           <a href={guidePageUrl("ipe-vs-hash-beam")}>
-            انواع تیرآهن {toPersianDigits("IPE")} و هاش
+            انواع تیرآهن IPE و هاش
           </a>
           <a href={guidePageUrl("units-and-quote-specs")}>واحدهای فروش</a>
         </div>

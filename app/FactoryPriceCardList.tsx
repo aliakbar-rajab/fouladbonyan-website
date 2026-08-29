@@ -11,9 +11,9 @@ import {
   displayPrice,
   formatCatalogNumber,
   localizeCatalogValue,
-  toPersianDigits,
   unixSecondsToIso,
 } from "./catalog-utils";
+import { toPersianDigits } from "./persian-numbers.mjs";
 import { ChevronDownIcon } from "./icons";
 
 const quoteProductByGroup: Record<ProductGroupId, string> = {

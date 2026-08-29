@@ -1,10 +1,7 @@
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
-import {
-  displayPrice,
-  formatCatalogNumber,
-  toPersianDigits,
-} from "./catalog-utils";
+import { displayPrice, formatCatalogNumber } from "./catalog-utils";
+import { toPersianDigits } from "./persian-numbers.mjs";
 
 function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
   return (

@@ -194,10 +194,10 @@ test("F17: product groups carry no placeholder search rows", async () => {
 
   assert.ok(productGroups.length > 0, "there should be product groups");
   for (const group of productGroups) {
-    assert.deepEqual(
-      group.rows,
-      [],
-      `${group.id} must not carry hardcoded rows: search always runs against the live catalogs, so these only ever surfaced when the live load was pending or failed`,
+    assert.equal(
+      "rows" in group,
+      false,
+      `${group.id} must not carry hardcoded rows: search always runs against the live catalogs, so rows are only attached dynamically`,
     );
   }
 });
@@ -222,13 +222,8 @@ test("F17: every searchable row is built from live catalog data", async () => {
 
 test("live catalog search indexes real rows and navigation metadata", async () => {
   const { productGroups } = await import("../app/category-meta.ts");
-  const baseGroups = productGroups.map(({ id, label }) => ({
-    id,
-    label,
-    rows: [],
-  }));
   const groups = buildCatalogSearchGroups(
-    baseGroups,
+    productGroups,
     await loadGroupCatalogs(),
   );
 

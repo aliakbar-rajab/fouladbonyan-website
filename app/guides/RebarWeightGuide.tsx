@@ -1,4 +1,4 @@
-import { toPersianDigits } from "../catalog-utils";
+import { toPersianDigits } from "../persian-numbers.mjs";
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
 import { fa, faFixed, list } from "./guide-helpers";

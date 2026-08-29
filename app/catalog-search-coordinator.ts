@@ -252,9 +252,6 @@ export type CatalogWorkspaceOptions = {
   searchLoader?: () => Promise<CatalogSearchGroup[]>;
 };
 
-/** Backward-compatibility alias */
-export type CatalogWorkspaceState = CatalogWorkspace;
-
 export function useCatalogWorkspace({
   initialCategory,
   initialSubcategory,
@@ -333,7 +330,10 @@ export function useCatalogWorkspace({
   }, [route.subcategory, route.subcategoryLabel]);
 
   const filteredGroups: ProductGroup[] = useMemo(
-    () => filterProductGroups(searchGroups ?? productGroups, committedQuery),
+    () =>
+      searchGroups && committedQuery
+        ? filterProductGroups(searchGroups, committedQuery)
+        : productGroups,
     [committedQuery, searchGroups],
   );
 

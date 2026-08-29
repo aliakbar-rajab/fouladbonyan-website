@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { toAsciiDigits } from "./site-logic.mjs";
+import { toAsciiDigits } from "./persian-numbers.mjs";
 
 export type FieldErrors = Record<string, string>;
 

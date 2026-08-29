@@ -1,4 +1,3 @@
-import { toPersianDigits } from "../catalog-utils";
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
 import { ComparisonTable, QuoteChecklist } from "./GuideShared";
@@ -19,13 +18,12 @@ export function BeamTypesGuide({ reference }: { reference: GuideReference }) {
   return (
     <>
       <section className="content-card">
-        <h2>{`${toPersianDigits("IPE")}، ${toPersianDigits("HEA")} و ${toPersianDigits("HEB")}`}</h2>
+        <h2>IPE، HEA و HEB</h2>
         <p>
-          تیرآهن معمولی با استاندارد {toPersianDigits("IPE")} بال باریک دارد و
+          تیرآهن معمولی با استاندارد IPE بال باریک دارد و
           پرکاربردترین مقطع تیر در ساختمان‌سازی است. هاش مقطع بال‌پهن است و در
-          کاتالوگ در دو رده عرضه می‌شود: هاش سبک با استاندارد{" "}
-          {toPersianDigits("HEA")} و هاش سنگین با استاندارد{" "}
-          {toPersianDigits("HEB")}.
+          کاتالوگ در دو رده عرضه می‌شود: هاش سبک با استاندارد HEA و هاش سنگین
+          با استاندارد HEB.
         </p>
         <p>
           انتخاب بین این سه از محاسبات سازه می‌آید، نه از قیمت. آنچه این صفحه
@@ -90,7 +88,7 @@ export function BeamTypesGuide({ reference }: { reference: GuideReference }) {
       <section className="content-card">
         <h2>وزن شاخه را جدا بپرسید</h2>
         <p>
-          وزن شاخه تیرآهن {toPersianDigits("IPE")} برای یک سایز مشخص بین
+          وزن شاخه تیرآهن IPE برای یک سایز مشخص بین
           کارخانه‌ها فرق دارد و جدول کامل آن را در صفحه جدول وزن تیرآهن
           آورده‌ایم. برای هاش، داده قیمت وزن اعلامی ندارد؛ آن را پیش از سفارش از
           واحد فروش بگیرید.
