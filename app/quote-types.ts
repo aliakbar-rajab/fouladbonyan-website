@@ -33,31 +33,14 @@ export function isQuoteProduct(value: unknown): value is QuoteProductName {
 }
 
 /** One piece unit option resolved from catalog prices. */
-export type QuotePieceOption = {
+export type QuotePieceOptionChoice = {
   key: string;
   label: string;
   unit: string;
   priceToman: number;
 };
 
-/** Price estimate summary derived from catalog data for a product. */
-export type QuotePriceEstimate = {
-  product: QuoteProductName;
-  unitPriceTomanPerKg: number;
-  minPriceTomanPerKg: number;
-  maxPriceTomanPerKg: number;
-  rowCount: number;
-  date: string;
-  pieceOptions?: QuotePieceOption[];
-  branchWeight?: "rebar-12m";
-  supportsPieceUnits: boolean;
-};
-
-export type QuotePriceEstimates = Partial<
-  Record<QuoteProductName, QuotePriceEstimate>
->;
-
-/** Raw input for one quote row. */
+/** Raw input for one quote line item from the client form. */
 export type RawQuoteItem = {
   id: number;
   product: QuoteProductName | "";
@@ -68,7 +51,7 @@ export type RawQuoteItem = {
   pieceOptionKey: string;
 };
 
-/** Raw contact info. */
+/** Raw contact info submitted from the client form. */
 export type RawQuoteContact = {
   fullName: string;
   phone: string;
@@ -76,45 +59,33 @@ export type RawQuoteContact = {
   notes: string;
 };
 
-/** Full raw form input. */
+/** Full raw form input structure. */
 export type RawQuoteRequest = {
   contact: RawQuoteContact;
   items: RawQuoteItem[];
   acceptDisclaimer: boolean;
 };
 
-/** Normalized contact info with cleaned digits and trimmed strings. */
-export type NormalizedQuoteContact = {
-  fullName: string;
-  phone: string;
-  destination: string;
-  notes: string;
-};
-
-/** Normalized item with numeric values parsed from Persian/Arabic/ASCII digits. */
-export type NormalizedQuoteItem = {
+/** Evaluation result for a single quote line item. */
+export type QuoteItemEvaluation = {
   id: number;
   product: QuoteProductName | "";
   quantity: string;
   quantityNumeric: number | null;
   unit: QuoteUnit;
+  effectiveUnit: string;
   dimensions: string;
   rebarDiameterMm: string;
   rebarDiameterNumeric: number | null;
   pieceOptionKey: string;
-};
-
-/** Result of pricing derivation for a single item. */
-export type DerivedQuoteItem = {
-  id: number;
-  item: NormalizedQuoteItem;
-  estimate: QuotePriceEstimate | undefined;
-  pieceOption: QuotePieceOption | undefined;
-  effectiveUnit: string;
+  pieceOption?: QuotePieceOptionChoice;
   approximateTotalToman: number | null;
   approximateTotalRial: number | null;
   unitPriceRial: number | null;
   weightInKg: number | null;
+  priceExplanation: string;
+  supportsPieceUnits: boolean;
+  requiresRebarDiameter: boolean;
 };
 
 /** Aggregated pricing totals across all items. */
@@ -132,7 +103,7 @@ export type QuoteValidationResult = {
   errors: Record<string, string>;
 };
 
-/** Final printable invoice structure. */
+/** Final printable line item structure in GeneratedQuote. */
 export type GeneratedQuoteItem = {
   product: QuoteProductName;
   quantity: string;
@@ -142,6 +113,7 @@ export type GeneratedQuoteItem = {
   totalRial: number | null;
 };
 
+/** Final printable invoice document model. */
 export type GeneratedQuote = {
   date: string;
   fullName: string;
@@ -152,21 +124,16 @@ export type GeneratedQuote = {
   totalRial: number;
 };
 
-/** Result of prepareQuoteRequest. */
-export type QuoteRequestResult = {
+/** Complete evaluation output for a quote request. */
+export type QuoteEvaluationResult = {
   input: {
-    contact: NormalizedQuoteContact;
-    items: NormalizedQuoteItem[];
+    contact: RawQuoteContact;
+    items: RawQuoteItem[];
     acceptDisclaimer: boolean;
   };
   validation: QuoteValidationResult;
-  pricing: {
-    items: DerivedQuoteItem[];
-    totals: QuoteTotals;
-  };
-  output: {
-    message: string;
-    document: GeneratedQuote;
-  };
+  items: QuoteItemEvaluation[];
+  totals: QuoteTotals;
+  message: string;
+  document: GeneratedQuote;
 };
-

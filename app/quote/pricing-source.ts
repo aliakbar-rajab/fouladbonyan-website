@@ -1,28 +1,12 @@
-import {
-  createRetryableLoader,
-  loadAllGroupCatalogs,
-} from "./catalog-reader";
-import type { CatalogCategory, GroupCatalog } from "./catalog-types";
-import { localizeCatalogValue } from "./catalog-utils";
 import type {
-  QuotePieceOption,
-  QuotePriceEstimate,
-  QuotePriceEstimates,
-  QuoteProductName,
-  QuoteUnit,
-} from "./quote-types";
+  CatalogCategory,
+  CatalogSnapshot,
+  GroupCatalog,
+} from "../catalog-types";
+import type { ProductGroupId } from "../category-meta";
+import { localizeCatalogValue } from "../catalog-utils";
+import type { QuotePieceOptionChoice, QuoteProductName } from "../quote-types";
 
-export type {
-  QuotePieceOption,
-  QuotePriceEstimate,
-  QuotePriceEstimates,
-  QuoteProductName,
-  QuoteUnit,
-};
-
-import type { ProductGroupId } from "./category-meta";
-
-/** How a per-piece weight is derived for a product priced only by weight. */
 type BranchWeightFormula = "rebar-12m";
 
 type QuoteSource = {
@@ -62,10 +46,26 @@ const quoteSources: Partial<Record<QuoteProductName, QuoteSource>> = {
   },
 };
 
+export type ProductPricingBaseline = {
+  product: QuoteProductName;
+  unitPriceTomanPerKg: number;
+  minPriceTomanPerKg: number;
+  maxPriceTomanPerKg: number;
+  rowCount: number;
+  date: string;
+  pieceOptions: QuotePieceOptionChoice[];
+  branchWeight?: "rebar-12m";
+  supportsPieceUnits: boolean;
+};
+
+export type QuotePricingBaselines = Partial<
+  Record<QuoteProductName, ProductPricingBaseline>
+>;
+
 const averageToman = (prices: number[]) =>
   Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length);
 
-function kilogramPrices(category: CatalogCategory) {
+function extractKilogramPrices(category: CatalogCategory): number[] {
   return category.factories
     .flatMap((factory) => factory.rows)
     .filter(
@@ -78,10 +78,10 @@ function kilogramPrices(category: CatalogCategory) {
     .map((row) => row.price);
 }
 
-function buildPieceOptions(
+function extractPieceOptions(
   category: CatalogCategory | undefined,
   unit: string,
-): QuotePieceOption[] {
+): QuotePieceOptionChoice[] {
   if (!category) return [];
 
   const bySizeSpec = new Map<
@@ -125,58 +125,64 @@ function buildPieceOptions(
   });
 }
 
+function normalizeToGroupCatalogs(
+  source: CatalogSnapshot | GroupCatalog[] | null | undefined,
+): GroupCatalog[] {
+  if (!source) return [];
+  if (Array.isArray(source)) return source;
+  if ("catalogs" in source && Array.isArray(source.catalogs)) {
+    return source.catalogs;
+  }
+  return [];
+}
+
 /**
- * Pure function to derive QuotePriceEstimates from group catalogs.
+ * Extract quote pricing baselines directly from catalog data.
  */
-export function deriveQuoteEstimates(
-  catalogsList: GroupCatalog[],
-): QuotePriceEstimates {
+export function extractQuotePricingBaselines(
+  source: CatalogSnapshot | GroupCatalog[] | null | undefined,
+): QuotePricingBaselines {
+  const catalogsList = normalizeToGroupCatalogs(source);
   const catalogs = new Map(
     catalogsList.map((catalog) => [catalog.id, catalog]),
   );
-  const estimates: QuotePriceEstimates = {};
+  const baselines: QuotePricingBaselines = {};
 
-  for (const [product, source] of Object.entries(quoteSources) as [
+  for (const [product, src] of Object.entries(quoteSources) as [
     QuoteProductName,
     QuoteSource,
   ][]) {
-    const catalog = catalogs.get(source.group);
+    const catalog = catalogs.get(src.group);
     if (!catalog) continue;
 
     const categoryOf = (id: string) =>
       catalog.categories.find((category) => category.id === id);
 
     const pricedCategory = categoryOf(
-      source.categoryId ?? catalog.initialCategoryId,
+      src.categoryId ?? catalog.initialCategoryId,
     );
     if (!pricedCategory) continue;
 
-    const prices = kilogramPrices(pricedCategory);
+    const prices = extractKilogramPrices(pricedCategory);
     if (!prices.length) continue;
 
-    const pieceOptions = (source.pieceSources ?? []).flatMap(
-      ({ categoryId, unit }) => buildPieceOptions(categoryOf(categoryId), unit),
+    const pieceOptions = (src.pieceSources ?? []).flatMap(
+      ({ categoryId, unit }) => extractPieceOptions(categoryOf(categoryId), unit),
     );
 
-    estimates[product] = {
+    baselines[product] = {
       product,
       unitPriceTomanPerKg: averageToman(prices),
       minPriceTomanPerKg: Math.min(...prices),
       maxPriceTomanPerKg: Math.max(...prices),
       rowCount: prices.length,
-      date: pricedCategory.summary.date,
-      ...(pieceOptions.length ? { pieceOptions } : {}),
-      ...(source.branchWeight ? { branchWeight: source.branchWeight } : {}),
+      date: pricedCategory.summary?.date ?? "امروز",
+      pieceOptions,
+      ...(src.branchWeight ? { branchWeight: src.branchWeight } : {}),
       supportsPieceUnits:
-        pieceOptions.length > 0 || Boolean(source.branchWeight),
+        pieceOptions.length > 0 || Boolean(src.branchWeight),
     };
   }
 
-  return estimates;
+  return baselines;
 }
-
-export const loadQuotePriceEstimates = createRetryableLoader(async () => {
-  const catalogs = await loadAllGroupCatalogs();
-  return deriveQuoteEstimates(catalogs);
-});
-

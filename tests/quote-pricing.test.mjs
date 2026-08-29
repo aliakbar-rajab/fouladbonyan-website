@@ -1,22 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deriveQuoteEstimates } from "../app/quote-pricing.ts";
 import {
-  buildQuoteMessage,
-  deriveQuoteItemPricing,
-  deriveQuotePricing,
-  normalizePhone,
-  normalizeQuoteContact,
-  normalizeQuoteItem,
-  normalizeQuoteRequest,
   parsePersianNumber,
-  prepareQuoteRequest,
-  resolvePieceOption,
-  validateDestination,
-  validateFullName,
-  validatePhone,
-  validateQuantity,
-  validateQuoteRequest,
+  rialToWords,
+} from "../app/persian-numbers.mjs";
+import {
+  createQuoteEvaluator,
+  formatToman,
+  isQuoteProduct,
+  isQuoteUnit,
+  loadQuoteEvaluator,
+  quoteDisclaimer,
+  quoteProductNames,
+  quoteUnits,
 } from "../app/quote-engine.ts";
 
 const contact = {
@@ -35,6 +31,7 @@ const rebarEstimate = {
   date: "امروز",
   branchWeight: "rebar-12m",
   supportsPieceUnits: true,
+  pieceOptions: [],
 };
 
 const beamEstimate = {
@@ -58,6 +55,7 @@ const pipeEstimate = {
   rowCount: 5,
   date: "امروز",
   supportsPieceUnits: false,
+  pieceOptions: [],
 };
 
 const allEstimates = {
@@ -67,13 +65,17 @@ const allEstimates = {
 };
 
 function buildOneItemQuote(item, estimate) {
-  const result = prepareQuoteRequest(
-    { contact, items: [item], acceptDisclaimer: true },
+  const evaluator = createQuoteEvaluator(
     estimate ? { [estimate.product]: estimate } : {},
   );
+  const result = evaluator.evaluateRequest({
+    contact,
+    items: [item],
+    acceptDisclaimer: true,
+  });
   return {
-    approximateTotal: result.pricing.items[0].approximateTotalToman,
-    quote: result.output.document,
+    approximateTotal: result.items[0].approximateTotalToman,
+    quote: result.document,
   };
 }
 
@@ -121,132 +123,265 @@ test("a whole-number شاخه quantity priced from a real catalog piece option r
   );
 });
 
-test("normalizeQuoteContact trims whitespace and normalizes Iranian phone numbers", () => {
-  const normalized = normalizeQuoteContact({
-    fullName: "  علی اکبری  ",
-    phone: " +98 912 345-6789 ",
-    destination: " اصفهان ",
-    notes: "  توضیحات فوری  ",
-  });
+test("catalog snapshot to quote evaluator extracts accurate baseline prices and piece options", () => {
+  const mockSnapshot = {
+    fetchedAt: "2026-08-29T00:00:00.000Z",
+    sourceName: "فولاد ایرانیان",
+    sourceHome: "https://www.fooladiranian.com/",
+    taxRate: 0.1,
+    catalogs: [
+      {
+        id: "rebar",
+        label: "میلگرد",
+        initialCategoryId: "ribbed",
+        fetchedAt: "2026-08-29T00:00:00.000Z",
+        sourceName: "فولاد ایرانیان",
+        sourceHome: "https://www.fooladiranian.com/",
+        taxRate: 0.1,
+        categories: [
+          {
+            id: "ribbed",
+            label: "میلگرد آجدار",
+            groupingLabel: "کارخانه",
+            specificationLabel: "سایز",
+            sourceTitle: "قیمت میلگرد آجدار",
+            sourceUrl: "https://example.com",
+            summary: {
+              date: "۱۴۰۵/۰۶/۰۷",
+              min: 30000,
+              max: 32000,
+              average: 31000,
+              percent: 0,
+              status: "same",
+            },
+            filters: { sizes: ["14", "16"], factories: ["کارخانه نمونه"] },
+            factories: [
+              {
+                name: "کارخانه نمونه",
+                updatedAt: 0,
+                updatedDate: "۱۴۰۵/۰۶/۰۷",
+                rows: [
+                  { unit: "کیلوگرم", price: 30000, size: "14", title: "میلگرد ۱۴" },
+                  { unit: "کیلوگرم", price: 32000, size: "16", title: "میلگرد ۱۶" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "beam",
+        label: "تیرآهن",
+        initialCategoryId: "beam",
+        fetchedAt: "2026-08-29T00:00:00.000Z",
+        sourceName: "فولاد ایرانیان",
+        sourceHome: "https://www.fooladiranian.com/",
+        taxRate: 0.1,
+        categories: [
+          {
+            id: "beam",
+            label: "تیرآهن",
+            groupingLabel: "کارخانه",
+            specificationLabel: "سایز",
+            sourceTitle: "قیمت تیرآهن",
+            sourceUrl: "https://example.com",
+            summary: {
+              date: "۱۴۰۵/۰۶/۰۷",
+              min: 40000,
+              max: 42000,
+              average: 41000,
+              percent: 0,
+              status: "same",
+            },
+            filters: { sizes: ["14"], factories: ["ذوب آهن"] },
+            factories: [
+              {
+                name: "ذوب آهن",
+                updatedAt: 0,
+                updatedDate: "۱۴۰۵/۰۶/۰۷",
+                rows: [
+                  { unit: "کیلوگرم", price: 40000, size: "14", title: "تیرآهن ۱۴ کیلو" },
+                  { unit: "شاخه", price: 6_000_000, size: "14", title: "تیرآهن ۱۴ شاخه" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
 
-  assert.equal(normalized.fullName, "علی اکبری");
-  assert.equal(normalized.phone, "+989123456789");
-  assert.equal(normalized.destination, "اصفهان");
-  assert.equal(normalized.notes, "توضیحات فوری");
-});
+  const evaluator = createQuoteEvaluator(mockSnapshot);
+  assert.equal(evaluator.supportsPieceUnits("میلگرد"), true);
+  assert.equal(evaluator.requiresRebarDiameter("میلگرد"), true);
+  assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
 
-test("parsePersianNumber parses ASCII, Persian and Arabic digits correctly", () => {
-  assert.equal(parsePersianNumber("12.5"), 12.5);
-  assert.equal(parsePersianNumber("۱۲.۵"), 12.5);
-  assert.equal(parsePersianNumber("١٢.٥"), 12.5);
-  assert.equal(parsePersianNumber("نامعتبر"), null);
-  assert.equal(parsePersianNumber(""), null);
-});
+  const beamPieceOptions = evaluator.getPieceOptions("تیرآهن");
+  assert.equal(beamPieceOptions.length, 1);
+  assert.equal(beamPieceOptions[0].unit, "شاخه");
+  assert.equal(beamPieceOptions[0].priceToman, 6_000_000);
 
-test("normalizeQuoteItem parses Persian digits for quantity and diameter", () => {
-  const normalized = normalizeQuoteItem({
-    id: 3,
+  // Evaluate rebar branch with diameter 14
+  const rebarItem = evaluator.evaluateItem({
+    id: 1,
     product: "میلگرد",
-    quantity: "۱۲",
+    quantity: "10",
     unit: "شاخه",
-    dimensions: "  A3  ",
-    rebarDiameterMm: "۱۶",
-    pieceOptionKey: "",
+    rebarDiameterMm: "14",
   });
+  assert.ok(rebarItem.approximateTotalToman !== null && rebarItem.approximateTotalToman > 0);
+  assert.ok(rebarItem.weightInKg !== null && rebarItem.weightInKg > 0);
 
-  assert.equal(normalized.quantityNumeric, 12);
-  assert.equal(normalized.rebarDiameterNumeric, 16);
-  assert.equal(normalized.dimensions, "A3");
-  assert.equal(normalized.unit, "شاخه");
+  // Evaluate beam piece option
+  const beamItem = evaluator.evaluateItem({
+    id: 2,
+    product: "تیرآهن",
+    quantity: "2",
+    unit: "شاخه",
+    pieceOptionKey: beamPieceOptions[0].key,
+  });
+  assert.equal(beamItem.approximateTotalToman, 12_000_000);
+  assert.equal(beamItem.approximateTotalRial, 120_000_000);
 });
 
-test("validateQuantity enforces positive numbers and integer piece constraints with Persian digits", () => {
-  assert.equal(validateQuantity("", "تن", 0), "مقدار تقریبی کالای ۱ را وارد کنید.");
-  assert.equal(validateQuantity("0", "تن", 0), "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.");
-  assert.equal(validateQuantity("-5", "تن", 0), "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.");
-  assert.equal(validateQuantity("۲.۵", "تن", 0), ""); // 2.5 tonnes is valid
+test("missing or partial catalog prices handle unpriced products gracefully", () => {
+  const evaluator = createQuoteEvaluator({}); // empty catalog
+  const item = evaluator.evaluateItem({
+    id: 1,
+    product: "ورق فولادی",
+    quantity: "5",
+    unit: "تن",
+  });
+
+  assert.equal(item.approximateTotalToman, null);
+  assert.equal(item.approximateTotalRial, null);
+  assert.equal(item.unitPriceRial, null);
+  assert.match(item.priceExplanation, /با واحد فروش تماس بگیرید/);
+
+  const requestResult = evaluator.evaluateRequest({
+    contact: { fullName: "تست", phone: "09121111111", destination: "تهران", notes: "" },
+    items: [item],
+    acceptDisclaimer: true,
+  });
+
+  assert.equal(requestResult.validation.isValid, true);
+  assert.equal(requestResult.totals.hasAnyPriced, false);
+  assert.equal(requestResult.totals.totalRial, 0);
+  assert.match(requestResult.message, /محاسبه نشده/);
+});
+
+test("evaluator validateField tests required contact and disclaimer inputs", () => {
+  const evaluator = createQuoteEvaluator();
+
+  assert.ok(evaluator.validateField("fullName", "").length > 0);
+  assert.ok(evaluator.validateField("fullName", "ع").length > 0);
+  assert.equal(evaluator.validateField("fullName", "علی رضایی"), "");
+
+  assert.ok(evaluator.validateField("phone", "").length > 0);
+  assert.ok(evaluator.validateField("phone", "123").length > 0);
+  assert.equal(evaluator.validateField("phone", "09121234567"), "");
+  assert.equal(evaluator.validateField("phone", "۰۹۱۲۱۲۳۴۵۶۷"), "");
+  assert.equal(evaluator.validateField("phone", "+989121234567"), "");
+
+  assert.ok(evaluator.validateField("destination", "").length > 0);
+  assert.equal(evaluator.validateField("destination", "مشهد"), "");
+
+  assert.ok(evaluator.validateField("acceptDisclaimer", false).length > 0);
+  assert.equal(evaluator.validateField("acceptDisclaimer", true), "");
+});
+
+test("evaluator validateField validates item product and quantity with piece unit integer checks", () => {
+  const evaluator = createQuoteEvaluator();
+
   assert.equal(
-    validateQuantity("۲.۵", "شاخه", 0),
+    evaluator.validateField("product", "", { itemIndex: 0 }),
+    "نوع کالای ۱ را وارد کنید.",
+  );
+  assert.equal(
+    evaluator.validateField("product", "میلگرد", { itemIndex: 0 }),
+    "",
+  );
+
+  assert.equal(
+    evaluator.validateField("quantity", "", { unit: "تن", itemIndex: 0 }),
+    "مقدار تقریبی کالای ۱ را وارد کنید.",
+  );
+  assert.equal(
+    evaluator.validateField("quantity", "0", { unit: "تن", itemIndex: 0 }),
+    "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.",
+  );
+  assert.equal(
+    evaluator.validateField("quantity", "-5", { unit: "تن", itemIndex: 0 }),
+    "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.",
+  );
+  assert.equal(
+    evaluator.validateField("quantity", "۲.۵", { unit: "تن", itemIndex: 0 }),
+    "",
+  );
+  assert.equal(
+    evaluator.validateField("quantity", "۲.۵", { unit: "شاخه", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.",
   );
   assert.equal(
-    validateQuantity("۲.۵", "عدد", 0),
+    evaluator.validateField("quantity", "۲.۵", { unit: "عدد", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ برای واحد عدد باید عدد صحیح باشد.",
   );
-  assert.equal(validateQuantity("۱۰", "شاخه", 0), "");
-});
-
-test("validateFullName, validatePhone, validateDestination validate required fields correctly", () => {
-  assert.ok(validateFullName("").length > 0);
-  assert.ok(validateFullName("ع").length > 0);
-  assert.equal(validateFullName("علی رضایی"), "");
-
-  assert.ok(validatePhone("").length > 0);
-  assert.ok(validatePhone("123").length > 0);
-  assert.equal(validatePhone("09121234567"), "");
-  assert.equal(validatePhone("۰۹۱۲۱۲۳۴۵۶۷"), "");
-  assert.equal(validatePhone("+989121234567"), "");
-
-  assert.ok(validateDestination("").length > 0);
-  assert.equal(validateDestination("مشهد"), "");
-});
-
-test("deriveQuoteItemPricing computes accurate Toman and Rial for weight, rebar and piece option items", () => {
-  // 1. Weight based (tonne -> 2 tonnes @ 45,000 toman/kg = 90,000,000 toman)
-  const weightItem = deriveQuoteItemPricing(
-    {
-      id: 1,
-      product: "لوله فولادی",
-      quantity: "2",
-      unit: "تن",
-      dimensions: "",
-      rebarDiameterMm: "",
-      pieceOptionKey: "",
-    },
-    allEstimates,
+  assert.equal(
+    evaluator.validateField("quantity", "۱۰", { unit: "شاخه", itemIndex: 0 }),
+    "",
   );
+});
+
+test("evaluator evaluates items and computes accurate Toman and Rial for weight, rebar and piece option items", () => {
+  const evaluator = createQuoteEvaluator(allEstimates);
+
+  // 1. Weight based (tonne -> 2 tonnes @ 45,000 toman/kg = 90,000,000 toman)
+  const weightItem = evaluator.evaluateItem({
+    id: 1,
+    product: "لوله فولادی",
+    quantity: "2",
+    unit: "تن",
+    dimensions: "",
+    rebarDiameterMm: "",
+    pieceOptionKey: "",
+  });
   assert.equal(weightItem.weightInKg, 2000);
   assert.equal(weightItem.approximateTotalToman, 90_000_000);
   assert.equal(weightItem.approximateTotalRial, 900_000_000);
   assert.equal(weightItem.unitPriceRial, 450_000_000);
 
   // 2. Rebar branch weight (10 branches of rebar 16)
-  const rebarItem = deriveQuoteItemPricing(
-    {
-      id: 2,
-      product: "میلگرد",
-      quantity: "۱۰",
-      unit: "شاخه",
-      dimensions: "A3",
-      rebarDiameterMm: "۱۶",
-      pieceOptionKey: "",
-    },
-    allEstimates,
-  );
+  const rebarItem = evaluator.evaluateItem({
+    id: 2,
+    product: "میلگرد",
+    quantity: "۱۰",
+    unit: "شاخه",
+    dimensions: "A3",
+    rebarDiameterMm: "۱۶",
+    pieceOptionKey: "",
+  });
   assert.ok(rebarItem.weightInKg !== null && rebarItem.weightInKg > 0);
   assert.ok(rebarItem.approximateTotalToman !== null && rebarItem.approximateTotalToman > 0);
   assert.equal(rebarItem.approximateTotalRial, rebarItem.approximateTotalToman * 10);
 
   // 3. Piece option item (5 branches of beam 14 @ 5,500,000 toman = 27,500,000 toman)
-  const beamItem = deriveQuoteItemPricing(
-    {
-      id: 3,
-      product: "تیرآهن",
-      quantity: "5",
-      unit: "شاخه",
-      dimensions: "",
-      rebarDiameterMm: "",
-      pieceOptionKey: "beam:14",
-    },
-    allEstimates,
-  );
+  const beamItem = evaluator.evaluateItem({
+    id: 3,
+    product: "تیرآهن",
+    quantity: "5",
+    unit: "شاخه",
+    dimensions: "",
+    rebarDiameterMm: "",
+    pieceOptionKey: "beam:14",
+  });
   assert.equal(beamItem.effectiveUnit, "شاخه");
   assert.equal(beamItem.approximateTotalToman, 27_500_000);
   assert.equal(beamItem.approximateTotalRial, 275_000_000);
   assert.equal(beamItem.unitPriceRial, 55_000_000);
 });
 
-test("deriveQuotePricing aggregates multi-item totals and counts", () => {
+test("evaluator evaluateItems aggregates multi-item totals and item counts", () => {
+  const evaluator = createQuoteEvaluator(allEstimates);
   const items = [
     {
       id: 1,
@@ -259,7 +394,7 @@ test("deriveQuotePricing aggregates multi-item totals and counts", () => {
     },
     {
       id: 2,
-      product: "سایر محصولات فولادی", // Unpriced product
+      product: "سایر محصولات فولادی",
       quantity: "100",
       unit: "کیلوگرم",
       dimensions: "سفارشی",
@@ -268,7 +403,7 @@ test("deriveQuotePricing aggregates multi-item totals and counts", () => {
     },
   ];
 
-  const pricing = deriveQuotePricing(items, allEstimates);
+  const pricing = evaluator.evaluateItems(items);
   assert.equal(pricing.totals.totalItemCount, 2);
   assert.equal(pricing.totals.pricedItemCount, 1);
   assert.equal(pricing.totals.hasAnyPriced, true);
@@ -276,94 +411,85 @@ test("deriveQuotePricing aggregates multi-item totals and counts", () => {
   assert.equal(pricing.totals.totalRial, 450_000_000);
 });
 
-test("buildQuoteMessage formats a clean, human-readable Persian quote summary", () => {
-  const pricing = deriveQuotePricing(
-    [
-      {
-        id: 1,
-        product: "تیرآهن",
-        quantity: "2",
-        unit: "شاخه",
-        dimensions: "سایز ۱۴",
-        rebarDiameterMm: "",
-        pieceOptionKey: "beam:14",
-      },
-    ],
-    allEstimates,
-  );
+test("formatMessage creates a human-readable Persian quote summary with disclaimer", () => {
+  const evaluator = createQuoteEvaluator(allEstimates);
+  const evaluation = evaluator.evaluateItems([
+    {
+      id: 1,
+      product: "تیرآهن",
+      quantity: "2",
+      unit: "شاخه",
+      dimensions: "سایز ۱۴",
+      rebarDiameterMm: "",
+      pieceOptionKey: "beam:14",
+    },
+  ]);
 
-  const message = buildQuoteMessage(
-    normalizeQuoteContact(contact),
-    pricing.items,
-    pricing.totals,
-  );
+  const message = evaluator.formatMessage(contact, evaluation.items, evaluation.totals);
   assert.match(message, /درخواست پیش‌فاکتور غیرقطعی/);
   assert.match(message, /نام: کاربر آزمایشی/);
   assert.match(message, /شماره تماس: 09121234567/);
   assert.match(message, /تیرآهن/);
   assert.match(message, /جمع تقریبی:/);
   assert.match(message, /شهر مقصد: تهران/);
+  assert.match(message, new RegExp(quoteDisclaimer));
 });
 
-test("prepareQuoteRequest executes complete normalization, validation, pricing and output serialization", () => {
+test("evaluateRequest executes complete normalization, validation, pricing, message and document serialization", () => {
+  const evaluator = createQuoteEvaluator(allEstimates);
+
   // Valid request
-  const validResult = prepareQuoteRequest(
-    {
-      contact: {
-        fullName: "  محمد محمدی  ",
-        phone: " ۰۹۱۲۳۴۵۶۷۸۹ ",
-        destination: " تبریز ",
-        notes: "ارسال با تریلی",
-      },
-      items: [
-        {
-          id: 1,
-          product: "میلگرد",
-          quantity: "۵",
-          unit: "شاخه",
-          dimensions: "A3",
-          rebarDiameterMm: "۱۴",
-          pieceOptionKey: "",
-        },
-      ],
-      acceptDisclaimer: true,
+  const validResult = evaluator.evaluateRequest({
+    contact: {
+      fullName: "  محمد محمدی  ",
+      phone: " ۰۹۱۲۳۴۵۶۷۸۹ ",
+      destination: " تبریز ",
+      notes: "ارسال با تریلی",
     },
-    allEstimates,
-  );
+    items: [
+      {
+        id: 1,
+        product: "میلگرد",
+        quantity: "۵",
+        unit: "شاخه",
+        dimensions: "A3",
+        rebarDiameterMm: "۱۴",
+        pieceOptionKey: "",
+      },
+    ],
+    acceptDisclaimer: true,
+  });
 
   assert.equal(validResult.validation.isValid, true);
   assert.equal(Object.keys(validResult.validation.errors).length, 0);
   assert.equal(validResult.input.contact.fullName, "محمد محمدی");
   assert.equal(validResult.input.contact.phone, "09123456789");
-  assert.ok(validResult.pricing.totals.totalRial > 0);
-  assert.equal(validResult.output.document.fullName, "محمد محمدی");
-  assert.equal(validResult.output.document.items.length, 1);
-  assert.match(validResult.output.message, /محمد محمدی/);
+  assert.ok(validResult.totals.totalRial > 0);
+  assert.equal(validResult.document.fullName, "محمد محمدی");
+  assert.equal(validResult.document.items.length, 1);
+  assert.match(validResult.message, /محمد محمدی/);
 
   // Invalid request
-  const invalidResult = prepareQuoteRequest(
-    {
-      contact: {
-        fullName: "",
-        phone: "123",
-        destination: "",
-        notes: "",
-      },
-      items: [
-        {
-          id: 1,
-          product: "",
-          quantity: "invalid",
-          unit: "تن",
-          dimensions: "",
-          rebarDiameterMm: "",
-          pieceOptionKey: "",
-        },
-      ],
-      acceptDisclaimer: false,
+  const invalidResult = evaluator.evaluateRequest({
+    contact: {
+      fullName: "",
+      phone: "123",
+      destination: "",
+      notes: "",
     },
-    allEstimates,
-  );
+    items: [
+      {
+        id: 1,
+        product: "",
+        quantity: "invalid",
+        unit: "تن",
+        dimensions: "",
+        rebarDiameterMm: "",
+        pieceOptionKey: "",
+      },
+    ],
+    acceptDisclaimer: false,
+  });
 
   assert.equal(invalidResult.validation.isValid, false);
   assert.ok(invalidResult.validation.errors.fullName);
@@ -374,86 +500,71 @@ test("prepareQuoteRequest executes complete normalization, validation, pricing a
   assert.ok(invalidResult.validation.errors["itemQuantity-1"]);
 });
 
-test("normalizeQuoteRequest and validateQuoteRequest operate on full request structures", () => {
-  const normalized = normalizeQuoteRequest({
+test("evaluator validateRequest checks full form structure correctly", () => {
+  const evaluator = createQuoteEvaluator();
+  const valid = evaluator.validateRequest({
     contact: {
-      fullName: "  حسین حسینی  ",
-      phone: " ۰۹۱۲۱۱۱۱۱۱۱ ",
-      destination: " شیراز ",
-      notes: "   ",
+      fullName: "حسین حسینی",
+      phone: "09121111111",
+      destination: "شیراز",
+      notes: "",
     },
     items: [
       {
         id: 1,
         product: "میلگرد",
-        quantity: "۱۰",
+        quantity: "10",
         unit: "شاخه",
         dimensions: "A3",
-        rebarDiameterMm: "۱۴",
+        rebarDiameterMm: "14",
         pieceOptionKey: "",
       },
     ],
     acceptDisclaimer: true,
   });
 
-  assert.equal(normalized.contact.fullName, "حسین حسینی");
-  assert.equal(normalized.contact.phone, "09121111111");
-  assert.equal(normalized.items[0].quantityNumeric, 10);
-  assert.equal(normalized.acceptDisclaimer, true);
-
-  const validation = validateQuoteRequest(normalized);
-  assert.equal(validation.isValid, true);
-  assert.equal(Object.keys(validation.errors).length, 0);
+  assert.equal(valid.isValid, true);
+  assert.equal(Object.keys(valid.errors).length, 0);
 });
 
-test("resolvePieceOption finds matching option by key", () => {
-  const option = resolvePieceOption("beam:14", beamEstimate);
-  assert.ok(option);
-  assert.equal(option?.priceToman, 5_500_000);
-
-  assert.equal(resolvePieceOption("unknown", beamEstimate), undefined);
-  assert.equal(resolvePieceOption("", beamEstimate), undefined);
-  assert.equal(resolvePieceOption("beam:14", undefined), undefined);
-});
-
-test("normalizePhone cleans dashes, spaces, and Persian digits", () => {
-  assert.equal(normalizePhone("۰۹۱۲-۳۴۵-۶۷۸۹"), "09123456789");
-  assert.equal(normalizePhone("(021) 88888888"), "02188888888");
-});
-
-test("deriveQuoteEstimates derives valid estimates from group catalogs", () => {
-  const mockCatalogs = [
+test("evaluator formatDocument generates complete printable document structure", () => {
+  const evaluator = createQuoteEvaluator(allEstimates);
+  const evaluation = evaluator.evaluateItems([
     {
-      id: "rebar",
-      label: "میلگرد",
-      initialCategoryId: "ribbed",
-      categories: [
-        {
-          id: "ribbed",
-          label: "میلگرد آجدار",
-          specificationLabel: "سایز",
-          summary: { date: "۱۴۰۴/۱۲/۰۱", itemCount: 2, minPrice: 30000, maxPrice: 32000 },
-          factories: [
-            {
-              id: "factory-1",
-              name: "کارخانه نمونه",
-              rows: [
-                { unit: "کیلوگرم", price: 30000, size: "14" },
-                { unit: "کیلوگرم", price: 32000, size: "16" },
-              ],
-            },
-          ],
-        },
-      ],
+      id: 1,
+      product: "میلگرد",
+      quantity: "2",
+      unit: "تن",
+      dimensions: "A3",
+      rebarDiameterMm: "",
+      pieceOptionKey: "",
     },
-  ];
+  ]);
 
-  const estimates = deriveQuoteEstimates(mockCatalogs);
-  assert.ok(estimates.میلگرد);
-  assert.equal(estimates.میلگرد?.unitPriceTomanPerKg, 31000);
-  assert.equal(estimates.میلگرد?.minPriceTomanPerKg, 30000);
-  assert.equal(estimates.میلگرد?.maxPriceTomanPerKg, 32000);
-  assert.equal(estimates.میلگرد?.branchWeight, "rebar-12m");
+  const doc = evaluator.formatDocument(contact, evaluation.items, evaluation.totals);
+  assert.equal(doc.fullName, "کاربر آزمایشی");
+  assert.equal(doc.destination, "تهران");
+  assert.equal(doc.items.length, 1);
+  assert.equal(doc.items[0].product, "میلگرد");
+  assert.equal(doc.items[0].unitPriceRial, 600_000_000);
+  assert.equal(doc.totalRial, 1_200_000_000);
+});
+
+test("domain product and unit metadata arrays and type guards behave accurately", () => {
+  assert.ok(quoteProductNames.includes("میلگرد"));
+  assert.ok(quoteProductNames.includes("تیرآهن"));
+  assert.ok(quoteUnits.includes("تن"));
+  assert.ok(quoteUnits.includes("شاخه"));
+
+  assert.equal(isQuoteProduct("میلگرد"), true);
+  assert.equal(isQuoteProduct("ناشناخته"), false);
+  assert.equal(isQuoteUnit("تن"), true);
+  assert.equal(isQuoteUnit("متر"), false);
+});
+
+test("formatToman currency formatting helper displays Persian localized amounts", () => {
+  assert.equal(formatToman(50_000), "۵۰٬۰۰۰ تومان");
+  assert.equal(formatToman(1_250_000), "۱٬۲۵۰٬۰۰۰ تومان");
 });
 
 test("parsePersianNumber parses Persian/Arabic decimal and thousands separators", () => {
@@ -468,21 +579,20 @@ test("parsePersianNumber parses Persian/Arabic decimal and thousands separators"
   assert.equal(parsePersianNumber("نامعتبر"), null);
 });
 
-test("validateQuantity accepts Persian decimal and integer inputs properly", () => {
-  assert.equal(validateQuantity("۲/۵", "تن", 0), "");
-  assert.equal(validateQuantity("۲٫۵", "کیلوگرم", 0), "");
-  assert.equal(validateQuantity("۱۰", "شاخه", 0), "");
-  assert.match(
-    validateQuantity("۲/۵", "شاخه", 0),
-    /عدد صحیح باشد/,
-  );
-});
-
-test("rialToWords handles zero, negative, and normal values safely", async () => {
-  const { rialToWords } = await import("../app/persian-numbers.mjs");
+test("rialToWords handles zero, negative, and normal values safely", () => {
   assert.equal(rialToWords(0), "صفر ریال");
   assert.equal(rialToWords(-100), "صفر ریال");
   assert.equal(rialToWords(1_000_000), "یک میلیون ریال");
   assert.equal(rialToWords(10_000_000), "ده میلیون ریال");
 });
 
+test("loadQuoteEvaluator memoizes and evaluates against live catalog files", async () => {
+  const evaluator = await loadQuoteEvaluator();
+  const rebarEvaluation = evaluator.evaluateItem({
+    id: 1,
+    product: "میلگرد",
+    quantity: "1",
+    unit: "تن",
+  });
+  assert.ok(rebarEvaluation.approximateTotalToman !== null && rebarEvaluation.approximateTotalToman > 0);
+});

@@ -1,22 +1,39 @@
-import { calculateRebarWeight } from "./catalog-behavior.mjs";
 import {
-  normalizePhone,
-  validateFullName,
-  validatePhone,
-} from "./form-validation";
-import { parsePersianNumber } from "./persian-numbers.mjs";
+  createRetryableLoader,
+  loadAllGroupCatalogs,
+} from "./catalog-reader";
+import type { CatalogSnapshot, GroupCatalog } from "./catalog-types";
 import {
+  aggregateQuoteTotals,
+  evaluateItemPricing,
+  formatToman,
+} from "./quote/calculation";
+import {
+  extractQuotePricingBaselines,
+  type QuotePricingBaselines,
+} from "./quote/pricing-source";
+import {
+  buildQuoteDocument,
+  buildQuoteMessage,
+} from "./quote/serialization";
+import {
+  normalizeQuoteContact,
+  validateQuoteField,
+  validateQuoteRequestInput,
+  type FieldValidationOptions,
+} from "./quote/validation";
+import {
+  isQuoteProduct,
+  isQuoteUnit,
   quoteDisclaimer,
   quoteProductNames,
-  type DerivedQuoteItem,
+  quoteUnits,
   type GeneratedQuote,
-  type NormalizedQuoteContact,
-  type NormalizedQuoteItem,
-  type QuotePieceOption,
-  type QuotePriceEstimate,
-  type QuotePriceEstimates,
+  type GeneratedQuoteItem,
+  type QuoteEvaluationResult,
+  type QuoteItemEvaluation,
+  type QuotePieceOptionChoice,
   type QuoteProductName,
-  type QuoteRequestResult,
   type QuoteTotals,
   type QuoteUnit,
   type QuoteValidationResult,
@@ -25,358 +42,213 @@ import {
   type RawQuoteRequest,
 } from "./quote-types";
 
-import { formatCatalogNumber } from "./catalog-utils";
-
-export const RIAL_PER_TOMAN = 10;
-export const tomanToRial = (toman: number) => toman * RIAL_PER_TOMAN;
-export const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
-
-export const formatToman = (value: number) =>
-  `${formatCatalogNumber(value)} تومان`;
-
-const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-export const persianToday = () => persianDateFormatter.format(new Date());
-
-export const isPieceUnit = (unit: string): boolean =>
-  unit === "شاخه" || unit === "عدد";
-
-export const itemIndexLabel = (index: number) =>
-  formatCatalogNumber(index + 1);
-
-export { normalizePhone, parsePersianNumber };
-
 // ---------------------------------------------------------------------------
-// 1. NORMALIZATION
+// 1. PUBLIC DOMAIN METADATA & UI VALUES
 // ---------------------------------------------------------------------------
 
-export function normalizeQuoteContact(
-  raw: Partial<RawQuoteContact> | null | undefined,
-): NormalizedQuoteContact {
+export {
+  formatToman,
+  isQuoteProduct,
+  isQuoteUnit,
+  quoteDisclaimer,
+  quoteProductNames,
+  quoteUnits,
+};
+
+export type {
+  GeneratedQuote,
+  GeneratedQuoteItem,
+  QuoteEvaluationResult,
+  QuoteItemEvaluation,
+  QuotePieceOptionChoice,
+  QuoteProductName,
+  QuoteTotals,
+  QuoteUnit,
+  QuoteValidationResult,
+  RawQuoteContact,
+  RawQuoteItem,
+  RawQuoteRequest,
+};
+
+// ---------------------------------------------------------------------------
+// 2. UNIFIED QUOTE EVALUATOR CONTRACT & IMPLEMENTATION
+// ---------------------------------------------------------------------------
+
+export type QuoteEvaluator = {
+  /** Evaluate a single line item against market pricing baselines. */
+  evaluateItem: (
+    item: Partial<RawQuoteItem> | null | undefined,
+  ) => QuoteItemEvaluation;
+
+  /** Evaluate multiple line items and compute aggregated totals. */
+  evaluateItems: (items: (Partial<RawQuoteItem> | null | undefined)[]) => {
+    items: QuoteItemEvaluation[];
+    totals: QuoteTotals;
+  };
+
+  /** Validate and evaluate a complete quote request (pricing, validation, message, document). */
+  evaluateRequest: (request: RawQuoteRequest) => QuoteEvaluationResult;
+
+  /** Validate a single form field on change. Returns empty string if valid, error message otherwise. */
+  validateField: (
+    field: string,
+    value: unknown,
+    options?: FieldValidationOptions,
+  ) => string;
+
+  /** Validate a complete quote request input. */
+  validateRequest: (request: RawQuoteRequest) => QuoteValidationResult;
+
+  /** Retrieve piece unit options for a product from catalog pricing. */
+  getPieceOptions: (product: QuoteProductName | "") => QuotePieceOptionChoice[];
+
+  /** Whether the product supports piece units (branch/piece). */
+  supportsPieceUnits: (product: QuoteProductName | "") => boolean;
+
+  /** Whether the product requires rebar diameter for piece weight calculations. */
+  requiresRebarDiameter: (product: QuoteProductName | "") => boolean;
+
+  /** Format a quote request into a human-readable Persian copy message. */
+  formatMessage: (
+    contact: RawQuoteContact,
+    items: QuoteItemEvaluation[],
+    totals: QuoteTotals,
+  ) => string;
+
+  /** Generate the final printable invoice/quote document structure. */
+  formatDocument: (
+    contact: RawQuoteContact,
+    items: QuoteItemEvaluation[],
+    totals: QuoteTotals,
+  ) => GeneratedQuote;
+};
+
+function resolveBaselines(
+  source: CatalogSnapshot | GroupCatalog[] | QuotePricingBaselines | null | undefined,
+): QuotePricingBaselines {
+  if (!source) return {};
+  // If already a baselines dictionary (e.g. from mock tests)
+  const firstVal = Object.values(source)[0];
+  if (firstVal && typeof firstVal === "object" && "unitPriceTomanPerKg" in firstVal) {
+    return source as QuotePricingBaselines;
+  }
+  return extractQuotePricingBaselines(source as CatalogSnapshot | GroupCatalog[]);
+}
+
+/**
+ * Construct a deep QuoteEvaluator over catalog data or pricing baselines.
+ */
+export function createQuoteEvaluator(
+  source?: CatalogSnapshot | GroupCatalog[] | QuotePricingBaselines | null,
+): QuoteEvaluator {
+  const baselines = resolveBaselines(source);
+
+  const evaluateItem = (
+    item: Partial<RawQuoteItem> | null | undefined,
+  ): QuoteItemEvaluation => evaluateItemPricing(item, baselines);
+
+  const evaluateItems = (
+    items: (Partial<RawQuoteItem> | null | undefined)[],
+  ): { items: QuoteItemEvaluation[]; totals: QuoteTotals } => {
+    const evaluatedItems = (items ?? []).map(evaluateItem);
+    const totals = aggregateQuoteTotals(evaluatedItems);
+    return { items: evaluatedItems, totals };
+  };
+
+  const validateRequest = (
+    request: RawQuoteRequest,
+  ): QuoteValidationResult => {
+    return validateQuoteRequestInput(request);
+  };
+
+  const validateField = (
+    field: string,
+    value: unknown,
+    options?: FieldValidationOptions,
+  ): string => {
+    return validateQuoteField(field, value, options);
+  };
+
+  const formatMessage = (
+    contact: RawQuoteContact,
+    items: QuoteItemEvaluation[],
+    totals: QuoteTotals,
+  ): string => {
+    return buildQuoteMessage(contact, items, totals);
+  };
+
+  const formatDocument = (
+    contact: RawQuoteContact,
+    items: QuoteItemEvaluation[],
+    totals: QuoteTotals,
+  ): GeneratedQuote => {
+    return buildQuoteDocument(contact, items, totals);
+  };
+
+  const evaluateRequest = (
+    request: RawQuoteRequest,
+  ): QuoteEvaluationResult => {
+    const normalizedContact = normalizeQuoteContact(request.contact);
+    const validation = validateQuoteRequestInput({
+      contact: normalizedContact,
+      items: request.items,
+      acceptDisclaimer: request.acceptDisclaimer,
+    });
+    const { items, totals } = evaluateItems(request.items);
+    const message = formatMessage(normalizedContact, items, totals);
+    const document = formatDocument(normalizedContact, items, totals);
+
+    return {
+      input: {
+        contact: normalizedContact,
+        items: request.items,
+        acceptDisclaimer: request.acceptDisclaimer,
+      },
+      validation,
+      items,
+      totals,
+      message,
+      document,
+    };
+  };
+
+  const getPieceOptions = (
+    product: QuoteProductName | "",
+  ): QuotePieceOptionChoice[] => {
+    if (!product || !baselines[product]) return [];
+    return baselines[product]?.pieceOptions ?? [];
+  };
+
+  const supportsPieceUnits = (product: QuoteProductName | ""): boolean => {
+    if (!product || !baselines[product]) return true;
+    return baselines[product]?.supportsPieceUnits ?? true;
+  };
+
+  const requiresRebarDiameter = (product: QuoteProductName | ""): boolean => {
+    if (!product || !baselines[product]) return false;
+    return Boolean(baselines[product]?.branchWeight);
+  };
+
   return {
-    fullName: (raw?.fullName ?? "").trim(),
-    phone: normalizePhone(raw?.phone ?? ""),
-    destination: (raw?.destination ?? "").trim(),
-    notes: (raw?.notes ?? "").trim(),
+    evaluateItem,
+    evaluateItems,
+    evaluateRequest,
+    validateField,
+    validateRequest,
+    getPieceOptions,
+    supportsPieceUnits,
+    requiresRebarDiameter,
+    formatMessage,
+    formatDocument,
   };
 }
 
-export function normalizeQuoteItem(
-  raw: Partial<RawQuoteItem> | null | undefined,
-): NormalizedQuoteItem {
-  const rawQuantity = String(raw?.quantity ?? "").trim();
-  const rawDiameter = String(raw?.rebarDiameterMm ?? "").trim();
-  const quantityNumeric = parsePersianNumber(rawQuantity);
-  const rebarDiameterNumeric = parsePersianNumber(rawDiameter);
-
-  const rawProduct = raw?.product ?? "";
-  const product: QuoteProductName | "" = (
-    quoteProductNames as readonly string[]
-  ).includes(rawProduct)
-    ? (rawProduct as QuoteProductName)
-    : "";
-
-  const rawUnit = raw?.unit ?? "تن";
-  const unit: QuoteUnit =
-    rawUnit === "کیلوگرم" || rawUnit === "شاخه" || rawUnit === "عدد"
-      ? rawUnit
-      : "تن";
-
-  return {
-    id: raw?.id ?? 1,
-    product,
-    quantity: rawQuantity,
-    quantityNumeric,
-    unit,
-    dimensions: String(raw?.dimensions ?? "").trim(),
-    rebarDiameterMm: rawDiameter,
-    rebarDiameterNumeric,
-    pieceOptionKey: String(raw?.pieceOptionKey ?? "").trim(),
-  };
-}
-
-export function normalizeQuoteRequest(
-  raw: RawQuoteRequest,
-): {
-  contact: NormalizedQuoteContact;
-  items: NormalizedQuoteItem[];
-  acceptDisclaimer: boolean;
-} {
-  return {
-    contact: normalizeQuoteContact(raw.contact),
-    items: (raw.items ?? []).map(normalizeQuoteItem),
-    acceptDisclaimer: Boolean(raw.acceptDisclaimer),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// 2. VALIDATION
-// ---------------------------------------------------------------------------
-
-export const DISCLAIMER_ERROR =
-  "برای آماده‌سازی درخواست باید متن غیرقطعی‌بودن درخواست را تأیید کنید.";
-
-export { validateFullName, validatePhone };
-
-export function validateDestination(value: string): string {
-  return value.trim() ? "" : "شهر مقصد را وارد کنید.";
-}
-
-export function validateQuantity(
-  quantityInput: string,
-  unit: string,
-  index: number,
-): string {
-  const label = `مقدار تقریبی کالای ${itemIndexLabel(index)}`;
-  if (!quantityInput.trim()) {
-    return `${label} را وارد کنید.`;
-  }
-  const numeric = parsePersianNumber(quantityInput);
-  if (numeric === null || numeric <= 0) {
-    return `${label} باید عددی بزرگ‌تر از صفر باشد.`;
-  }
-  if (isPieceUnit(unit) && !Number.isInteger(numeric)) {
-    return `${label} برای واحد ${unit} باید عدد صحیح باشد.`;
-  }
-  return "";
-}
-
-export function validateQuoteRequest(
-  input: {
-    contact: NormalizedQuoteContact;
-    items: NormalizedQuoteItem[];
-    acceptDisclaimer: boolean;
+/**
+ * Async retryable loader for site-wide QuoteEvaluator.
+ */
+export const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
+  async () => {
+    const catalogs = await loadAllGroupCatalogs();
+    return createQuoteEvaluator(catalogs);
   },
-): QuoteValidationResult {
-  const errors: Record<string, string> = {};
-
-  const nameError = validateFullName(input.contact.fullName);
-  if (nameError) errors.fullName = nameError;
-
-  const phoneError = validatePhone(input.contact.phone);
-  if (phoneError) errors.phone = phoneError;
-
-  const destinationError = validateDestination(input.contact.destination);
-  if (destinationError) errors.destination = destinationError;
-
-  if (!input.acceptDisclaimer) {
-    errors.acceptDisclaimer = DISCLAIMER_ERROR;
-  }
-
-  for (const [index, item] of input.items.entries()) {
-    if (!item.product) {
-      errors[`itemProduct-${item.id}`] = `نوع کالای ${itemIndexLabel(index)} را وارد کنید.`;
-    }
-    const quantityError = validateQuantity(item.quantity, item.unit, index);
-    if (quantityError) {
-      errors[`itemQuantity-${item.id}`] = quantityError;
-    }
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// 3. OPTION RESOLUTION & PRICING DERIVATION
-// ---------------------------------------------------------------------------
-
-export function resolvePieceOption(
-  pieceOptionKey: string,
-  estimate: QuotePriceEstimate | undefined,
-): QuotePieceOption | undefined {
-  if (!pieceOptionKey || !estimate?.pieceOptions) return undefined;
-  return estimate.pieceOptions.find((option) => option.key === pieceOptionKey);
-}
-
-export function deriveQuoteItemPricing(
-  rawItem: Partial<RawQuoteItem> | NormalizedQuoteItem,
-  estimates: QuotePriceEstimates | null | undefined,
-): DerivedQuoteItem {
-  const item =
-    "quantityNumeric" in rawItem
-      ? (rawItem as NormalizedQuoteItem)
-      : normalizeQuoteItem(rawItem);
-
-  const estimate =
-    item.product && estimates ? estimates[item.product] : undefined;
-  const pieceOption = resolvePieceOption(item.pieceOptionKey, estimate);
-  const effectiveUnit = pieceOption?.unit ?? item.unit;
-
-  let approximateTotalToman: number | null = null;
-  let weightInKg: number | null = null;
-
-  const qty = item.quantityNumeric;
-
-  if (estimate && qty !== null && qty > 0) {
-    if (pieceOption) {
-      approximateTotalToman = Math.round(pieceOption.priceToman * qty);
-    } else if (item.unit === "تن" || item.unit === "کیلوگرم") {
-      weightInKg = item.unit === "تن" ? qty * 1_000 : qty;
-      approximateTotalToman = Math.round(
-        estimate.unitPriceTomanPerKg * weightInKg,
-      );
-    } else if (
-      estimate.branchWeight === "rebar-12m" &&
-      item.rebarDiameterNumeric !== null &&
-      item.rebarDiameterNumeric > 0
-    ) {
-      const calculatedWeight = calculateRebarWeight(
-        item.rebarDiameterNumeric,
-        REBAR_STANDARD_BRANCH_LENGTH_M,
-        Math.trunc(qty),
-      );
-      if (calculatedWeight) {
-        weightInKg = calculatedWeight;
-        approximateTotalToman = Math.round(
-          estimate.unitPriceTomanPerKg * calculatedWeight,
-        );
-      }
-    }
-  }
-
-  const approximateTotalRial =
-    approximateTotalToman === null ? null : tomanToRial(approximateTotalToman);
-
-  const unitPriceRial =
-    approximateTotalRial === null || !qty
-      ? null
-      : Math.round(approximateTotalRial / qty);
-
-  return {
-    id: item.id,
-    item,
-    estimate,
-    pieceOption,
-    effectiveUnit,
-    approximateTotalToman,
-    approximateTotalRial,
-    unitPriceRial,
-    weightInKg,
-  };
-}
-
-export function deriveQuotePricing(
-  items: (Partial<RawQuoteItem> | NormalizedQuoteItem)[],
-  estimates: QuotePriceEstimates | null | undefined,
-): { items: DerivedQuoteItem[]; totals: QuoteTotals } {
-  const derivedItems = items.map((item) =>
-    deriveQuoteItemPricing(item, estimates),
-  );
-
-  let totalToman = 0;
-  let totalRial = 0;
-  let pricedItemCount = 0;
-
-  for (const derived of derivedItems) {
-    if (derived.approximateTotalToman !== null) {
-      totalToman += derived.approximateTotalToman;
-      totalRial += derived.approximateTotalRial ?? 0;
-      pricedItemCount += 1;
-    }
-  }
-
-  return {
-    items: derivedItems,
-    totals: {
-      totalToman,
-      totalRial,
-      pricedItemCount,
-      totalItemCount: derivedItems.length,
-      hasAnyPriced: pricedItemCount > 0,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// 4. OUTPUT SERIALIZATION
-// ---------------------------------------------------------------------------
-
-function priceLineDescription(priced: DerivedQuoteItem): string {
-  const { estimate, approximateTotalToman, pieceOption } = priced;
-  if (approximateTotalToman === null || !estimate) {
-    return " | قیمت تقریبی: نیازمند بررسی واحد فروش";
-  }
-  if (pieceOption) {
-    return ` | قیمت تقریبی: ${formatToman(approximateTotalToman)} (بر اساس قیمت واقعی سایت برای این آیتم: ${formatToman(pieceOption.priceToman)} برای هر ${pieceOption.unit})`;
-  }
-  return ` | قیمت تقریبی: ${formatToman(approximateTotalToman)} (مبنای محاسبه: ${formatToman(estimate.unitPriceTomanPerKg)} برای هر کیلوگرم)`;
-}
-
-export function buildQuoteMessage(
-  contact: NormalizedQuoteContact,
-  items: DerivedQuoteItem[],
-  totals: QuoteTotals,
-): string {
-  return [
-    "درخواست پیش‌فاکتور غیرقطعی",
-    `نام: ${contact.fullName}`,
-    `شماره تماس: ${contact.phone}`,
-    "",
-    `کالاهای درخواست (${formatCatalogNumber(items.length)} کالا):`,
-    ...items.map(
-      (priced, index) =>
-        `${formatCatalogNumber(index + 1)}) ${priced.item.product.trim()} | ${priced.item.quantity.trim()} ${priced.effectiveUnit} | ابعاد/استاندارد: ${priced.item.dimensions.trim() || "اعلام نشده"}${priceLineDescription(priced)}`,
-    ),
-    "",
-    `جمع تقریبی: ${
-      totals.hasAnyPriced ? formatToman(totals.totalToman) : "محاسبه نشده"
-    }`,
-    "قیمت‌های تقریبی بالا صرفاً اطلاع‌رسانی هستند و ممکن است همه کالاها را پوشش ندهند.",
-    "",
-    `شهر مقصد: ${contact.destination}`,
-    `توضیحات: ${contact.notes || "ندارد"}`,
-    "",
-    quoteDisclaimer,
-  ].join("\n");
-}
-
-export function buildQuoteDocument(
-  contact: NormalizedQuoteContact,
-  items: DerivedQuoteItem[],
-  totals: QuoteTotals,
-): GeneratedQuote {
-  return {
-    date: persianToday(),
-    ...contact,
-    items: items.map((priced) => ({
-      product: priced.item.product as QuoteProductName,
-      quantity: priced.item.quantity,
-      unit: priced.effectiveUnit,
-      dimensions: priced.item.dimensions,
-      unitPriceRial: priced.unitPriceRial,
-      totalRial: priced.approximateTotalRial,
-    })),
-    totalRial: totals.totalRial,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// 5. UNIFIED DOMAIN PIPELINE
-// ---------------------------------------------------------------------------
-
-export function prepareQuoteRequest(
-  rawInput: RawQuoteRequest,
-  estimates: QuotePriceEstimates | null | undefined,
-): QuoteRequestResult {
-  const input = normalizeQuoteRequest(rawInput);
-  const validation = validateQuoteRequest(input);
-  const pricing = deriveQuotePricing(input.items, estimates);
-  const output = {
-    message: buildQuoteMessage(input.contact, pricing.items, pricing.totals),
-    document: buildQuoteDocument(input.contact, pricing.items, pricing.totals),
-  };
-
-  return {
-    input,
-    validation,
-    pricing,
-    output,
-  };
-}
+);

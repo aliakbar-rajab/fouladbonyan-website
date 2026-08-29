@@ -13,7 +13,7 @@ import {
   type GroupCatalog,
 } from "./catalog-reader";
 import type { CatalogViewRequest } from "./catalog-types";
-import { isProductGroupId, readRouteRequest, type RouteRequest } from "./root-dataset";
+import { isProductGroupId, readRouteRequest } from "./root-dataset";
 import { filterProductGroups } from "./site-logic.mjs";
 
 // ---------------------------------------------------------------------------
@@ -181,8 +181,66 @@ export function priceSectionHeading(
 }
 
 // ---------------------------------------------------------------------------
-// 3. WORKSPACE COORDINATION HOOK
+// 3. DEEP WORKSPACE COORDINATOR
 // ---------------------------------------------------------------------------
+
+export type CatalogViewMode =
+  | "home-overview"
+  | "category-overview"
+  | "catalog"
+  | "empty";
+
+export type CatalogWorkspaceSearchState = {
+  query: string;
+  isActive: boolean;
+  isSearching: boolean;
+  statusMessage: string;
+};
+
+export type CatalogWorkspaceHeroState = {
+  categoryGroup: ProductGroup | null;
+  subcategory: { id: string; label: string } | null;
+};
+
+export type CatalogWorkspace = {
+  // --- Derived View State ---
+  /** Resolved presentation mode for the pricing panel */
+  viewMode: CatalogViewMode;
+  /** Currently active product group identifier */
+  activeGroup: ProductGroupId;
+  /** Active group metadata descriptor, or null when search returns 0 results */
+  visibleGroup: ProductGroup | null;
+  /** Active selected tab ID in the navigation list */
+  selectedTabId: ProductGroupId;
+  /** Current view and filter parameters for price tables */
+  activeViewRequest: CatalogViewRequest;
+  /** Dynamic section title and subtitle */
+  heading: { title: string; description: string };
+  /** Brand link destination ('/' on category pages, '#top' on home) */
+  brandHref: string;
+  /** Pre-computed hero presentation context */
+  hero: CatalogWorkspaceHeroState;
+  /** Encapsulated search status and query model */
+  search: CatalogWorkspaceSearchState;
+  /** Whether the workspace is rendered for a deep category route */
+  isCategoryRoute: boolean;
+
+  // --- Domain Actions ---
+  /** Submit a search query with resilient async loading and race protection */
+  submitSearch: (query: string) => Promise<boolean>;
+  /** Switch to a specific catalog group and optional target view */
+  selectGroup: (
+    groupId: ProductGroupId,
+    view?: Omit<CatalogViewRequest, "requestId">,
+  ) => void;
+  /** Handle tab selection with automatic search interception */
+  selectTab: (
+    groupId: ProductGroupId,
+    event?: { preventDefault: () => void },
+  ) => void;
+  /** Reset search and return to default catalog view */
+  clearSearch: () => void;
+};
 
 export type CatalogWorkspaceOptions = {
   initialCategory?: ProductGroupId;
@@ -191,40 +249,15 @@ export type CatalogWorkspaceOptions = {
   searchLoader?: () => Promise<CatalogSearchGroup[]>;
 };
 
-export type CatalogWorkspaceState = {
-  route: RouteRequest;
-  isCategoryRoute: boolean;
-  isCategoryOverviewRoute: boolean;
-  categoryGroup: ProductGroup | null;
-  subcategoryInfo: { id: string; label: string } | null;
-  activeGroup: ProductGroupId;
-  activeViewRequest: CatalogViewRequest;
-  committedQuery: string;
-  searchStatusMessage: string;
-  isSearching: boolean;
-  isSearchActive: boolean;
-  filteredGroups: ProductGroup[];
-  visibleGroup: ProductGroup | null;
-  selectedTabId: ProductGroupId;
-  heading: { title: string; description: string };
-  submitSearch: (query: string) => Promise<boolean>;
-  clearSearch: () => void;
-  navigateToGroup: (
-    groupId: ProductGroupId,
-    view?: Omit<CatalogViewRequest, "requestId">,
-  ) => void;
-  handleTabClick: (
-    groupId: ProductGroupId,
-    event?: { preventDefault: () => void },
-  ) => void;
-};
+/** Backward-compatibility alias */
+export type CatalogWorkspaceState = CatalogWorkspace;
 
 export function useCatalogWorkspace({
   initialCategory,
   initialSubcategory,
   initialSubcategoryLabel,
   searchLoader = loadCatalogSearchGroups,
-}: CatalogWorkspaceOptions = {}): CatalogWorkspaceState {
+}: CatalogWorkspaceOptions = {}): CatalogWorkspace {
   const route = useMemo(
     () =>
       readRouteRequest({
@@ -298,12 +331,14 @@ export function useCatalogWorkspace({
     [filteredGroups, activeGroup],
   );
 
+  const isSearchActive = Boolean(committedQuery);
+
   const selectedTabId = useMemo(
     () =>
-      isCategoryRoute || committedQuery
+      isCategoryRoute || isSearchActive
         ? (visibleGroup?.id ?? productGroups[0].id)
         : productGroups[0].id,
-    [isCategoryRoute, committedQuery, visibleGroup?.id],
+    [isCategoryRoute, isSearchActive, visibleGroup?.id],
   );
 
   const heading = useMemo(
@@ -322,12 +357,22 @@ export function useCatalogWorkspace({
     ],
   );
 
-  const navigateToGroup = useCallback(
+  const viewMode: CatalogViewMode = useMemo(() => {
+    if (isSearchActive) {
+      return visibleGroup ? "catalog" : "empty";
+    }
+    if (isCategoryRoute) {
+      return isCategoryOverviewRoute ? "category-overview" : "catalog";
+    }
+    return "home-overview";
+  }, [isSearchActive, isCategoryRoute, isCategoryOverviewRoute, visibleGroup]);
+
+  const selectGroup = useCallback(
     (
       groupId: ProductGroupId,
       view?: Omit<CatalogViewRequest, "requestId">,
     ) => {
-      // Invalidate in-flight search
+      // Invalidate in-flight search requests
       searchTokenRef.current += 1;
       setCommittedQuery("");
       setSearchStatusMessage("");
@@ -344,9 +389,9 @@ export function useCatalogWorkspace({
   );
 
   const clearSearch = useCallback(() => {
-    navigateToGroup(productGroups[0].id);
+    selectGroup(productGroups[0].id);
     setSearchStatusMessage("همه محصولات نمایش داده می‌شوند.");
-  }, [navigateToGroup]);
+  }, [selectGroup]);
 
   const submitSearch = useCallback(
     async (query: string): Promise<boolean> => {
@@ -408,35 +453,38 @@ export function useCatalogWorkspace({
     [searchLoader],
   );
 
-  const handleTabClick = useCallback(
+  const selectTab = useCallback(
     (groupId: ProductGroupId, event?: { preventDefault: () => void }) => {
       if (committedQuery) {
         event?.preventDefault();
-        navigateToGroup(groupId);
+        selectGroup(groupId);
       }
     },
-    [committedQuery, navigateToGroup],
+    [committedQuery, selectGroup],
   );
 
   return {
-    route,
-    isCategoryRoute,
-    isCategoryOverviewRoute,
-    categoryGroup,
-    subcategoryInfo,
+    viewMode,
     activeGroup,
-    activeViewRequest,
-    committedQuery,
-    searchStatusMessage,
-    isSearching,
-    isSearchActive: Boolean(committedQuery),
-    filteredGroups,
     visibleGroup,
     selectedTabId,
+    activeViewRequest,
     heading,
+    brandHref: isCategoryRoute ? "/" : "#top",
+    hero: {
+      categoryGroup,
+      subcategory: subcategoryInfo,
+    },
+    search: {
+      query: committedQuery,
+      isActive: isSearchActive,
+      isSearching,
+      statusMessage: searchStatusMessage,
+    },
+    isCategoryRoute,
     submitSearch,
+    selectGroup,
+    selectTab,
     clearSearch,
-    navigateToGroup,
-    handleTabClick,
   };
 }

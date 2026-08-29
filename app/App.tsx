@@ -107,7 +107,7 @@ export default function App({
       </a>
 
       <SiteHeader
-        brandHref={workspace.isCategoryRoute ? "/" : "#top"}
+        brandHref={workspace.brandHref}
         renderNav={({ closeMobileNav }) => (
           <MegaMenu
             onMobileClose={closeMobileNav}
@@ -120,8 +120,8 @@ export default function App({
         <HeroCarousel
           reduceMotion={reduceMotion}
           onGoToPrices={() => scrollToPrices(reduceMotion)}
-          categoryGroup={workspace.categoryGroup}
-          subcategory={workspace.subcategoryInfo}
+          categoryGroup={workspace.hero.categoryGroup}
+          subcategory={workspace.hero.subcategory}
         />
 
         <MarketPrices />
@@ -149,15 +149,15 @@ export default function App({
               <button
                 type="submit"
                 aria-label="جست‌وجو"
-                disabled={workspace.isSearching}
+                disabled={workspace.search.isSearching}
               >
-                {workspace.isSearching ? "در حال جست‌وجو…" : "جست‌وجو"}
+                {workspace.search.isSearching ? "در حال جست‌وجو…" : "جست‌وجو"}
               </button>
             </form>
 
             <p className="search-status" role="status" aria-live="polite">
-              {workspace.searchStatusMessage}
-              {workspace.isSearchActive ? (
+              {workspace.search.statusMessage}
+              {workspace.search.isActive ? (
                 <button type="button" onClick={handleClearSearch}>
                   پاک‌کردن جست‌وجو
                 </button>
@@ -190,8 +190,8 @@ export default function App({
                       }}
                       onKeyDown={(event) => moveTabFocus(event, index)}
                       onClick={(event) => {
-                        workspace.handleTabClick(group.id, event);
-                        if (workspace.isSearchActive) {
+                        workspace.selectTab(group.id, event);
+                        if (workspace.search.isActive) {
                           setSearchInput("");
                           scrollToPrices(reduceMotion);
                         }
@@ -204,37 +204,47 @@ export default function App({
               </div>
             </div>
 
-            {workspace.isCategoryRoute || workspace.isSearchActive ? (
-              workspace.visibleGroup ? (
-                <div
-                  className="product-panel"
-                  role="tabpanel"
-                  id={`panel-${workspace.visibleGroup.id}`}
-                  aria-labelledby={`tab-${workspace.visibleGroup.id}`}
-                  tabIndex={0}
-                >
-                  {workspace.isCategoryOverviewRoute && !workspace.isSearchActive ? (
-                    <CategoryOverview groupId={workspace.visibleGroup.id} />
-                  ) : (
-                    <CatalogPrices
-                      key={`${workspace.visibleGroup.id}-${workspace.activeViewRequest.requestId}`}
-                      groupId={workspace.visibleGroup.id}
-                      phoneHref={contactHref}
-                      requestedView={workspace.activeViewRequest}
-                    />
-                  )}
-                </div>
-              ) : (
-                <div className="empty-state" role="status">
-                  <h3>محصولی پیدا نشد</h3>
-                  <p>عبارت دیگری جست‌وجو کنید یا با واحد فروش تماس بگیرید.</p>
-                  <a href={siteConfig.contact.phones[0].href} dir="ltr">
-                    {siteConfig.contact.phones[0].label}
-                  </a>
-                </div>
-              )
-            ) : (
+            {workspace.viewMode === "home-overview" && (
               <SteelPriceOverview phoneHref={contactHref} />
+            )}
+
+            {workspace.viewMode === "category-overview" && workspace.visibleGroup && (
+              <div
+                className="product-panel"
+                role="tabpanel"
+                id={`panel-${workspace.visibleGroup.id}`}
+                aria-labelledby={`tab-${workspace.visibleGroup.id}`}
+                tabIndex={0}
+              >
+                <CategoryOverview groupId={workspace.visibleGroup.id} />
+              </div>
+            )}
+
+            {workspace.viewMode === "catalog" && workspace.visibleGroup && (
+              <div
+                className="product-panel"
+                role="tabpanel"
+                id={`panel-${workspace.visibleGroup.id}`}
+                aria-labelledby={`tab-${workspace.visibleGroup.id}`}
+                tabIndex={0}
+              >
+                <CatalogPrices
+                  key={`${workspace.visibleGroup.id}-${workspace.activeViewRequest.requestId}`}
+                  groupId={workspace.visibleGroup.id}
+                  phoneHref={contactHref}
+                  requestedView={workspace.activeViewRequest}
+                />
+              </div>
+            )}
+
+            {workspace.viewMode === "empty" && (
+              <div className="empty-state" role="status">
+                <h3>محصولی پیدا نشد</h3>
+                <p>عبارت دیگری جست‌وجو کنید یا با واحد فروش تماس بگیرید.</p>
+                <a href={siteConfig.contact.phones[0].href} dir="ltr">
+                  {siteConfig.contact.phones[0].label}
+                </a>
+              </div>
             )}
           </div>
         </section>

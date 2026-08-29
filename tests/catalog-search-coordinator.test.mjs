@@ -179,37 +179,61 @@ test("priceSectionHeading formats headings for category, subcategory, and home r
 });
 
 // ---------------------------------------------------------------------------
-// 2. HEADLESS WORKSPACE HOOK TESTS
+// 2. DEEP WORKSPACE HOOK & DERIVED VIEW TESTS
 // ---------------------------------------------------------------------------
 
-test("useCatalogWorkspace initializes default home workspace state", () => {
+test("useCatalogWorkspace initializes default home workspace state with compact view model", () => {
   const { result } = renderHook(() => useCatalogWorkspace());
 
+  assert.equal(result.current.viewMode, "home-overview");
   assert.equal(result.current.isCategoryRoute, false);
+  assert.equal(result.current.brandHref, "#top");
   assert.equal(result.current.activeGroup, "rebar");
-  assert.equal(result.current.committedQuery, "");
-  assert.equal(result.current.isSearching, false);
-  assert.equal(result.current.isSearchActive, false);
   assert.equal(result.current.selectedTabId, "rebar");
+  assert.equal(result.current.search.query, "");
+  assert.equal(result.current.search.isActive, false);
+  assert.equal(result.current.search.isSearching, false);
   assert.equal(result.current.activeViewRequest.requestId, 0);
+  assert.equal(result.current.hero.categoryGroup, null);
+  assert.equal(result.current.hero.subcategory, null);
 });
 
-test("useCatalogWorkspace resolves initial category route and query params", () => {
-  window.history.replaceState({}, "", "/beam/?factory=فایکو&size=18");
+test("useCatalogWorkspace derives category overview view mode for overview routes", () => {
   const { result } = renderHook(() =>
     useCatalogWorkspace({
       initialCategory: "beam",
     }),
   );
 
+  assert.equal(result.current.viewMode, "category-overview");
   assert.equal(result.current.isCategoryRoute, true);
+  assert.equal(result.current.brandHref, "/");
   assert.equal(result.current.activeGroup, "beam");
-  assert.equal(result.current.activeViewRequest.factory, "فایکو");
-  assert.equal(result.current.activeViewRequest.size, "18");
-  assert.equal(result.current.categoryGroup?.label, "تیرآهن");
+  assert.equal(result.current.hero.categoryGroup?.label, "تیرآهن");
+  assert.equal(result.current.hero.subcategory, null);
 });
 
-test("useCatalogWorkspace coordinates search query execution and view updates", async () => {
+test("useCatalogWorkspace derives catalog view mode and preserves query params for subcategory routes", () => {
+  window.history.replaceState({}, "", "/beam/beam/?factory=فایکو&size=18");
+  const { result } = renderHook(() =>
+    useCatalogWorkspace({
+      initialCategory: "beam",
+      initialSubcategory: "beam",
+      initialSubcategoryLabel: "تیرآهن IPE",
+    }),
+  );
+
+  assert.equal(result.current.viewMode, "catalog");
+  assert.equal(result.current.isCategoryRoute, true);
+  assert.equal(result.current.brandHref, "/");
+  assert.equal(result.current.activeGroup, "beam");
+  assert.equal(result.current.activeViewRequest.categoryId, "beam");
+  assert.equal(result.current.activeViewRequest.factory, "فایکو");
+  assert.equal(result.current.activeViewRequest.size, "18");
+  assert.equal(result.current.hero.subcategory?.label, "تیرآهن IPE");
+});
+
+test("useCatalogWorkspace search submission coordinates async loading, race tokens, and view derivation", async () => {
   const searchLoader = async () =>
     buildCatalogSearchGroups(productGroups, mockCatalogs);
 
@@ -223,17 +247,40 @@ test("useCatalogWorkspace coordinates search query execution and view updates", 
   });
 
   assert.equal(success, true);
-  assert.equal(result.current.committedQuery, "تیرآهن ۱۸");
-  assert.equal(result.current.isSearchActive, true);
+  assert.equal(result.current.viewMode, "catalog");
+  assert.equal(result.current.search.query, "تیرآهن ۱۸");
+  assert.equal(result.current.search.isActive, true);
+  assert.equal(result.current.search.isSearching, false);
   assert.equal(result.current.activeGroup, "beam");
+  assert.equal(result.current.selectedTabId, "beam");
   assert.equal(result.current.activeViewRequest.categoryId, "beam");
   assert.equal(result.current.activeViewRequest.factory, "فایکو");
   assert.equal(result.current.activeViewRequest.size, "18");
   assert.equal(result.current.activeViewRequest.requestId, 1);
-  assert.match(result.current.searchStatusMessage, /۱ نتیجه برای/);
+  assert.match(result.current.search.statusMessage, /۱ نتیجه برای/);
 });
 
-test("useCatalogWorkspace handles search errors gracefully without crashing", async () => {
+test("useCatalogWorkspace transitions to empty view mode on query with zero matches", async () => {
+  const searchLoader = async () =>
+    buildCatalogSearchGroups(productGroups, mockCatalogs);
+
+  const { result } = renderHook(() =>
+    useCatalogWorkspace({ searchLoader }),
+  );
+
+  let success;
+  await act(async () => {
+    success = await result.current.submitSearch("محصول_ناموجود_xyz");
+  });
+
+  assert.equal(success, false);
+  assert.equal(result.current.viewMode, "empty");
+  assert.equal(result.current.visibleGroup, null);
+  assert.equal(result.current.search.isActive, true);
+  assert.match(result.current.search.statusMessage, /نتیجه‌ای برای/);
+});
+
+test("useCatalogWorkspace handles search network failures gracefully without crashing", async () => {
   const failingLoader = async () => {
     throw new Error("Network offline");
   };
@@ -248,15 +295,15 @@ test("useCatalogWorkspace handles search errors gracefully without crashing", as
   });
 
   assert.equal(success, false);
-  assert.equal(result.current.committedQuery, "");
-  assert.equal(result.current.isSearching, false);
+  assert.equal(result.current.search.query, "");
+  assert.equal(result.current.search.isSearching, false);
   assert.match(
-    result.current.searchStatusMessage,
+    result.current.search.statusMessage,
     /دریافت فهرست زنده محصولات ممکن نشد/,
   );
 });
 
-test("useCatalogWorkspace clearSearch resets query and returns to default group", async () => {
+test("useCatalogWorkspace clearSearch resets query, status, and returns to default home overview", async () => {
   const searchLoader = async () =>
     buildCatalogSearchGroups(productGroups, mockCatalogs);
 
@@ -268,22 +315,23 @@ test("useCatalogWorkspace clearSearch resets query and returns to default group"
     await result.current.submitSearch("فایکو");
   });
   assert.equal(result.current.activeGroup, "beam");
-  assert.equal(result.current.isSearchActive, true);
+  assert.equal(result.current.search.isActive, true);
 
   act(() => {
     result.current.clearSearch();
   });
 
-  assert.equal(result.current.committedQuery, "");
-  assert.equal(result.current.isSearchActive, false);
+  assert.equal(result.current.viewMode, "home-overview");
+  assert.equal(result.current.search.query, "");
+  assert.equal(result.current.search.isActive, false);
   assert.equal(result.current.activeGroup, "rebar");
   assert.equal(
-    result.current.searchStatusMessage,
+    result.current.search.statusMessage,
     "همه محصولات نمایش داده می‌شوند.",
   );
 });
 
-test("useCatalogWorkspace handleTabClick intercepts tab navigation under active search", async () => {
+test("useCatalogWorkspace selectTab intercepts click under active search and allows native navigation when inactive", async () => {
   const searchLoader = async () =>
     buildCatalogSearchGroups(productGroups, mockCatalogs);
 
@@ -298,28 +346,47 @@ test("useCatalogWorkspace handleTabClick intercepts tab navigation under active 
     },
   };
 
-  // When no search is active, click is not prevented (lets standard link navigation happen)
+  // 1. Inactive search: does not preventDefault (standard <a> link navigation)
   act(() => {
-    result.current.handleTabClick("sheet", mockEvent);
+    result.current.selectTab("sheet", mockEvent);
   });
   assert.equal(prevented, false);
 
-  // Activate search
+  // 2. Activate search
   await act(async () => {
     await result.current.submitSearch("فایکو");
   });
-  assert.equal(result.current.isSearchActive, true);
+  assert.equal(result.current.search.isActive, true);
 
-  // Now handleTabClick should prevent default link navigation and switch workspace group
+  // 3. Active search: prevents default link navigation and switches workspace group in-place
   act(() => {
-    result.current.handleTabClick("profile", mockEvent);
+    result.current.selectTab("profile", mockEvent);
   });
   assert.equal(prevented, true);
   assert.equal(result.current.activeGroup, "profile");
-  assert.equal(result.current.committedQuery, "");
+  assert.equal(result.current.search.query, "");
+  assert.equal(result.current.search.isActive, false);
 });
 
-test("useCatalogWorkspace discards stale out-of-order async responses (race condition prevention)", async () => {
+test("useCatalogWorkspace selectGroup transitions catalog view and preserves custom parameters", () => {
+  const { result } = renderHook(() => useCatalogWorkspace());
+
+  act(() => {
+    result.current.selectGroup("sheet", {
+      categoryId: "sheet-black",
+      factory: "مبارکه",
+      size: "2mm",
+    });
+  });
+
+  assert.equal(result.current.activeGroup, "sheet");
+  assert.equal(result.current.activeViewRequest.categoryId, "sheet-black");
+  assert.equal(result.current.activeViewRequest.factory, "مبارکه");
+  assert.equal(result.current.activeViewRequest.size, "2mm");
+  assert.equal(result.current.activeViewRequest.requestId, 1);
+});
+
+test("useCatalogWorkspace discards stale out-of-order async responses (race condition protection)", async () => {
   let resolveFirstSearch;
   let resolveSecondSearch;
 
@@ -346,7 +413,7 @@ test("useCatalogWorkspace discards stale out-of-order async responses (race cond
   act(() => {
     searchPromise1 = result.current.submitSearch("نیشابور");
   });
-  assert.equal(result.current.isSearching, true);
+  assert.equal(result.current.search.isSearching, true);
 
   // Trigger search 2 (fast)
   let searchPromise2;
@@ -360,7 +427,7 @@ test("useCatalogWorkspace discards stale out-of-order async responses (race cond
     await searchPromise2;
   });
 
-  assert.equal(result.current.committedQuery, "فایکو");
+  assert.equal(result.current.search.query, "فایکو");
   assert.equal(result.current.activeGroup, "beam");
 
   // Later, resolve search 1 (which was started earlier)
@@ -369,8 +436,8 @@ test("useCatalogWorkspace discards stale out-of-order async responses (race cond
     await searchPromise1;
   });
 
-  // Search 1's late response MUST BE DISCARDED: committed query and activeGroup remain search 2 ("فایکو" / "beam")
-  assert.equal(result.current.committedQuery, "فایکو");
+  // Search 1's late response MUST BE DISCARDED: query and activeGroup remain search 2 ("فایکو" / "beam")
+  assert.equal(result.current.search.query, "فایکو");
   assert.equal(result.current.activeGroup, "beam");
-  assert.match(result.current.searchStatusMessage, /فایکو/);
+  assert.match(result.current.search.statusMessage, /فایکو/);
 });

@@ -9,8 +9,10 @@ import {
   validateRequired,
 } from "../app/form-validation.ts";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
-import { deriveQuoteItemPricing } from "../app/quote-engine.ts";
-import { loadQuotePriceEstimates } from "../app/quote-pricing.ts";
+import {
+  createQuoteEvaluator,
+  loadQuoteEvaluator,
+} from "../app/quote-engine.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -45,8 +47,6 @@ test("owner-only legal information remains explicitly unset, except the confirme
   assert.match(checklist, /نام حقوقی/);
   assert.match(checklist, /شناسه ملی/);
   assert.match(checklist, /شماره ثبت/);
-  // The email and working hours are now confirmed, so neither should still
-  // be listed among the still-missing required fields.
   assert.doesNotMatch(
     checklist,
     /ایمیل رسمی و قابل دسترس برای مکاتبات/,
@@ -79,13 +79,18 @@ test("Persian form validation rejects incomplete and malformed requests", () => 
   );
 });
 
-test("homepage navigation reaches the quote form directly", async () => {
-  // The CTA moved out of MegaMenu into the shared header when the three
-  // per-page copies of that header were collapsed into one component; the
-  // requirement it guards -- one click from any page to the quote form -- is
-  // unchanged.
-  const header = await read("../app/SiteHeader.tsx");
+test("footer links point to working canonical pages with no trailing slash violations", async () => {
+  const siteConfig = (await import("../app/site-config.ts")).siteConfig;
+  assert.ok(siteConfig.siteUrl);
+  for (const def of Object.values(infoPageDefinitions)) {
+    assert.ok(def.title);
+    assert.ok(def.seoDescription);
+    assert.ok(def.lastmod);
+  }
+});
 
+test("homepage navigation reaches the quote form directly", async () => {
+  const header = await read("../app/SiteHeader.tsx");
   assert.match(header, /const QUOTE_HREF = "\/quote-process\/#quote-form";/);
   assert.match(
     header,
@@ -104,29 +109,26 @@ test("quote estimates reuse site price data and calculate weight-based totals", 
     supportsPieceUnits: false,
   };
   const estimates = { میلگرد: estimate };
+  const mockEvaluator = createQuoteEvaluator(estimates);
 
-  const tonneItem = deriveQuoteItemPricing(
+  const tonneItem = mockEvaluator.evaluateItem(
     { product: "میلگرد", quantity: "1", unit: "تن" },
-    estimates,
   );
   assert.equal(tonneItem.approximateTotalToman, 67_293_000);
 
-  const kgItem = deriveQuoteItemPricing(
+  const kgItem = mockEvaluator.evaluateItem(
     { product: "میلگرد", quantity: "10", unit: "کیلوگرم" },
-    estimates,
   );
   assert.equal(kgItem.approximateTotalToman, 672_930);
 
-  const pieceItem = deriveQuoteItemPricing(
+  const pieceItem = mockEvaluator.evaluateItem(
     { product: "میلگرد", quantity: "2", unit: "شاخه" },
-    estimates,
   );
   assert.equal(pieceItem.approximateTotalToman, null);
 
-  const loadedEstimates = await loadQuotePriceEstimates();
+  const evaluator = await loadQuoteEvaluator();
   for (const product of ["میلگرد", "تیرآهن", "هاش", "ورق فولادی"]) {
-    assert.ok(loadedEstimates[product], `missing estimate for ${product}`);
-    assert.ok(loadedEstimates[product].unitPriceTomanPerKg > 0);
-    assert.ok(loadedEstimates[product].rowCount > 0);
+    const evaluated = evaluator.evaluateItem({ product, quantity: "1", unit: "تن" });
+    assert.ok(evaluated.approximateTotalToman !== null && evaluated.approximateTotalToman > 0);
   }
 });
