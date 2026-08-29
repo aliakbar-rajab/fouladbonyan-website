@@ -5,6 +5,8 @@ import {
   rialToWords,
 } from "../app/persian-numbers.mjs";
 import {
+  buildQuoteDocument,
+  buildQuoteMessage,
   createQuoteEvaluator,
   formatToman,
   isQuoteProduct,
@@ -13,6 +15,8 @@ import {
   quoteDisclaimer,
   quoteProductNames,
   quoteUnits,
+  validateQuoteField,
+  validateQuoteRequestInput,
 } from "../app/quote-engine.ts";
 
 const contact = {
@@ -270,66 +274,80 @@ test("missing or partial catalog prices handle unpriced products gracefully", ()
   assert.match(requestResult.message, /محاسبه نشده/);
 });
 
-test("evaluator validateField tests required contact and disclaimer inputs", () => {
-  const evaluator = createQuoteEvaluator();
+test("validateQuoteField requires no catalog data — required contact and disclaimer inputs", () => {
+  // No evaluator, no baselines, no catalog load: validateQuoteField is a
+  // direct pure export, independent of pricing data.
+  assert.ok(validateQuoteField("fullName", "").length > 0);
+  assert.ok(validateQuoteField("fullName", "ع").length > 0);
+  assert.equal(validateQuoteField("fullName", "علی رضایی"), "");
 
-  assert.ok(evaluator.validateField("fullName", "").length > 0);
-  assert.ok(evaluator.validateField("fullName", "ع").length > 0);
-  assert.equal(evaluator.validateField("fullName", "علی رضایی"), "");
+  assert.ok(validateQuoteField("phone", "").length > 0);
+  assert.ok(validateQuoteField("phone", "123").length > 0);
+  assert.equal(validateQuoteField("phone", "09121234567"), "");
+  assert.equal(validateQuoteField("phone", "۰۹۱۲۱۲۳۴۵۶۷"), "");
+  assert.equal(validateQuoteField("phone", "+989121234567"), "");
 
-  assert.ok(evaluator.validateField("phone", "").length > 0);
-  assert.ok(evaluator.validateField("phone", "123").length > 0);
-  assert.equal(evaluator.validateField("phone", "09121234567"), "");
-  assert.equal(evaluator.validateField("phone", "۰۹۱۲۱۲۳۴۵۶۷"), "");
-  assert.equal(evaluator.validateField("phone", "+989121234567"), "");
+  assert.ok(validateQuoteField("destination", "").length > 0);
+  assert.equal(validateQuoteField("destination", "مشهد"), "");
 
-  assert.ok(evaluator.validateField("destination", "").length > 0);
-  assert.equal(evaluator.validateField("destination", "مشهد"), "");
-
-  assert.ok(evaluator.validateField("acceptDisclaimer", false).length > 0);
-  assert.equal(evaluator.validateField("acceptDisclaimer", true), "");
+  assert.ok(validateQuoteField("acceptDisclaimer", false).length > 0);
+  assert.equal(validateQuoteField("acceptDisclaimer", true), "");
 });
 
-test("evaluator validateField validates item product and quantity with piece unit integer checks", () => {
-  const evaluator = createQuoteEvaluator();
-
+test("validateQuoteField requires no catalog data — item product and quantity with piece unit integer checks", () => {
   assert.equal(
-    evaluator.validateField("product", "", { itemIndex: 0 }),
+    validateQuoteField("product", "", { itemIndex: 0 }),
     "نوع کالای ۱ را وارد کنید.",
   );
   assert.equal(
-    evaluator.validateField("product", "میلگرد", { itemIndex: 0 }),
+    validateQuoteField("product", "میلگرد", { itemIndex: 0 }),
     "",
   );
 
   assert.equal(
-    evaluator.validateField("quantity", "", { unit: "تن", itemIndex: 0 }),
+    validateQuoteField("quantity", "", { unit: "تن", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ را وارد کنید.",
   );
   assert.equal(
-    evaluator.validateField("quantity", "0", { unit: "تن", itemIndex: 0 }),
+    validateQuoteField("quantity", "0", { unit: "تن", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.",
   );
   assert.equal(
-    evaluator.validateField("quantity", "-5", { unit: "تن", itemIndex: 0 }),
+    validateQuoteField("quantity", "-5", { unit: "تن", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ باید عددی بزرگ‌تر از صفر باشد.",
   );
   assert.equal(
-    evaluator.validateField("quantity", "۲.۵", { unit: "تن", itemIndex: 0 }),
+    validateQuoteField("quantity", "۲.۵", { unit: "تن", itemIndex: 0 }),
     "",
   );
   assert.equal(
-    evaluator.validateField("quantity", "۲.۵", { unit: "شاخه", itemIndex: 0 }),
+    validateQuoteField("quantity", "۲.۵", { unit: "شاخه", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.",
   );
   assert.equal(
-    evaluator.validateField("quantity", "۲.۵", { unit: "عدد", itemIndex: 0 }),
+    validateQuoteField("quantity", "۲.۵", { unit: "عدد", itemIndex: 0 }),
     "مقدار تقریبی کالای ۱ برای واحد عدد باید عدد صحیح باشد.",
   );
   assert.equal(
-    evaluator.validateField("quantity", "۱۰", { unit: "شاخه", itemIndex: 0 }),
+    validateQuoteField("quantity", "۱۰", { unit: "شاخه", itemIndex: 0 }),
     "",
   );
+});
+
+test("validateQuoteField and validateQuoteRequestInput are unaffected by missing or loading catalog prices — no evaluator constructed at all", () => {
+  // Simulates the QuoteRequestForm state before loadQuoteEvaluator() resolves:
+  // field validation must not depend on, wait for, or be gated by baselines.
+  assert.equal(validateQuoteField("phone", "09121234567"), "");
+  assert.ok(validateQuoteField("phone", "123").length > 0);
+
+  const result = validateQuoteRequestInput({
+    contact: { fullName: "کاربر آزمایشی", phone: "09121234567", destination: "تهران", notes: "" },
+    items: [
+      { id: 1, product: "میلگرد", quantity: "5", unit: "تن" },
+    ],
+    acceptDisclaimer: true,
+  });
+  assert.equal(result.isValid, true);
 });
 
 test("evaluator evaluates items and computes accurate Toman and Rial for weight, rebar and piece option items", () => {
@@ -411,7 +429,7 @@ test("evaluator evaluateItems aggregates multi-item totals and item counts", () 
   assert.equal(pricing.totals.totalRial, 450_000_000);
 });
 
-test("formatMessage creates a human-readable Persian quote summary with disclaimer", () => {
+test("buildQuoteMessage creates a human-readable Persian quote summary with disclaimer", () => {
   const evaluator = createQuoteEvaluator(allEstimates);
   const evaluation = evaluator.evaluateItems([
     {
@@ -425,7 +443,7 @@ test("formatMessage creates a human-readable Persian quote summary with disclaim
     },
   ]);
 
-  const message = evaluator.formatMessage(contact, evaluation.items, evaluation.totals);
+  const message = buildQuoteMessage(contact, evaluation.items, evaluation.totals);
   assert.match(message, /درخواست پیش‌فاکتور غیرقطعی/);
   assert.match(message, /نام: کاربر آزمایشی/);
   assert.match(message, /شماره تماس: 09121234567/);
@@ -500,9 +518,8 @@ test("evaluateRequest executes complete normalization, validation, pricing, mess
   assert.ok(invalidResult.validation.errors["itemQuantity-1"]);
 });
 
-test("evaluator validateRequest checks full form structure correctly", () => {
-  const evaluator = createQuoteEvaluator();
-  const valid = evaluator.validateRequest({
+test("validateQuoteRequestInput checks full form structure correctly — no catalog data required", () => {
+  const valid = validateQuoteRequestInput({
     contact: {
       fullName: "حسین حسینی",
       phone: "09121111111",
@@ -527,7 +544,7 @@ test("evaluator validateRequest checks full form structure correctly", () => {
   assert.equal(Object.keys(valid.errors).length, 0);
 });
 
-test("evaluator formatDocument generates complete printable document structure", () => {
+test("buildQuoteDocument generates complete printable document structure", () => {
   const evaluator = createQuoteEvaluator(allEstimates);
   const evaluation = evaluator.evaluateItems([
     {
@@ -541,7 +558,7 @@ test("evaluator formatDocument generates complete printable document structure",
     },
   ]);
 
-  const doc = evaluator.formatDocument(contact, evaluation.items, evaluation.totals);
+  const doc = buildQuoteDocument(contact, evaluation.items, evaluation.totals);
   assert.equal(doc.fullName, "کاربر آزمایشی");
   assert.equal(doc.destination, "تهران");
   assert.equal(doc.items.length, 1);

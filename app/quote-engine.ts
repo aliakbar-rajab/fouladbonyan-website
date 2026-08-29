@@ -71,7 +71,25 @@ export type {
 };
 
 // ---------------------------------------------------------------------------
-// 2. UNIFIED QUOTE EVALUATOR CONTRACT & IMPLEMENTATION
+// 2. PURE QUOTE OPERATIONS — no pricing baselines, no catalog load required
+// ---------------------------------------------------------------------------
+
+/** Validate a single form field. Returns empty string if valid, error message otherwise. */
+export { validateQuoteField };
+
+/** Validate a complete quote request input (contact, items, disclaimer). */
+export { validateQuoteRequestInput };
+
+/** Format already-evaluated items/totals into a human-readable Persian copy message. */
+export { buildQuoteMessage };
+
+/** Generate the final printable invoice/quote document from already-evaluated items/totals. */
+export { buildQuoteDocument };
+
+export type { FieldValidationOptions };
+
+// ---------------------------------------------------------------------------
+// 3. BASELINE-BOUND QUOTE EVALUATOR — pricing-dependent operations only
 // ---------------------------------------------------------------------------
 
 export type QuoteEvaluator = {
@@ -89,16 +107,6 @@ export type QuoteEvaluator = {
   /** Validate and evaluate a complete quote request (pricing, validation, message, document). */
   evaluateRequest: (request: RawQuoteRequest) => QuoteEvaluationResult;
 
-  /** Validate a single form field on change. Returns empty string if valid, error message otherwise. */
-  validateField: (
-    field: string,
-    value: unknown,
-    options?: FieldValidationOptions,
-  ) => string;
-
-  /** Validate a complete quote request input. */
-  validateRequest: (request: RawQuoteRequest) => QuoteValidationResult;
-
   /** Retrieve piece unit options for a product from catalog pricing. */
   getPieceOptions: (product: QuoteProductName | "") => QuotePieceOptionChoice[];
 
@@ -107,20 +115,6 @@ export type QuoteEvaluator = {
 
   /** Whether the product requires rebar diameter for piece weight calculations. */
   requiresRebarDiameter: (product: QuoteProductName | "") => boolean;
-
-  /** Format a quote request into a human-readable Persian copy message. */
-  formatMessage: (
-    contact: RawQuoteContact,
-    items: QuoteItemEvaluation[],
-    totals: QuoteTotals,
-  ) => string;
-
-  /** Generate the final printable invoice/quote document structure. */
-  formatDocument: (
-    contact: RawQuoteContact,
-    items: QuoteItemEvaluation[],
-    totals: QuoteTotals,
-  ) => GeneratedQuote;
 };
 
 function resolveBaselines(
@@ -155,36 +149,6 @@ export function createQuoteEvaluator(
     return { items: evaluatedItems, totals };
   };
 
-  const validateRequest = (
-    request: RawQuoteRequest,
-  ): QuoteValidationResult => {
-    return validateQuoteRequestInput(request);
-  };
-
-  const validateField = (
-    field: string,
-    value: unknown,
-    options?: FieldValidationOptions,
-  ): string => {
-    return validateQuoteField(field, value, options);
-  };
-
-  const formatMessage = (
-    contact: RawQuoteContact,
-    items: QuoteItemEvaluation[],
-    totals: QuoteTotals,
-  ): string => {
-    return buildQuoteMessage(contact, items, totals);
-  };
-
-  const formatDocument = (
-    contact: RawQuoteContact,
-    items: QuoteItemEvaluation[],
-    totals: QuoteTotals,
-  ): GeneratedQuote => {
-    return buildQuoteDocument(contact, items, totals);
-  };
-
   const evaluateRequest = (
     request: RawQuoteRequest,
   ): QuoteEvaluationResult => {
@@ -195,8 +159,8 @@ export function createQuoteEvaluator(
       acceptDisclaimer: request.acceptDisclaimer,
     });
     const { items, totals } = evaluateItems(request.items);
-    const message = formatMessage(normalizedContact, items, totals);
-    const document = formatDocument(normalizedContact, items, totals);
+    const message = buildQuoteMessage(normalizedContact, items, totals);
+    const document = buildQuoteDocument(normalizedContact, items, totals);
 
     return {
       input: {
@@ -233,13 +197,9 @@ export function createQuoteEvaluator(
     evaluateItem,
     evaluateItems,
     evaluateRequest,
-    validateField,
-    validateRequest,
     getPieceOptions,
     supportsPieceUnits,
     requiresRebarDiameter,
-    formatMessage,
-    formatDocument,
   };
 }
 

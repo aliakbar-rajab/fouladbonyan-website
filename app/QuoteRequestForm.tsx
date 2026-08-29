@@ -14,6 +14,7 @@ import {
   quoteDisclaimer,
   quoteProductNames,
   quoteUnits,
+  validateQuoteField,
   type GeneratedQuote,
   type QuoteEvaluator,
   type QuoteItemEvaluation,
@@ -176,7 +177,7 @@ export function QuoteRequestForm() {
     const isCheckbox =
       element instanceof HTMLInputElement && element.type === "checkbox";
     const fieldValue = isCheckbox ? element.checked : value;
-    const errorMsg = activeEvaluator.validateField(name, fieldValue);
+    const errorMsg = validateQuoteField(name, fieldValue);
     setFieldError(setErrors, name, errorMsg);
   };
 
@@ -216,7 +217,7 @@ export function QuoteRequestForm() {
       const index = next.findIndex((item) => item.id === itemId);
       if (index !== -1) {
         if ("product" in patch) {
-          const errorMsg = activeEvaluator.validateField(
+          const errorMsg = validateQuoteField(
             "product",
             patch.product,
             { itemIndex: index },
@@ -224,7 +225,7 @@ export function QuoteRequestForm() {
           setFieldError(setErrors, `itemProduct-${itemId}`, errorMsg);
         }
         if ("quantity" in patch || "unit" in patch) {
-          const errorMsg = activeEvaluator.validateField(
+          const errorMsg = validateQuoteField(
             "quantity",
             next[index].quantity,
             { unit: next[index].unit, itemIndex: index },
