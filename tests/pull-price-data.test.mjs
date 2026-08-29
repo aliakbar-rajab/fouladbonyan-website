@@ -3,10 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import {
-  pullDataset,
-  pullPriceSnapshot,
-} from "../scripts/lib/price-pipeline.mjs";
+import { pullPriceSnapshot } from "../scripts/lib/price-pipeline.mjs";
 
 async function withTempFile(initialContent, run) {
   const dir = await mkdtemp(join(tmpdir(), "pull-price-data-"));
@@ -19,101 +16,69 @@ async function withTempFile(initialContent, run) {
   }
 }
 
-test("pullDataset overwrites the output file when the fetch succeeds and validates", async () => {
+test("pull workflow validates and replaces the complete Catalog snapshot", async () => {
+  const snapshot = JSON.parse(
+    await readFile(
+      new URL("../app/data/catalog-prices.json", import.meta.url),
+      "utf8",
+    ),
+  );
   await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
-    const fetchImpl = async () =>
-      new Response(JSON.stringify({ fetchedAt: "new" }), { status: 200 });
-
-    const result = await pullDataset({
+    const result = await pullPriceSnapshot({
       endpoint: "https://price.example",
-      name: "rebar-prices",
       outputPath,
-      validate: () => {},
-      fetchImpl,
+      fetchImpl: async () =>
+        new Response(JSON.stringify(snapshot), { status: 200 }),
     });
 
     assert.equal(result.ok, true);
-    assert.equal(result.fetchedAt, "new");
-    assert.equal(await readFile(outputPath, "utf8"), '{"fetchedAt":"new"}\n');
+    assert.equal(result.fetchedAt, snapshot.fetchedAt);
+    assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), snapshot);
   });
 });
 
-test("pullDataset leaves the file untouched when the upstream fetch fails", async () => {
-  await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
-    const fetchImpl = async () =>
-      new Response("service unavailable", { status: 503 });
-
-    const result = await pullDataset({
-      endpoint: "https://price.example",
-      name: "rebar-prices",
-      outputPath,
-      validate: () => {},
-      fetchImpl,
-    });
-
-    assert.equal(result.ok, false);
-    assert.match(result.error, /HTTP 503/);
-    assert.equal(await readFile(outputPath, "utf8"), '{"fetchedAt":"old"}\n');
-  });
-});
-
-test("pullDataset leaves the file untouched when the fetch throws (network error)", async () => {
-  await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
-    const fetchImpl = async () => {
+for (const [name, fetchImpl, errorPattern] of [
+  [
+    "upstream HTTP failure",
+    async () => new Response("service unavailable", { status: 503 }),
+    /HTTP 503/,
+  ],
+  [
+    "network failure",
+    async () => {
       throw new Error("network unreachable");
-    };
-
-    const result = await pullDataset({
-      endpoint: "https://price.example",
-      name: "rebar-prices",
-      outputPath,
-      validate: () => {},
-      fetchImpl,
+    },
+    /network unreachable/,
+  ],
+]) {
+  test(`pull workflow leaves the prior snapshot untouched on ${name}`, async () => {
+    await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
+      const result = await pullPriceSnapshot({
+        endpoint: "https://price.example",
+        outputPath,
+        fetchImpl,
+      });
+      assert.equal(result.ok, false);
+      assert.match(result.error, errorPattern);
+      assert.equal(await readFile(outputPath, "utf8"), '{"fetchedAt":"old"}\n');
     });
-
-    assert.equal(result.ok, false);
-    assert.match(result.error, /network unreachable/);
-    assert.equal(await readFile(outputPath, "utf8"), '{"fetchedAt":"old"}\n');
   });
-});
+}
 
-test("pullDataset leaves the file untouched when validation rejects the payload", async () => {
-  await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
-    const fetchImpl = async () =>
-      new Response(JSON.stringify({ fetchedAt: "new" }), { status: 200 });
-
-    const result = await pullDataset({
-      endpoint: "https://price.example",
-      name: "rebar-prices",
-      outputPath,
-      validate: () => {
-        throw new Error("داده قیمت نامعتبر است");
-      },
-      fetchImpl,
-    });
-
-    assert.equal(result.ok, false);
-    assert.match(result.error, /نامعتبر/);
-    assert.equal(await readFile(outputPath, "utf8"), '{"fetchedAt":"old"}\n');
-  });
-});
-
-test("pullPriceSnapshot executes full schema validation against catalog snapshot payload", async () => {
+test("pull workflow leaves the prior snapshot untouched when validation fails", async () => {
   await withTempFile('{"fetchedAt":"old"}\n', async (outputPath) => {
     const invalidSnapshot = {
       fetchedAt: new Date().toISOString(),
       sourceName: "فولاد ایرانیان",
       sourceHome: "https://www.fooladiranian.com/",
       taxRate: 0.1,
-      catalogs: [], // Invalid: missing expected catalogs
+      catalogs: [],
     };
-    const fetchImpl = async () =>
-      new Response(JSON.stringify(invalidSnapshot), { status: 200 });
-
     const result = await pullPriceSnapshot({
       endpoint: "https://price.example",
       outputPath,
-      fetchImpl,
+      fetchImpl: async () =>
+        new Response(JSON.stringify(invalidSnapshot), { status: 200 }),
     });
 
     assert.equal(result.ok, false);

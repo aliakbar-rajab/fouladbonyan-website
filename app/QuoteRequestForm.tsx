@@ -6,23 +6,19 @@ import {
   setFieldError,
 } from "./form-validation";
 import {
-  createQuoteEvaluator,
   formatToman,
   isQuoteProduct,
   isQuoteUnit,
-  loadQuoteEvaluator,
   quoteDisclaimer,
   quoteProductNames,
-  quoteUnits,
-  validateQuoteField,
   type GeneratedQuote,
-  type QuoteEvaluator,
-  type QuoteItemEvaluation,
   type RawQuoteItem,
 } from "./quote-engine";
+import type { QuoteItemEstimate } from "./quote-request-estimate";
 import { QuoteDocument } from "./QuoteDocument";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
+import { useQuoteRequestEstimate } from "./use-quote-request-estimate";
 
 const MAX_QUOTE_ITEMS = 100;
 
@@ -44,7 +40,7 @@ function ItemPriceHint({
   loading,
   loadError,
 }: {
-  priced: QuoteItemEvaluation;
+  priced: QuoteItemEstimate;
   loading: boolean;
   loadError: boolean;
 }) {
@@ -56,7 +52,7 @@ function ItemPriceHint({
     pieceOption,
     requiresRebarDiameter,
   } = priced;
-  const byPiece = unit === "شاخه" || unit === "عدد";
+  const byPiece = priced.isPieceUnit;
 
   if (loading) {
     return <span>در حال دریافت قیمت تقریبی از داده‌های سایت…</span>;
@@ -105,13 +101,11 @@ function ItemPriceHint({
         </span>
       ) : (
         <span>
-          {priced.weightInKg && (
+          {priced.unitPriceTomanPerKg && (
             <>
               میانگین داده قیمت سایت:{" "}
               <strong>
-                {formatToman(
-                  Math.round(approximateTotalToman / priced.weightInKg),
-                )}
+                {formatToman(priced.unitPriceTomanPerKg)}
               </strong>{" "}
               برای هر کیلوگرم
             </>
@@ -131,13 +125,16 @@ function ItemPriceHint({
 export function QuoteRequestForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [items, setItems] = useState<RawQuoteItem[]>([createQuoteItem(1)]);
-  const [evaluator, setEvaluator] = useState<QuoteEvaluator | null>(null);
-  const [priceLoadError, setPriceLoadError] = useState(false);
   const [generatedQuote, setGeneratedQuote] = useState<GeneratedQuote | null>(
     null,
   );
   const nextItemId = useRef(2);
   const prepared = usePreparedRequest();
+  const {
+    estimate,
+    isLoading: isPriceLoading,
+    loadError: priceLoadError,
+  } = useQuoteRequestEstimate();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -165,11 +162,6 @@ export function QuoteRequestForm() {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
-  const activeEvaluator = useMemo(
-    () => evaluator ?? createQuoteEvaluator(),
-    [evaluator],
-  );
-
   const validateChangedField = (
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => {
@@ -177,31 +169,13 @@ export function QuoteRequestForm() {
     const isCheckbox =
       element instanceof HTMLInputElement && element.type === "checkbox";
     const fieldValue = isCheckbox ? element.checked : value;
-    const errorMsg = validateQuoteField(name, fieldValue);
+    const errorMsg = estimate.validateField(name, fieldValue);
     setFieldError(setErrors, name, errorMsg);
   };
 
-  useEffect(() => {
-    let active = true;
-    loadQuoteEvaluator()
-      .then((instance) => {
-        if (!active) return;
-        setEvaluator(instance);
-        setPriceLoadError(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setPriceLoadError(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const { items: pricedItems, totals } = useMemo(
-    () => activeEvaluator.evaluateItems(items),
-    [items, activeEvaluator],
+    () => estimate.estimateItems(items),
+    [items, estimate],
   );
 
   const clearDraft = () => {
@@ -217,7 +191,7 @@ export function QuoteRequestForm() {
       const index = next.findIndex((item) => item.id === itemId);
       if (index !== -1) {
         if ("product" in patch) {
-          const errorMsg = validateQuoteField(
+          const errorMsg = estimate.validateField(
             "product",
             patch.product,
             { itemIndex: index },
@@ -225,7 +199,7 @@ export function QuoteRequestForm() {
           setFieldError(setErrors, `itemProduct-${itemId}`, errorMsg);
         }
         if ("quantity" in patch || "unit" in patch) {
-          const errorMsg = validateQuoteField(
+          const errorMsg = estimate.validateField(
             "quantity",
             next[index].quantity,
             { unit: next[index].unit, itemIndex: index },
@@ -268,7 +242,7 @@ export function QuoteRequestForm() {
       notes: String(form.get("notes") ?? ""),
     };
 
-    const evaluation = activeEvaluator.evaluateRequest({
+    const evaluation = estimate.evaluateRequest({
       contact,
       items,
       acceptDisclaimer: form.get("acceptDisclaimer") === "on",
@@ -377,10 +351,9 @@ export function QuoteRequestForm() {
             const quantityErrorId = `quote-quantity-${id}-error`;
             const priceHintId = `quote-price-${id}-hint`;
 
-            const hidePieceUnits = !activeEvaluator.supportsPieceUnits(product);
-            const pieceOptions = activeEvaluator.getPieceOptions(product);
-            const requiresRebar = activeEvaluator.requiresRebarDiameter(product);
-            const isPiece = unit === "شاخه" || unit === "عدد";
+            const pieceOptions = priced.pieceOptions;
+            const requiresRebar = priced.requiresRebarDiameter;
+            const isPiece = priced.isPieceUnit;
 
             return (
               <fieldset className="quote-item-card" key={id}>
@@ -464,11 +437,7 @@ export function QuoteRequestForm() {
                           }
                         }}
                       >
-                        {quoteUnits
-                          .filter(
-                            (u) => !hidePieceUnits || (u !== "شاخه" && u !== "عدد"),
-                          )
-                          .map((u) => (
+                        {priced.availableUnits.map((u) => (
                             <option key={u}>{u}</option>
                           ))}
                       </select>
@@ -535,7 +504,7 @@ export function QuoteRequestForm() {
                 <div className="quote-item-price" id={priceHintId}>
                   <ItemPriceHint
                     priced={priced}
-                    loading={!evaluator && !priceLoadError}
+                    loading={isPriceLoading}
                     loadError={priceLoadError}
                   />
                 </div>

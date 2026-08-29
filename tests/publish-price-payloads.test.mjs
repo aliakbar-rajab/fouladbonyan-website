@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  publishPayloads,
-  refreshAndPublishSnapshot,
-} from "../scripts/lib/price-pipeline.mjs";
+import { refreshAndPublishSnapshot } from "../scripts/lib/price-pipeline.mjs";
 
 function fakeProductItem(index) {
   return {
@@ -40,87 +37,60 @@ function fakeCatalogHtml() {
     products: [{ title: "کارخانه تست", productsitem: products }],
     price_compare: { date: "1404/01/01", percent: 1, status: "same" },
   };
-  const nextData = { props: { pageProps: { shopData } } };
-  return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script></body></html>`;
+  return `<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { shopData } } })}</script>`;
 }
 
-test("publishPayloads posts the payload with a bearer token and returns the parsed body", async () => {
+const runRefresh = (ingestResponse) => {
   let seenRequest;
   const fetchImpl = async (url, init) => {
-    seenRequest = { url, init };
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
-  };
-
-  const result = await publishPayloads({
-    endpoint: "https://price.example",
-    token: "secret-token",
-    payloads: { snapshot: {}, diagnostics: {} },
-    fetchImpl,
-  });
-
-  assert.deepEqual(result, { ok: true });
-  assert.equal(seenRequest.url, "https://price.example/ingest");
-  assert.equal(seenRequest.init.method, "POST");
-  assert.equal(seenRequest.init.headers.authorization, "Bearer secret-token");
-  assert.deepEqual(JSON.parse(seenRequest.init.body), {
-    snapshot: {},
-    diagnostics: {},
-  });
-});
-
-test("publishPayloads throws with the Worker's error message on a non-2xx response", async () => {
-  const fetchImpl = async () =>
-    new Response(
-      JSON.stringify({ ok: false, error: "میلگرد آجدار: HTTP 503" }),
-      { status: 422 },
-    );
-
-  await assert.rejects(
-    () =>
-      publishPayloads({
-        endpoint: "https://price.example",
-        token: "secret-token",
-        payloads: { snapshot: {} },
-        fetchImpl,
-      }),
-    /HTTP 422.*میلگرد آجدار/,
-  );
-});
-
-test("publishPayloads throws when the response body isn't JSON", async () => {
-  const fetchImpl = async () => new Response("upstream 502", { status: 502 });
-
-  await assert.rejects(
-    () =>
-      publishPayloads({
-        endpoint: "https://price.example",
-        token: "secret-token",
-        payloads: { snapshot: {} },
-        fetchImpl,
-      }),
-    /HTTP 502/,
-  );
-});
-
-test("refreshAndPublishSnapshot fetches live prices, validates snapshot, and publishes to Worker", async () => {
-  let ingestCalled = false;
-  const fetchImpl = async (url, init) => {
-    if (url.includes("/ingest")) {
-      ingestCalled = true;
-      assert.equal(init.headers.authorization, "Bearer test-worker-token");
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    if (url.endsWith("/ingest")) {
+      seenRequest = { url, init };
+      return ingestResponse();
     }
     return new Response(fakeCatalogHtml(), { status: 200 });
   };
+  return {
+    seenRequest: () => seenRequest,
+    result: refreshAndPublishSnapshot({
+      endpoint: "https://price.example",
+      token: "test-worker-token",
+      fetchImpl,
+    }),
+  };
+};
 
-  const result = await refreshAndPublishSnapshot({
-    endpoint: "https://price.example",
-    token: "test-worker-token",
-    fetchImpl,
-  });
+test("refresh-and-publish hides source work and posts one validated payload", async () => {
+  const run = runRefresh(
+    () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+  );
+  const result = await run.result;
+  const request = run.seenRequest();
 
-  assert.equal(ingestCalled, true);
   assert.equal(result.publishResult.ok, true);
   assert.ok(result.snapshot.catalogs.length >= 8);
   assert.ok(result.diagnostics.freshCategories > 40);
+  assert.equal(request.url, "https://price.example/ingest");
+  assert.equal(request.init.method, "POST");
+  assert.equal(request.init.headers.authorization, "Bearer test-worker-token");
+  const payload = JSON.parse(request.init.body);
+  assert.deepEqual(payload.snapshot, result.snapshot);
+  assert.deepEqual(payload.diagnostics, result.diagnostics);
+});
+
+test("refresh-and-publish reports the Worker's structured rejection", async () => {
+  const run = runRefresh(
+    () =>
+      new Response(
+        JSON.stringify({ ok: false, error: "میلگرد آجدار: HTTP 503" }),
+        { status: 422 },
+      ),
+  );
+  await assert.rejects(run.result, /HTTP 422.*میلگرد آجدار/);
+});
+
+test("refresh-and-publish reports a non-JSON Worker failure", async () => {
+  const run = runRefresh(
+    () => new Response("upstream 502", { status: 502 }),
+  );
+  await assert.rejects(run.result, /HTTP 502/);
 });

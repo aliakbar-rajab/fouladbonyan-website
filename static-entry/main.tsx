@@ -4,8 +4,6 @@ import App from "../app/App";
 import ContactPage from "../app/ContactPage";
 import InfoPage from "../app/InfoPage";
 import GuidePage from "../app/GuidePage";
-import { isInfoPageKey } from "../app/info-page-data";
-import { isGuidePageKey } from "../app/guide-page-data";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
@@ -13,7 +11,11 @@ import {
   loadCatalogSnapshot,
   primeCatalogReader,
 } from "../app/catalog-reader";
-import { isProductGroupId } from "../app/root-dataset";
+import {
+  interpretSiteRoute,
+  isHeroRoute,
+  isOrganizationRoute,
+} from "../app/site-route";
 import "../app/globals.css";
 
 function readJsonScript(id: string) {
@@ -46,17 +48,13 @@ primeCatalogReader({
 // hydrates against exactly the bytes it was prerendered from.
 const guideReference: GuideReference | null = readJsonScript("initial-guide-data");
 
-const pathSegments = window.location.pathname
-  .replace(/^\/|\/$/g, "")
-  .toLowerCase()
-  .split("/")
-  .filter(Boolean);
-const pageName = rootElement.dataset.page || pathSegments[0] || "";
-const isOrganizationPage = !pageName || pageName === "about";
+const route = interpretSiteRoute({
+  pathname: window.location.pathname,
+  dataset: rootElement.dataset,
+});
 
-const isHeroPage = !pageName || isProductGroupId(pageName);
 const heroPreloadLink = document.getElementById("hero-image-preload");
-if (heroPreloadLink && !isHeroPage) {
+if (heroPreloadLink && !isHeroRoute(route)) {
   heroPreloadLink.remove();
 }
 
@@ -64,7 +62,7 @@ const organizationJsonLd = document.getElementById(
   "organization-structured-data",
 );
 if (organizationJsonLd) {
-  if (isOrganizationPage) {
+  if (isOrganizationRoute(route)) {
     organizationJsonLd.textContent = JSON.stringify(
       buildOrganizationStructuredData(),
     );
@@ -73,11 +71,11 @@ if (organizationJsonLd) {
   }
 }
 async function resolveContent() {
-  if (pageName === "contact") return <ContactPage />;
-  if (isInfoPageKey(pageName)) {
-    return <InfoPage page={pageName} />;
+  if (route.kind === "contact") return <ContactPage />;
+  if (route.kind === "info") {
+    return <InfoPage page={route.page} />;
   }
-  if (pageName === "guide") {
+  if (route.kind === "guide") {
     // Production pages carry a build-time reference payload. The Vite
     // development server has no prerender step, so load the same validated
     // snapshots lazily instead of falling back to the homepage for /guide/*.
@@ -86,13 +84,7 @@ async function resolveContent() {
       (await loadCatalogSnapshot().then((snapshot) =>
         buildGuideReference(snapshot),
       ));
-    const requested = rootElement.dataset.guide || pathSegments[1] || "";
-    return (
-      <GuidePage
-        guide={isGuidePageKey(requested) ? requested : undefined}
-        reference={reference}
-      />
-    );
+    return <GuidePage guide={route.guide} reference={reference} />;
   }
 
   return <App />;

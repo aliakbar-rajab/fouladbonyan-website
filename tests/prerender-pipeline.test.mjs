@@ -19,6 +19,20 @@ import {
   primeCatalogSnapshot,
 } from "../app/catalog-reader.ts";
 import { buildGuideReference } from "../app/steel-reference.ts";
+import {
+  interpretSiteRoute,
+  siteRoutePath,
+} from "../app/site-route.ts";
+
+const datasetFromAttributes = (attributes) =>
+  Object.fromEntries(
+    [...attributes.matchAll(/data-([a-z-]+)="([^"]*)"/g)].map(
+      ([, name, value]) => [
+        name.replace(/-([a-z])/g, (_, character) => character.toUpperCase()),
+        value,
+      ],
+    ),
+  );
 
 const MOCK_TEMPLATE = `<!doctype html>
 <html lang="fa" dir="rtl">
@@ -77,6 +91,17 @@ test("collectSitePageDescriptors compiles all 68 static site descriptors with di
 
     urls.add(page.pageUrl);
     titles.add(page.title);
+
+    const pathname = new URL(page.pageUrl).pathname;
+    const route = interpretSiteRoute({
+      pathname,
+      dataset: datasetFromAttributes(page.rootAttributes),
+    });
+    assert.equal(
+      siteRoutePath(route),
+      pathname,
+      `${page.pageUrl} must use the same route meaning in SSG and hydration`,
+    );
 
     // If breadcrumbs are present, verify valid format
     if (page.breadcrumb.length > 0) {
@@ -264,4 +289,3 @@ test("replaceSocialMeta updates OpenGraph, Twitter and description meta tags", (
   assert.match(updated, /<meta name="twitter:title" content="عنوان جدید" \/>/);
   assert.match(updated, /<meta name="twitter:description" content="توضیحات جدید" \/>/);
 });
-

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   parsePersianNumber,
@@ -11,13 +12,17 @@ import {
   formatToman,
   isQuoteProduct,
   isQuoteUnit,
-  loadQuoteEvaluator,
   quoteDisclaimer,
   quoteProductNames,
   quoteUnits,
   validateQuoteField,
   validateQuoteRequestInput,
 } from "../app/quote-engine.ts";
+import {
+  createQuoteEvaluatorFromCatalog,
+  loadQuoteEvaluator,
+} from "../app/quote/catalog-pricing-adapter.ts";
+import { createQuoteRequestEstimate } from "../app/quote-request-estimate.ts";
 
 const contact = {
   fullName: "کاربر آزمایشی",
@@ -25,6 +30,18 @@ const contact = {
   destination: "تهران",
   notes: "",
 };
+
+test("React consumes the quote estimate flow without coordinating evaluator internals", async () => {
+  const source = await readFile(
+    new URL("../app/QuoteRequestForm.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /estimate\.estimateItems\(items\)/);
+  assert.match(source, /estimate\.evaluateRequest\(/);
+  assert.doesNotMatch(source, /createQuoteEvaluator|loadQuoteEvaluator|QuoteEvaluator/);
+  assert.doesNotMatch(source, /supportsPieceUnits|getPieceOptions/);
+  assert.doesNotMatch(source, /approximateTotalToman\s*\/\s*priced\.weightInKg/);
+});
 
 const rebarEstimate = {
   product: "میلگرد",
@@ -215,7 +232,7 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
     ],
   };
 
-  const evaluator = createQuoteEvaluator(mockSnapshot);
+  const evaluator = createQuoteEvaluatorFromCatalog(mockSnapshot);
   assert.equal(evaluator.supportsPieceUnits("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
@@ -427,6 +444,52 @@ test("evaluator evaluateItems aggregates multi-item totals and item counts", () 
   assert.equal(pricing.totals.hasAnyPriced, true);
   assert.equal(pricing.totals.totalToman, 45_000_000);
   assert.equal(pricing.totals.totalRial, 450_000_000);
+});
+
+test("quote request estimate exposes one presentation-ready flow to React", () => {
+  const estimate = createQuoteRequestEstimate(
+    createQuoteEvaluator(allEstimates),
+  );
+  assert.deepEqual(Object.keys(estimate).sort(), [
+    "estimateItems",
+    "evaluateRequest",
+    "validateField",
+  ]);
+
+  const result = estimate.estimateItems([
+    {
+      id: 1,
+      product: "تیرآهن",
+      quantity: "2",
+      unit: "شاخه",
+      dimensions: "",
+      rebarDiameterMm: "",
+      pieceOptionKey: "beam:14",
+    },
+    {
+      id: 2,
+      product: "لوله فولادی",
+      quantity: "1",
+      unit: "تن",
+      dimensions: "",
+      rebarDiameterMm: "",
+      pieceOptionKey: "",
+    },
+  ]);
+
+  assert.equal(result.items[0].pieceOptions.length, 1);
+  assert.deepEqual(result.items[0].availableUnits, quoteUnits);
+  assert.equal(result.items[0].isPieceUnit, true);
+  assert.deepEqual(result.items[1].availableUnits, ["تن", "کیلوگرم"]);
+  assert.equal(result.items[1].unitPriceTomanPerKg, 45_000);
+  assert.equal(result.totals.pricedItemCount, 2);
+  assert.equal(
+    estimate.validateField("quantity", "۲.۵", {
+      unit: "شاخه",
+      itemIndex: 0,
+    }),
+    "مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.",
+  );
 });
 
 test("buildQuoteMessage creates a human-readable Persian quote summary with disclaimer", () => {

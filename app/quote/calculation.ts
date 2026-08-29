@@ -11,7 +11,7 @@ import type {
 import type {
   ProductPricingBaseline,
   QuotePricingBaselines,
-} from "./pricing-source";
+} from "./pricing-types";
 
 export const RIAL_PER_TOMAN = 10;
 export const REBAR_STANDARD_BRANCH_LENGTH_M = 12;

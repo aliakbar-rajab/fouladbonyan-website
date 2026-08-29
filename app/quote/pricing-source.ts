@@ -6,6 +6,7 @@ import type {
 import type { ProductGroupId } from "../category-meta";
 import { localizeCatalogValue } from "../catalog-utils";
 import type { QuotePieceOptionChoice, QuoteProductName } from "../quote-types";
+import type { QuotePricingBaselines } from "./pricing-types";
 
 type BranchWeightFormula = "rebar-12m";
 
@@ -45,22 +46,6 @@ const quoteSources: Partial<Record<QuoteProductName, QuoteSource>> = {
     ],
   },
 };
-
-export type ProductPricingBaseline = {
-  product: QuoteProductName;
-  unitPriceTomanPerKg: number;
-  minPriceTomanPerKg: number;
-  maxPriceTomanPerKg: number;
-  rowCount: number;
-  date: string;
-  pieceOptions: QuotePieceOptionChoice[];
-  branchWeight?: "rebar-12m";
-  supportsPieceUnits: boolean;
-};
-
-export type QuotePricingBaselines = Partial<
-  Record<QuoteProductName, ProductPricingBaseline>
->;
 
 const averageToman = (prices: number[]) =>
   Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length);

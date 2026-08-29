@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-import {
-  parseCatalogPage,
-  fetchCategory,
-  fetchCategoriesWithDiagnostics,
-  buildCatalogSnapshot,
-  updateLocalPriceSnapshot,
-} from "../scripts/lib/price-pipeline.mjs";
-import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import test from "node:test";
+import { updateLocalPriceSnapshot } from "../scripts/lib/price-pipeline.mjs";
 
 function fakeProductItem(index, titlePrefix = "میلگرد") {
   return {
@@ -48,269 +41,125 @@ function fakeCatalogHtml({ length = 120, title = "تست" } = {}) {
     price_compare: { date: "1404/01/01", percent: 1, status: "same" },
   };
   const nextData = { props: { pageProps: { shopData } } };
-  return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script></body></html>`;
-}
-
-function fakeCatalogHtmlReversedAttributes({
-  length = 120,
-  title = "تست",
-} = {}) {
-  const products = Array.from({ length }, (_, index) =>
-    fakeProductItem(index, title),
-  );
-  const shopData = {
-    title,
-    products: [{ title: "کارخانه تست", productsitem: products }],
-    price_compare: { date: "1404/01/01", percent: 1, status: "same" },
-  };
-  const nextData = { props: { pageProps: { shopData } } };
   return `<html><body><script type="application/json" id="__NEXT_DATA__">${JSON.stringify(nextData)}</script></body></html>`;
 }
 
-test("parseCatalogPage extracts Next.js data with standard or reversed script attributes", () => {
-  const source = { id: "test", label: "تست", url: "https://example.com" };
-  const parsed1 = parseCatalogPage(fakeCatalogHtml(), source);
-  const parsed2 = parseCatalogPage(fakeCatalogHtmlReversedAttributes(), source);
-
-  assert.equal(parsed1.id, "test");
-  assert.equal(parsed2.id, "test");
-  assert.equal(parsed1.factories[0].rows.length, 120);
-  assert.equal(parsed2.factories[0].rows.length, 120);
-});
-
-test("parseCatalogPage throws on missing __NEXT_DATA__ or corrupted JSON", () => {
-  const source = { id: "test", label: "تست", url: "https://example.com" };
-  assert.throws(
-    () => parseCatalogPage("<html><body>بدون داده</body></html>", source),
-    /پیدا نشد/,
-  );
-  assert.throws(
-    () =>
-      parseCatalogPage(
-        '<html><body><script id="__NEXT_DATA__">{invalid json</script></body></html>',
-        source,
-      ),
-    /تجزیه JSON/,
-  );
-});
-
-test("fetchCategory retries on transient 500/503 errors with exponential backoff and succeeds", async () => {
-  let callCount = 0;
-  const retriesRecorded = [];
-  const fakeFetch = async () => {
-    callCount += 1;
-    if (callCount < 3) {
-      return new Response("Service Unavailable", { status: 503 });
-    }
-    return new Response(fakeCatalogHtml(), { status: 200 });
-  };
-
-  const source = {
-    id: "test-src",
-    label: "دسته تستی",
-    url: "https://example.com/test",
-  };
-  const result = await fetchCategory(source, {
-    attempts: 4,
-    baseDelayMs: 10,
-    maxDelayMs: 50,
-    fetchImpl: fakeFetch,
-    onRetry: (info) => retriesRecorded.push(info),
-  });
-
-  assert.equal(callCount, 3);
-  assert.equal(retriesRecorded.length, 2);
-  assert.equal(result.id, "test-src");
-  assert.equal(result.factories[0].rows.length, 120);
-});
-
-test("fetchCategory respects retry-after header on 429 Too Many Requests", async () => {
-  let callCount = 0;
-  const fakeFetch = async () => {
-    callCount += 1;
-    if (callCount === 1) {
-      return new Response("Rate limit", {
-        status: 429,
-        headers: { "retry-after": "1" },
-      });
-    }
-    return new Response(fakeCatalogHtml(), { status: 200 });
-  };
-
-  const source = {
-    id: "rate-limited",
-    label: "تست محدودیت",
-    url: "https://example.com",
-  };
-  const result = await fetchCategory(source, {
-    attempts: 2,
-    baseDelayMs: 10,
-    maxDelayMs: 2000,
-    fetchImpl: fakeFetch,
-  });
-
-  assert.equal(callCount, 2);
-  assert.equal(result.id, "rate-limited");
-});
-
-test("fetchCategories isolates single source failures and uses fallback data", async () => {
-  const sources = [
-    { id: "src-1", label: "دسته اول", url: "https://example.com/1" },
-    { id: "src-2", label: "دسته دوم", url: "https://example.com/2" },
-    { id: "src-3", label: "دسته سوم", url: "https://example.com/3" },
-  ];
-
-  const fallbackForSrc2 = {
-    id: "src-2",
-    label: "دسته دوم",
-    groupingLabel: "کارخانه",
-    specificationLabel: "استاندارد",
-    sourceTitle: "دسته دوم قدیمی",
-    sourceUrl: "https://example.com/2",
-    summary: {
-      min: 1000,
-      max: 2000,
-      average: 1500,
-      percent: 0,
-      status: "same",
-      date: "1404/01/01",
-    },
-    filters: { sizes: ["12"], factories: ["کارخانه قدیمی"] },
-    factories: [
-      {
-        name: "کارخانه قدیمی",
-        updatedAt: 1700000000,
-        updatedDate: "1404/01/01",
-        rows: [
-          {
-            id: 999,
-            title: "محصول قدیمی",
-            size: "12",
-            unit: "کیلوگرم",
-            factory: "کارخانه قدیمی",
-            price: 1500,
-            percent: 0,
-            status: "same",
-            updatedAt: 1700000000,
-          },
-        ],
-      },
-    ],
-  };
-
-  const fakeFetch = async (url) => {
-    if (url.includes("/2")) {
-      return new Response("Internal Server Error", { status: 500 });
-    }
-    return new Response(fakeCatalogHtml({ length: 50 }), { status: 200 });
-  };
-
-  const warnings = [];
-  const { categories, diagnostics } = await fetchCategoriesWithDiagnostics(
-    sources,
-    {
-      limit: 2,
-      attempts: 2,
-      fallbackCategories: [fallbackForSrc2],
-      fetchImpl: fakeFetch,
-      onWarning: (msg) => warnings.push(msg),
-    },
-  );
-
-  assert.equal(categories.length, 3);
-  assert.equal(categories[0].id, "src-1");
-  assert.equal(categories[1].id, "src-2");
-  assert.equal(categories[1].sourceTitle, "دسته دوم قدیمی");
-  assert.equal(categories[2].id, "src-3");
-
-  assert.equal(diagnostics.total, 3);
-  assert.equal(diagnostics.freshCount, 2);
-  assert.equal(diagnostics.fallbackCount, 1);
-  assert.equal(warnings.length, 1);
-  assert.match(warnings[0], /ایزوله‌سازی خطا.*دسته دوم/);
-});
-
-test("fetchCategoriesWithDiagnostics throws when a category fails and has no fallback", async () => {
-  const sources = [
-    { id: "src-1", label: "دسته اول", url: "https://example.com/1" },
-  ];
-  const fakeFetch = async () => new Response("Not Found", { status: 404 });
-
-  await assert.rejects(
-    () =>
-      fetchCategoriesWithDiagnostics(sources, {
-        attempts: 1,
-        fallbackCategories: [],
-        fetchImpl: fakeFetch,
-      }),
-    /HTTP 404/,
-  );
-});
-
-test("buildCatalogSnapshot completes and validates even when some categories use fallback", async () => {
-  const fakeAllOkFetch = async () =>
-    new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
-
-  const { snapshot: baseline } = await buildCatalogSnapshot({
-    fetchImpl: fakeAllOkFetch,
-  });
-  assert.ok(baseline.catalogs.length >= 8);
-
-  const fakePartialFailFetch = async (url) => {
-    const decoded = decodeURIComponent(url);
-    if (decoded.includes("میلگرد-ساده") || decoded.includes("ورق-ck45")) {
-      return new Response("Upstream Crash", { status: 502 });
-    }
-    return new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
-  };
-
-  const { snapshot: result, diagnostics } = await buildCatalogSnapshot({
-    fallbackSnapshot: baseline,
-    attempts: 2,
-    fetchImpl: fakePartialFailFetch,
-  });
-
-  validateCatalogSnapshot(result);
-
-  assert.equal(diagnostics.fallbackCategories, 2);
-  assert.ok(diagnostics.freshCategories > 40);
-  assert.equal(diagnostics.warnings.length, 2);
-});
-
-test("updateLocalPriceSnapshot writes atomically to disk using fallback on partial failure", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "update-local-snapshot-"));
+async function withTempOutput(run) {
+  const dir = await mkdtemp(join(tmpdir(), "price-workflow-"));
   const outputPath = join(dir, "catalog-prices.json");
-
   try {
-    const fakeAllOkFetch = async () =>
-      new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+    await run(outputPath);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
-    const { snapshot: initial } = await updateLocalPriceSnapshot({
+test("price pipeline exposes only its three complete workflows", async () => {
+  const pipeline = await import("../scripts/lib/price-pipeline.mjs");
+  assert.deepEqual(Object.keys(pipeline).sort(), [
+    "pullPriceSnapshot",
+    "refreshAndPublishSnapshot",
+    "updateLocalPriceSnapshot",
+  ]);
+});
+
+test("local refresh hides parsing and transient retry behind one workflow", async () => {
+  await withTempOutput(async (outputPath) => {
+    let calls = 0;
+    const warnings = [];
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls < 3) {
+        return new Response("Service Unavailable", { status: 503 });
+      }
+      return new Response(fakeCatalogHtml(), { status: 200 });
+    };
+
+    const { snapshot, diagnostics } = await updateLocalPriceSnapshot({
       outputPath,
-      fetchImpl: fakeAllOkFetch,
+      fetchImpl,
+      onWarning: (message) => warnings.push(message),
     });
 
+    assert.ok(calls > snapshot.catalogs.length, "the transient source must retry");
+    assert.equal(diagnostics.fallbackCategories, 0);
+    assert.equal(warnings.length, 0);
+    assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), snapshot);
+  });
+});
+
+test("local refresh preserves retry-after, malformed-source, and no-fallback failure behavior", async () => {
+  await withTempOutput(async (outputPath) => {
+    let targetUrl;
+    const targetAttempts = [];
+    const fetchImpl = async (url) => {
+      targetUrl ??= url;
+      if (url !== targetUrl) {
+        return new Response(fakeCatalogHtml(), { status: 200 });
+      }
+
+      targetAttempts.push(Date.now());
+      switch (targetAttempts.length) {
+        case 1:
+          return new Response("Rate limited", {
+            status: 429,
+            headers: { "retry-after": "1" },
+          });
+        case 2:
+          return new Response("<html>بدون داده ساختاریافته</html>", {
+            status: 200,
+          });
+        case 3:
+          return new Response(
+            '<script id="__NEXT_DATA__">{invalid json</script>',
+            { status: 200 },
+          );
+        default:
+          return new Response("Not Found", { status: 404 });
+      }
+    };
+
+    await assert.rejects(
+      updateLocalPriceSnapshot({ outputPath, fetchImpl }),
+      /HTTP 404/,
+    );
+    assert.equal(targetAttempts.length, 4);
+    assert.ok(
+      targetAttempts[1] - targetAttempts[0] >= 900,
+      "retry-after: 1 must delay the next attempt by about one second",
+    );
+    await assert.rejects(readFile(outputPath, "utf8"), /ENOENT/);
+  });
+});
+
+test("local refresh keeps the prior valid category when one source fails", async () => {
+  await withTempOutput(async (outputPath) => {
+    const allOkFetch = async () =>
+      new Response(fakeCatalogHtml(), { status: 200 });
+    const { snapshot: initial } = await updateLocalPriceSnapshot({
+      outputPath,
+      fetchImpl: allOkFetch,
+    });
     assert.ok(initial.catalogs.length >= 8);
 
-    const fakePartialFailFetch = async (url) => {
+    const partialFailureFetch = async (url) => {
       const decoded = decodeURIComponent(url);
       if (decoded.includes("میلگرد-ساده")) {
         return new Response("Upstream 503", { status: 503 });
       }
-      return new Response(fakeCatalogHtml({ length: 120 }), { status: 200 });
+      return new Response(fakeCatalogHtml(), { status: 200 });
     };
 
     const warnings = [];
-    const { snapshot: updated, diagnostics } = await updateLocalPriceSnapshot({
+    const { snapshot, diagnostics } = await updateLocalPriceSnapshot({
       outputPath,
-      fetchImpl: fakePartialFailFetch,
-      onWarning: (msg) => warnings.push(msg),
+      fetchImpl: partialFailureFetch,
+      onWarning: (message) => warnings.push(message),
     });
 
     assert.equal(diagnostics.fallbackCategories, 1);
-    const diskContent = JSON.parse(await readFile(outputPath, "utf8"));
-    assert.deepEqual(diskContent.fetchedAt, updated.fetchedAt);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /ایزوله‌سازی خطا.*میلگرد ساده/);
+    assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), snapshot);
+  });
 });

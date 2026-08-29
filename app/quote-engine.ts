@@ -1,17 +1,9 @@
 import {
-  createRetryableLoader,
-  loadAllGroupCatalogs,
-} from "./catalog-reader";
-import type { CatalogSnapshot, GroupCatalog } from "./catalog-types";
-import {
   aggregateQuoteTotals,
   evaluateItemPricing,
   formatToman,
 } from "./quote/calculation";
-import {
-  extractQuotePricingBaselines,
-  type QuotePricingBaselines,
-} from "./quote/pricing-source";
+import type { QuotePricingBaselines } from "./quote/pricing-types";
 import {
   buildQuoteDocument,
   buildQuoteMessage,
@@ -117,25 +109,14 @@ export type QuoteEvaluator = {
   requiresRebarDiameter: (product: QuoteProductName | "") => boolean;
 };
 
-function resolveBaselines(
-  source: CatalogSnapshot | GroupCatalog[] | QuotePricingBaselines | null | undefined,
-): QuotePricingBaselines {
-  if (!source) return {};
-  // If already a baselines dictionary (e.g. from mock tests)
-  const firstVal = Object.values(source)[0];
-  if (firstVal && typeof firstVal === "object" && "unitPriceTomanPerKg" in firstVal) {
-    return source as QuotePricingBaselines;
-  }
-  return extractQuotePricingBaselines(source as CatalogSnapshot | GroupCatalog[]);
-}
-
 /**
- * Construct a deep QuoteEvaluator over catalog data or pricing baselines.
+ * Construct a QuoteEvaluator over already-derived pricing baselines.
+ * Catalog translation belongs to the infrastructure adapter.
  */
 export function createQuoteEvaluator(
-  source?: CatalogSnapshot | GroupCatalog[] | QuotePricingBaselines | null,
+  source?: QuotePricingBaselines | null,
 ): QuoteEvaluator {
-  const baselines = resolveBaselines(source);
+  const baselines = source ?? {};
 
   const evaluateItem = (
     item: Partial<RawQuoteItem> | null | undefined,
@@ -202,13 +183,3 @@ export function createQuoteEvaluator(
     requiresRebarDiameter,
   };
 }
-
-/**
- * Async retryable loader for site-wide QuoteEvaluator.
- */
-export const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
-  async () => {
-    const catalogs = await loadAllGroupCatalogs();
-    return createQuoteEvaluator(catalogs);
-  },
-);

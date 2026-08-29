@@ -13,7 +13,10 @@ import {
   type GroupCatalog,
 } from "./catalog-reader";
 import type { CatalogViewRequest } from "./catalog-types";
-import { isProductGroupId, readRouteRequest } from "./root-dataset";
+import {
+  isProductGroupId,
+  resolveCatalogRouteRequest,
+} from "./site-route";
 import { filterProductGroups } from "./site-logic.mjs";
 
 // ---------------------------------------------------------------------------
@@ -259,12 +262,23 @@ export function useCatalogWorkspace({
   searchLoader = loadCatalogSearchGroups,
 }: CatalogWorkspaceOptions = {}): CatalogWorkspace {
   const route = useMemo(
-    () =>
-      readRouteRequest({
-        category: initialCategory,
-        subcategory: initialSubcategory,
-        subcategoryLabel: initialSubcategoryLabel,
-      }),
+    () => {
+      const dataset =
+        typeof document === "undefined"
+          ? undefined
+          : document.getElementById("root")?.dataset;
+      const pathname =
+        typeof window === "undefined" ? "/" : window.location.pathname;
+      return resolveCatalogRouteRequest({
+        pathname,
+        dataset,
+        overrides: {
+          category: initialCategory,
+          subcategory: initialSubcategory,
+          subcategoryLabel: initialSubcategoryLabel,
+        },
+      });
+    },
     [initialCategory, initialSubcategory, initialSubcategoryLabel],
   );
 

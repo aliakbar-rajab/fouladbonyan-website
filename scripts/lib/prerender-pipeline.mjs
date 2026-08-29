@@ -6,7 +6,6 @@ import App from "../../app/App.tsx";
 import { productGroups } from "../../app/category-meta.ts";
 import ContactPage from "../../app/ContactPage.tsx";
 import {
-  GUIDE_BASE_PATH,
   guideIndex,
   guidePageDefinitions,
   guidePageKeys,
@@ -26,6 +25,10 @@ import {
   primeCatalogSnapshot,
   setMenuCatalog,
 } from "../../app/catalog-reader.ts";
+import {
+  siteRouteDataset,
+  siteRoutePath,
+} from "../../app/site-route.ts";
 
 /**
  * Prerender Pipeline for Bonyan Foulad Daria.
@@ -65,6 +68,24 @@ export function buildHeroPreloadTag(group) {
       imagesizes="100vw"
       fetchpriority="high"
     />`;
+}
+
+const datasetAttributeName = (key) =>
+  `data-${key.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`)}`;
+
+export function buildRouteRootAttributes(route) {
+  return Object.entries(siteRouteDataset(route))
+    .map(([key, value]) => ` ${datasetAttributeName(key)}="${value}"`)
+    .join("");
+}
+
+function routeLocation(route, siteUrl) {
+  const pathname = siteRoutePath(route);
+  return {
+    outPath: pathname === "/" ? [] : pathname.split("/").filter(Boolean),
+    pageUrl: `${siteUrl}${pathname}`,
+    rootAttributes: buildRouteRootAttributes(route),
+  };
 }
 
 export function buildBreadcrumbJsonLd(items) {
@@ -207,15 +228,14 @@ export async function collectSitePageDescriptors({
   const pages = [];
 
   // 1. Homepage
+  const homeLocation = routeLocation({ kind: "home" }, siteUrl);
   pages.push({
-    outPath: [],
-    pageUrl: `${siteUrl}/`,
+    ...homeLocation,
     lastmod: rootLastmod,
     title: "قیمت روز آهن و فولاد | بنیان فولاد داریا",
     description:
       "قیمت روز آهن و فولاد، میلگرد، تیرآهن، ورق، پروفیل و انواع مقاطع فولادی در بازار. استعلام لحظه‌ای و صدور پیش‌فاکتور در بنیان فولاد داریا.",
     rootElement: React.createElement(App),
-    rootAttributes: "",
     heroPreload: undefined, // Preserves template default hero preload
     payloads: [
       menuPayload,
@@ -230,7 +250,9 @@ export async function collectSitePageDescriptors({
     const catalog = await loadGroupCatalog(group.id);
     const lastmod = catalog.fetchedAt.slice(0, 10);
     const heroPreload = buildHeroPreloadTag(group);
-    const groupUrl = `${siteUrl}/${group.id}/`;
+    const groupRoute = { kind: "catalog", category: group.id };
+    const groupLocation = routeLocation(groupRoute, siteUrl);
+    const groupUrl = groupLocation.pageUrl;
     const groupCrumb = { name: group.label, url: groupUrl };
     const catalogPayloads = [
       menuPayload,
@@ -239,13 +261,11 @@ export async function collectSitePageDescriptors({
 
     // Category landing page
     pages.push({
-      outPath: [group.id],
-      pageUrl: groupUrl,
+      ...groupLocation,
       lastmod,
       title: group.seoTitle,
       description: group.seoDescription,
       rootElement: React.createElement(App, { initialCategory: group.id }),
-      rootAttributes: ` data-initial-category="${group.id}"`,
       heroPreload,
       payloads: catalogPayloads,
       organizationData: null,
@@ -254,10 +274,16 @@ export async function collectSitePageDescriptors({
 
     // Subcategory pages
     for (const sub of catalog.categories) {
-      const subUrl = `${groupUrl}${sub.id}/`;
+      const subRoute = {
+        kind: "catalog",
+        category: group.id,
+        subcategory: sub.id,
+        subcategoryLabel: sub.label,
+      };
+      const subLocation = routeLocation(subRoute, siteUrl);
+      const subUrl = subLocation.pageUrl;
       pages.push({
-        outPath: [group.id, sub.id],
-        pageUrl: subUrl,
+        ...subLocation,
         lastmod,
         title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
         description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
@@ -266,7 +292,6 @@ export async function collectSitePageDescriptors({
           initialSubcategory: sub.id,
           initialSubcategoryLabel: sub.label,
         }),
-        rootAttributes: ` data-initial-category="${group.id}" data-initial-subcategory="${sub.id}" data-initial-subcategory-label="${sub.label}"`,
         heroPreload,
         payloads: catalogPayloads,
         organizationData: null,
@@ -276,16 +301,15 @@ export async function collectSitePageDescriptors({
   }
 
   // 3. Contact Page
-  const contactUrl = `${siteUrl}/contact/`;
+  const contactLocation = routeLocation({ kind: "contact" }, siteUrl);
+  const contactUrl = contactLocation.pageUrl;
   pages.push({
-    outPath: ["contact"],
-    pageUrl: contactUrl,
+    ...contactLocation,
     lastmod: "2026-08-11",
     title: "تماس با ما و نشانی | بنیان فولاد داریا",
     description:
       "شماره‌های تماس، نشانی دفتر و مسیریابی روی نقشه برای بنیان فولاد داریا. تماس با واحد فروش و مدیریت برای استعلام قیمت آهن و فولاد.",
     rootElement: React.createElement(ContactPage),
-    rootAttributes: ' data-page="contact"',
     heroPreload: null,
     payloads: [],
     organizationData: null,
@@ -294,15 +318,14 @@ export async function collectSitePageDescriptors({
 
   // 4. Info Pages
   for (const [slug, definition] of Object.entries(infoPageDefinitions)) {
-    const pageUrl = `${siteUrl}/${slug}/`;
+    const infoLocation = routeLocation({ kind: "info", page: slug }, siteUrl);
+    const pageUrl = infoLocation.pageUrl;
     pages.push({
-      outPath: [slug],
-      pageUrl,
+      ...infoLocation,
       lastmod: definition.lastmod,
       title: `${definition.title} | ${siteConfig.brand.name}`,
       description: definition.seoDescription,
       rootElement: React.createElement(InfoPage, { page: slug }),
-      rootAttributes: ` data-page="${slug}"`,
       heroPreload: null,
       payloads: [],
       organizationData: slug === "about" ? organizationData : null,
@@ -311,13 +334,13 @@ export async function collectSitePageDescriptors({
   }
 
   // 5. Guide Index & Articles
-  const guideIndexUrl = `${siteUrl}${GUIDE_BASE_PATH}`;
+  const guideIndexLocation = routeLocation({ kind: "guide" }, siteUrl);
+  const guideIndexUrl = guideIndexLocation.pageUrl;
   const guideIndexCrumb = { name: guideIndex.title, url: guideIndexUrl };
   const guidePayloads = [{ id: "initial-guide-data", data: reference }];
 
   pages.push({
-    outPath: ["guide"],
-    pageUrl: guideIndexUrl,
+    ...guideIndexLocation,
     lastmod: guideIndex.lastmod,
     title: guideIndex.seoTitle,
     description: guideIndex.seoDescription,
@@ -325,7 +348,6 @@ export async function collectSitePageDescriptors({
       guide: undefined,
       reference,
     }),
-    rootAttributes: ' data-page="guide"',
     heroPreload: null,
     payloads: guidePayloads,
     organizationData: null,
@@ -334,15 +356,14 @@ export async function collectSitePageDescriptors({
 
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
-    const pageUrl = `${guideIndexUrl}${key}/`;
+    const guideLocation = routeLocation({ kind: "guide", guide: key }, siteUrl);
+    const pageUrl = guideLocation.pageUrl;
     pages.push({
-      outPath: ["guide", key],
-      pageUrl,
+      ...guideLocation,
       lastmod: definition.lastmod,
       title: definition.seoTitle,
       description: definition.seoDescription,
       rootElement: React.createElement(GuidePage, { guide: key, reference }),
-      rootAttributes: ` data-page="guide" data-guide="${key}"`,
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,

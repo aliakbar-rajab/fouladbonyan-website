@@ -20,7 +20,7 @@ import {
  * ===========================================================================
  */
 
-export const SOURCE_ENVELOPE = {
+const SOURCE_ENVELOPE = {
   sourceName: "فولاد ایرانیان",
   sourceHome: "https://www.fooladiranian.com/",
   taxRate: 0.1,
@@ -29,7 +29,7 @@ export const SOURCE_ENVELOPE = {
 const SOURCE_ROOT = "https://www.fooladiranian.com/productlist/";
 
 /** Build a source URL from a Persian slug, keeping hyphens unescaped. */
-export function sourceUrl(slug) {
+function sourceUrl(slug) {
   return new URL(
     `${encodeURIComponent(slug).replaceAll("%2D", "-")}/`,
     SOURCE_ROOT,
@@ -91,7 +91,7 @@ function resolveSource(raw) {
 /**
  * Parse Next.js __NEXT_DATA__ from an HTML page into a structured category model.
  */
-export function parseCatalogPage(html, source) {
+function parseCatalogPage(html, source) {
   const match = html.match(
     /<script\b[^>]*id=["']__NEXT_DATA__["'][^>]*>(.*?)<\/script>/s,
   );
@@ -195,7 +195,7 @@ export function parseCatalogPage(html, source) {
  * ===========================================================================
  */
 
-export async function fetchCategoryOnce(
+async function fetchCategoryOnce(
   source,
   { timeoutMs = 25_000, fetchImpl = fetch } = {},
 ) {
@@ -225,7 +225,7 @@ export async function fetchCategoryOnce(
   return parseCatalogPage(html, source);
 }
 
-export async function fetchCategory(
+async function fetchCategory(
   source,
   {
     attempts = 4,
@@ -264,7 +264,7 @@ export async function fetchCategory(
   throw lastError;
 }
 
-export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
+async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   const {
     limit = 4,
     fallbackCategories = [],
@@ -334,7 +334,7 @@ export async function fetchCategoriesWithDiagnostics(sources, options = {}) {
  * ===========================================================================
  */
 
-export async function buildCatalogSnapshot(options = {}) {
+async function buildCatalogSnapshot(options = {}) {
   const {
     fallbackSnapshot,
     fallbackCategories = fallbackSnapshot?.catalogs?.flatMap(
@@ -404,7 +404,7 @@ export async function buildCatalogSnapshot(options = {}) {
 /**
  * Post a fetched+validated payload set to Cloudflare Worker ingest endpoint.
  */
-export async function publishPayloads({
+async function publishPayloads({
   endpoint,
   token,
   payloads,
@@ -431,7 +431,7 @@ export async function publishPayloads({
 /**
  * Pull one dataset from Cloudflare Worker and validate before overwriting outputPath.
  */
-export async function pullDataset({
+async function pullDataset({
   endpoint,
   name,
   outputPath,

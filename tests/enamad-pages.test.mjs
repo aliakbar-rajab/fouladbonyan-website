@@ -11,8 +11,8 @@ import {
 import { infoPageDefinitions } from "../app/info-page-data.ts";
 import {
   createQuoteEvaluator,
-  loadQuoteEvaluator,
 } from "../app/quote-engine.ts";
+import { loadQuoteEvaluator } from "../app/quote/catalog-pricing-adapter.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 

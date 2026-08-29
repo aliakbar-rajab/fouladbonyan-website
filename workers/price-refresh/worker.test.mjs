@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import worker from "./worker.mjs";
 import { KV_KEYS, STATUS_KEY } from "./ingest.mjs";
@@ -16,49 +17,28 @@ function fakeKv(seed = {}) {
   };
 }
 
-function fakeProductItem(index) {
-  return {
-    id: index + 1,
-    title: `میلگرد ${index + 1}`,
-    price: 100_000 + index,
-    percent: 1,
-    status: "same",
-    updated_at: Math.floor(Date.now() / 1000),
-    "meta-سایز": "12",
-    "meta-استاندارد": "A1",
-    "meta-گرید": "G1",
-    "meta-طول شاخه": "12",
-    "meta-حالت": "شاخه",
-    "meta-وزن تقریبی": "10",
-    "meta-محل تحویل": "کارخانه",
-    "meta-واحد": "کیلوگرم",
-    "meta-کارخانه": "کارخانه تست",
-    "meta-ضخامت": "2",
-    "meta-عرض": "1",
-    "meta-طول": "6",
-    "meta-رده": "40",
-    "meta-چشمه": "5x5",
-    "meta-ستون": "1",
-  };
-}
+const committedSnapshot = JSON.parse(
+  await readFile(
+    new URL("../../app/data/catalog-prices.json", import.meta.url),
+    "utf8",
+  ),
+);
 
-function fakeCatalogHtml() {
-  const products = Array.from({ length: 120 }, (_, index) => fakeProductItem(index));
-  const shopData = {
-    title: "تست",
-    products: [{ title: "کارخانه تست", productsitem: products }],
-    price_compare: { date: "1404/01/01", percent: 1, status: "same" },
-  };
-  const nextData = { props: { pageProps: { shopData } } };
-  return `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(nextData)}</script></body></html>`;
-}
-
-async function buildValidPayload(t) {
-  const { buildCatalogSnapshot } = await import(
-    "../../scripts/lib/price-pipeline.mjs"
+function buildValidPayload() {
+  const snapshot = structuredClone(committedSnapshot);
+  const totalCategories = snapshot.catalogs.reduce(
+    (total, catalog) => total + catalog.categories.length,
+    0,
   );
-  t.mock.method(globalThis, "fetch", async () => new Response(fakeCatalogHtml(), { status: 200 }));
-  return buildCatalogSnapshot();
+  return {
+    snapshot,
+    diagnostics: {
+      totalCategories,
+      freshCategories: totalCategories,
+      fallbackCategories: 0,
+      warnings: [],
+    },
+  };
 }
 
 test("GET /catalog-prices.json serves the stored canonical snapshot", async () => {
@@ -140,7 +120,7 @@ test("POST /ingest with a malformed JSON body is rejected without touching KV", 
 });
 
 test("POST /ingest with a valid payload stores it and calls the deploy hook", async (t) => {
-  const { snapshot, diagnostics } = await buildValidPayload(t);
+  const { snapshot, diagnostics } = buildValidPayload();
   const calledUrls = [];
   t.mock.method(globalThis, "fetch", async (input) => {
     const url = typeof input === "string" ? input : input.url;
@@ -167,8 +147,8 @@ test("POST /ingest with a valid payload stores it and calls the deploy hook", as
   assert.equal(calledUrls.includes("https://deploy.example/hook"), true);
 });
 
-test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends", async (t) => {
-  const { snapshot, diagnostics } = await buildValidPayload(t);
+test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends", async () => {
+  const { snapshot, diagnostics } = buildValidPayload();
   const producerPayload = { snapshot, diagnostics };
 
   const env = { PRICE_DATA: fakeKv(), INGEST_TOKEN: "secret" };
