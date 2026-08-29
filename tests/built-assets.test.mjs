@@ -27,8 +27,8 @@ test("production output contains required GitHub Pages files", async () => {
       "categories/hero-wire-1680.jpg",
       "categories/hero-rebar-640.webp",
       "categories/hero-rebar-640.avif",
-      "categories/01-rebar.webp",
-      "categories/01-rebar.avif",
+      "categories/01-rebar-384.webp",
+      "categories/01-rebar-384.avif",
       "categories/01-rebar-240.webp",
     ].map((path) => access(new URL(`../dist/${path}`, import.meta.url))),
   );

@@ -53,11 +53,12 @@ async function processHeroImage(filePath, prefix, writeFullJpeg = false) {
   }
 }
 
-// width 384 is also written unsuffixed (the "default" category image); width
-// 240 only ever appears as an explicit -240 file, alongside its JPEG fallback.
+// Responsive modern formats use explicit width suffixes. The unsuffixed JPEG
+// remains the source and fallback image; AVIF/WebP are generated only where
+// the rendered srcsets reference them.
 const CATEGORY_TARGETS = [
   { width: 240, suffixes: ["-240"], jpeg: true },
-  { width: 384, suffixes: ["", "-384"], jpeg: false },
+  { width: 384, suffixes: ["-384"], jpeg: false },
 ];
 
 async function processCategoryImage(file) {

@@ -110,99 +110,6 @@
   color: var(--muted);
 }
 
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.25rem;
-}
-
-.category-card {
-  min-width: 0;
-  position: relative;
-  display: grid;
-  grid-template-rows: 11.5rem 1fr;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 16px;
-  background: var(--white);
-  color: inherit;
-  text-align: start;
-  text-decoration: none;
-  box-shadow: 0 10px 30px rgba(10, 10, 14, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  cursor: pointer;
-  transition:
-    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 220ms ease;
-}
-
-.category-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 22px 48px rgba(10, 10, 14, 0.22);
-  border-color: rgba(246, 181, 0, 0.45);
-}
-
-.category-card picture {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: hidden;
-}
-
-.category-card picture img,
-.category-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.category-card:hover picture img,
-.category-card:hover img {
-  transform: scale(1.05);
-}
-
-.category-card > span {
-  display: grid;
-  align-content: start;
-  gap: 0.35rem;
-  padding: 1.15rem 1.15rem 1.35rem;
-}
-
-.category-card strong {
-  color: var(--brand-dark);
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.category-card small {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.75;
-}
-
-.category-card > b {
-  position: absolute;
-  inset-inline-end: 0.85rem;
-  top: 9.2rem;
-  width: 2.6rem;
-  height: 2.6rem;
-  display: grid;
-  place-items: center;
-  border: 3px solid var(--white);
-  border-radius: 50%;
-  background: var(--brand-yellow);
-  color: var(--ink);
-  box-shadow: 0 4px 14px rgba(246, 181, 0, 0.4);
-  transition: transform 0.22s ease, background-color 0.22s ease;
-}
-
-.category-card:hover > b {
-  transform: scale(1.1);
-  background: #ffc928;
-}
 
 .prices {
   position: relative;
@@ -763,17 +670,7 @@ tbody tr:hover {
 
 /* Responsive overrides for this module's own rules. */
 
-@media (max-width: 1080px) {
-  .category-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 900px) {
-  .category-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .steel-price-overview {
     padding: 1.25rem;
   }
@@ -869,22 +766,6 @@ tbody tr:hover {
     padding-block: 4rem;
   }
 
-  .category-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .category-card {
-    grid-template-columns: 8rem 1fr;
-    grid-template-rows: minmax(8rem, auto);
-  }
-
-  .category-card > b {
-    display: none;
-  }
-
-  .category-card > span {
-    align-content: center;
-  }
 
   .search-status {
     align-items: flex-start;

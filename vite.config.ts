@@ -14,10 +14,5 @@ const allowViteDevelopmentStyles = (): Plugin => ({
 });
 
 export default defineConfig(({ command }) => ({
-  base: "/",
   plugins: [react(), ...(command === "serve" ? [allowViteDevelopmentStyles()] : [])],
-  build: {
-    outDir: "dist",
-    sourcemap: false,
-  },
 }));
