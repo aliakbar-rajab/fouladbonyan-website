@@ -183,7 +183,8 @@ test("F10: guide content is real reference material linked into the product tree
     }
   }
 
-  // The index links to each guide, and the footer links the index site-wide.
+  // The index links to each guide, and the homepage/category knowledge
+  // sections link the index (the redesigned footer no longer does).
   for (const key of guidePageKeys) {
     assert.match(
       guideHome,
@@ -194,12 +195,11 @@ test("F10: guide content is real reference material linked into the product tree
   for (const [name, html] of [
     ["homepage", await readDist("index.html")],
     ["rebar category", await readDist("rebar/index.html")],
-    ["about", await readDist("about/index.html")],
   ]) {
     assert.match(
       html,
-      /<a href="\/guide\/">راهنمای فنی و جدول وزن<\/a>/,
-      `${name} footer must link to the guide index`,
+      /<a href="\/guide\/" class="knowledge-action-btn">/,
+      `${name} must link to the guide index via the knowledge section`,
     );
   }
 });

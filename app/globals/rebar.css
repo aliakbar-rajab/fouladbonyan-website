@@ -142,36 +142,23 @@
   border-inline-start: 1px solid #e1e1e6;
 }
 
-.rebar-stat-icon {
-  height: 1.65rem;
-  color: #42465a;
-  font-family: Arial, sans-serif;
-  font-size: 1.7rem;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.rebar-stat-icon.is-max,
 .rebar-stats article.is-max strong {
   color: #d72f4b;
 }
 
-.rebar-stat-icon.is-min,
 .rebar-stats article.is-min strong {
   color: #13b86c;
 }
 
-.rebar-stat-icon.is-change,
 .rebar-stats article.is-change strong {
   color: #46527e;
 }
 
-.rebar-stat-icon.is-average,
 .rebar-stats article.is-average strong {
   color: #13a4a6;
 }
 
-.rebar-stats article > span:not(.rebar-stat-icon) {
+.rebar-stats article > span {
   color: #5d5e69;
   font-size: 0.8rem;
 }

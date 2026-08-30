@@ -35,19 +35,10 @@
   /* Cinematic Liquid Steel */
   --steel-1000: #050708;
   --steel-950: #090c0f;
-  --steel-900: #0e1215;
-  --steel-850: #14191d;
-  --steel-800: #1a2025;
-  --steel-700: #2a3238;
-  --steel-500: #69747c;
-  --steel-200: #cbd1d5;
   --steel-100: #e8ecee;
   --bronze-500: #d79200;
-  --bronze-400: #f6b500;
   --bronze-300: #ffd45a;
-  --surface-quiet: rgb(255 255 255 / 4%);
   --surface-control: rgb(17 22 26 / 76%);
-  --surface-feature: rgb(12 16 19 / 88%);
   --surface-border: rgb(255 255 255 / 11%);
   --surface-highlight: rgb(255 255 255 / 18%);
   --radius-sm: 10px;

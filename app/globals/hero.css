@@ -146,7 +146,7 @@
   display: block;
 }
 
-.hero-content > p:not(.hero-kicker) {
+.hero-content > p {
   max-width: 650px;
   margin: 1.2rem 0 0;
   color: #ededee;

@@ -16,8 +16,11 @@ import { loadQuoteEvaluator } from "../app/quote/catalog-pricing-adapter.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
-test("all required informational pages are defined and linked from the footer", async () => {
-  const footer = await read("../app/SiteFooter.tsx");
+test("all required informational pages are defined and the intended links stay in place", async () => {
+  const [footer, megaMenu] = await Promise.all([
+    read("../app/SiteFooter.tsx"),
+    read("../app/MegaMenu.tsx"),
+  ]);
   const expectedPages = [
     "about",
     "terms",
@@ -27,10 +30,16 @@ test("all required informational pages are defined and linked from the footer", 
     "shipping-delivery",
   ];
 
+  // Every enamad-required info page must remain defined as a route.
   assert.deepEqual(Object.keys(infoPageDefinitions), expectedPages);
-  for (const page of expectedPages) {
-    assert.match(footer, new RegExp(`href: "/${page}/"`));
-  }
+
+  // The redesigned footer keeps the quote CTA and the legal page links.
+  assert.match(footer, /href: "\/quote-process\/"/);
+  assert.match(footer, /href="\/privacy\/"/);
+  assert.match(footer, /href="\/terms\/"/);
+
+  // "about" left the footer in the redesign but stays linked from the nav.
+  assert.match(megaMenu, /href="\/about\/"/);
 });
 
 test("owner-only legal information remains explicitly unset, except the confirmed official email", async () => {

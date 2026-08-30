@@ -113,8 +113,7 @@ body {
   font-weight: 610;
 }
 
-.hero-content > p,
-.hero-content > p:not(.hero-kicker) {
+.hero-content > p {
   max-width: 42rem;
   margin: 1.3rem 0 0;
   color: #d7dcde;
@@ -740,8 +739,7 @@ body {
 .factory-price-card,
 .filter-card,
 .price-source-card,
-.rebar-contact-card,
-.rebar-calculator {
+.rebar-contact-card {
   border-color: #d7dcdf;
   border-radius: var(--radius-md);
   box-shadow: 0 18px 55px rgb(0 0 0 / 12%);
@@ -775,10 +773,6 @@ body {
 
 .rebar-stats article {
   min-height: 6.7rem;
-}
-
-.rebar-stat-icon {
-  display: none;
 }
 
 .rebar-stat-marker {

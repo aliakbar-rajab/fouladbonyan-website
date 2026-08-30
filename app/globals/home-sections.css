@@ -83,8 +83,7 @@
   margin-bottom: 2rem;
 }
 
-.section-heading > span,
-.quote-inner > div > span {
+.section-heading > span {
   display: inline-flex;
   align-items: center;
   min-height: 2rem;

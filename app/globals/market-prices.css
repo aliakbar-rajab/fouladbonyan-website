@@ -22,16 +22,6 @@
   color: #e1e1e4;
 }
 
-.market-prices-state {
-  margin: 0;
-  padding: 1.1rem 1.25rem;
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: var(--radius);
-  background: rgb(255 255 255 / 6%);
-  color: #d8d8dc;
-  text-align: center;
-}
-
 .market-prices.is-status-only {
   padding-block: 0.8rem;
 }
