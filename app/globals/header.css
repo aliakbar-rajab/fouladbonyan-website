@@ -49,7 +49,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  transition: min-height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Brand ------------------------------------------------------------------ */
@@ -59,6 +58,10 @@
   align-items: center;
   gap: 1.1rem;
   min-width: 0;
+}
+
+.site-header .brand {
+  min-height: 2.75rem;
 }
 
 /*
@@ -73,7 +76,6 @@
   aspect-ratio: 571 / 603;
   display: block;
   object-fit: contain;
-  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .brand-copy {
@@ -238,7 +240,6 @@
   display: flex;
   align-items: center;
   gap: 0.15rem;
-  transition: min-height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .primary-nav {
@@ -250,7 +251,7 @@
 
 .primary-nav > a,
 .products-menu > button {
-  min-height: 2.4rem;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -286,7 +287,7 @@
 
 .header-quote {
   margin-inline-start: auto;
-  min-height: 2.4rem;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   padding-inline: 1.15rem;

@@ -155,8 +155,8 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             </a>
           </div>
 
-          <ul className="footer-lines-list">
-            {siteConfig.contact.phones.map((phone) => (
+          <ul className="footer-lines-list footer-lines-list--primary">
+            {siteConfig.contact.phones.slice(0, 1).map((phone) => (
               <li key={phone.href}>
                 <GlassSurface className="fg-pill" {...smallGlass}>
                   <a className="fg-pill-link" href={phone.href} dir="ltr">
@@ -165,20 +165,38 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
                 </GlassSurface>
               </li>
             ))}
-            {siteConfig.contact.management.map((contact) => (
-              <li className="footer-line-item--named" key={contact.href}>
-                <GlassSurface
-                  className="fg-pill fg-pill--named"
-                  {...smallGlass}
-                >
-                  <a className="fg-pill-link" href={contact.href}>
-                    <span className="fg-pill-name">{contact.name}</span>
-                    <span dir="ltr">{contact.label}</span>
-                  </a>
-                </GlassSurface>
-              </li>
-            ))}
           </ul>
+
+          <details className="footer-lines-more">
+            <summary>
+              سایر خطوط فروش و مدیریت
+              <span aria-hidden="true">+</span>
+            </summary>
+            <ul className="footer-lines-list footer-lines-list--secondary">
+              {siteConfig.contact.phones.slice(1).map((phone) => (
+                <li key={phone.href}>
+                  <GlassSurface className="fg-pill" {...smallGlass}>
+                    <a className="fg-pill-link" href={phone.href} dir="ltr">
+                      {phone.label}
+                    </a>
+                  </GlassSurface>
+                </li>
+              ))}
+              {siteConfig.contact.management.map((contact) => (
+                <li className="footer-line-item--named" key={contact.href}>
+                  <GlassSurface
+                    className="fg-pill fg-pill--named"
+                    {...smallGlass}
+                  >
+                    <a className="fg-pill-link" href={contact.href}>
+                      <span className="fg-pill-name">{contact.name}</span>
+                      <span dir="ltr">{contact.label}</span>
+                    </a>
+                  </GlassSurface>
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
 
         <div className="footer-base">

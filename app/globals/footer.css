@@ -199,7 +199,7 @@
 
 .footer-card--brand .brand-copy span {
   color: #918b81;
-  font-size: 0.66rem;
+  font-size: 0.78rem;
 }
 
 .footer-brand-desc {
@@ -211,7 +211,7 @@
 
 .footer-whatsapp {
   margin-top: auto;
-  min-height: 2.7rem;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
@@ -278,7 +278,7 @@
 }
 
 .footer-link-list a {
-  min-height: 2rem;
+  min-height: 2.75rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -444,6 +444,7 @@
 
 .footer-lines-map {
   margin-inline-start: auto;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -482,12 +483,63 @@
   flex: 1 1 11.5rem;
 }
 
+.footer-lines-list--primary li {
+  flex: 0 1 13rem;
+}
+
+.footer-lines-more {
+  border-top: 1px solid rgba(255, 255, 255, 0.065);
+  padding-top: 0.55rem;
+}
+
+.footer-lines-more summary {
+  min-height: 2.75rem;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding-inline: 0.8rem;
+  border-radius: 11px;
+  color: #d2cdc5;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.footer-lines-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.footer-lines-more summary:hover {
+  background: rgba(246, 181, 0, 0.08);
+  color: #ffd15e;
+}
+
+.footer-lines-more summary span {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1px solid rgba(246, 181, 0, 0.24);
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.footer-lines-more[open] summary span {
+  transform: rotate(45deg);
+}
+
+.footer-lines-list--secondary {
+  margin-top: 0.65rem;
+}
+
 .fg-pill > .glass-surface__content {
   padding: 0;
 }
 
 .fg-pill-link {
-  min-height: 2.65rem;
+  min-height: 2.75rem;
   width: 100%;
   display: flex;
   align-items: center;
@@ -563,7 +615,7 @@
 }
 
 .fg-chip-content {
-  min-height: 2.3rem;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.42rem;
@@ -610,6 +662,9 @@
 }
 
 .footer-base-legal a {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
   color: #a29c93;
   transition: color 0.18s ease;
 }
@@ -657,7 +712,7 @@
   }
 
   .footer-link-list a {
-    min-height: 2.45rem;
+    min-height: 2.75rem;
   }
 
   .footer-lines-map {
@@ -732,4 +787,3 @@
     box-shadow: 0 4px 12px rgba(246, 181, 0, 0.3);
   }
 }
-

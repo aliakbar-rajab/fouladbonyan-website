@@ -149,6 +149,14 @@
   color: #e1e1e4;
 }
 
+.price-workspace {
+  scroll-margin-top: calc(var(--header-nav-h) + 1rem);
+}
+
+.price-workspace-tools {
+  margin-bottom: 1.25rem;
+}
+
 /*
  * Product search. It used to live in the header, where it grew to 704px and
  * outweighed everything around it; it belongs with the price table it filters,
@@ -156,7 +164,7 @@
  */
 .site-search {
   max-width: 34rem;
-  height: 3.1rem;
+  min-height: 3.1rem;
   display: flex;
   overflow: hidden;
   margin-bottom: 1.1rem;
@@ -176,6 +184,7 @@
 
 .site-search input {
   min-width: 0;
+  min-height: 2.75rem;
   flex: 1;
   padding-inline: 1.15rem;
   border: 0;
@@ -191,6 +200,7 @@
 
 .site-search button {
   min-width: 6rem;
+  min-height: 2.75rem;
   border: 0;
   background: var(--brand-yellow);
   color: var(--ink);
@@ -238,9 +248,9 @@
 }
 
 .product-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 0.4rem;
-  overflow-x: auto;
   padding: 0.5rem;
   border: 1px solid var(--glass-dark-border);
   border-radius: 14px 14px 0 0;
@@ -249,31 +259,13 @@
   backdrop-filter: var(--glass-blur);
 }
 
-@media (max-width: 640px) {
-  .product-tabs {
-    scrollbar-width: none;
-  }
-
-  .product-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .product-tabs-viewport::after {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    inset-block: 1px;
-    left: 1px;
-    width: 2.5rem;
-    pointer-events: none;
-    border-radius: 0 11px 11px 0;
-    background: linear-gradient(to left, rgb(9 12 15 / 0%), #090c0f 85%);
-  }
+.product-select-mobile {
+  display: none;
 }
 
 .product-tabs a,
 .product-tabs button {
-  min-width: 6.5rem;
+  min-width: 0;
   min-height: 3.1rem;
   flex: 1 0 auto;
   display: inline-flex;
@@ -388,6 +380,7 @@
 }
 
 .overview-header-info p {
+  max-width: 68ch;
   margin: 0;
   color: #c4c5ca;
   font-size: 0.95rem;
@@ -412,7 +405,7 @@
   padding: 1.1rem 1rem;
   background: #232326;
   color: #e0e1e6;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 900;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
@@ -435,6 +428,7 @@
 }
 
 .overview-group-link {
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
@@ -513,6 +507,7 @@
 }
 
 .overview-action-link {
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -712,12 +707,15 @@ tbody tr:hover {
   }
 
   .overview-card-header h4 a {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
     color: var(--brand-yellow);
   }
 
   .overview-card-header p {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     color: #a0a1a8;
   }
 
@@ -732,7 +730,7 @@ tbody tr:hover {
 
   .overview-card-price small {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #8c8d94;
   }
 
@@ -747,13 +745,15 @@ tbody tr:hover {
   }
 
   .overview-card-price span {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #8c8d94;
     margin-inline-start: 0.25rem;
   }
 
   .overview-card-btn {
     display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
     padding: 0.45rem 0.75rem;
     border-radius: 6px;
     background: rgba(246, 181, 0, 0.15);
@@ -770,5 +770,39 @@ tbody tr:hover {
   .search-status {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .product-tabs-viewport {
+    display: none;
+  }
+
+  .product-select-mobile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    margin-block: 1rem 1.25rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--glass-dark-border);
+    border-radius: 12px;
+    background: var(--glass-dark-bg);
+  }
+
+  .product-select-mobile label {
+    color: #d9dddf;
+    font-size: 0.88rem;
+    font-weight: 800;
+  }
+
+  .product-select-mobile select {
+    width: 100%;
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: #171c20;
+    color: #fff;
+    font: inherit;
+    font-weight: 800;
   }
 }

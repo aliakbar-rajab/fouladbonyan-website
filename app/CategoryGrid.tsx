@@ -1,26 +1,21 @@
-import { productGroups, type ProductGroupId } from "./category-meta";
+import { productGroups } from "./category-meta";
 import { getCategoryImageSources } from "./image-utils";
 
-interface CategoryGridProps {
-  activeGroup: ProductGroupId;
-}
-
-export function CategoryGrid({ activeGroup }: CategoryGridProps) {
+export function CategoryGrid() {
   return (
     <div className="price-family-navigator" id="products">
       <div className="price-family-heading">
-        <h3>انتخاب خانواده محصول</h3>
-        <p>برای ورود به جدول تخصصی، یک گروه فولادی را انتخاب کنید.</p>
+        <h3>راهنمای خانواده‌های فولادی</h3>
+        <p>پس از مرور قیمت‌ها، مشخصات و کاربرد هر خانواده را بررسی کنید.</p>
       </div>
       <div className="category-grid">
         {productGroups.map((group) => {
           const sources = getCategoryImageSources(group.image);
           return (
             <a
-              className={`category-card${group.id === activeGroup ? " is-active" : ""}`}
+              className="category-card"
               href={`/${group.id}/`}
               key={group.id}
-              aria-current={group.id === activeGroup ? "true" : undefined}
             >
               <picture>
                 <source

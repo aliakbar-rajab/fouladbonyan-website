@@ -32,11 +32,106 @@
   text-align: center;
 }
 
+.market-prices.is-status-only {
+  padding-block: 0.8rem;
+}
+
+.market-status-rail {
+  min-height: 4.25rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 5%);
+  color: #e7eaec;
+}
+
+.market-status-rail h2,
+.market-status-rail p {
+  margin: 0;
+}
+
+.market-status-rail h2 {
+  color: #f5f6f7;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.market-status-rail p {
+  max-width: 68ch;
+  margin-top: 0.15rem;
+  color: #adb6bb;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.market-status-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #f6b500;
+  box-shadow: 0 0 0 0.3rem rgb(246 181 0 / 12%);
+}
+
+.market-status-dot.is-loading {
+  animation: market-status-pulse 1.4s ease-in-out infinite;
+}
+
+.market-status-dot.is-unavailable {
+  background: #d9a441;
+}
+
+.market-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.market-status-rail a,
+.market-status-rail button,
+.market-prices-checked button {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.85rem;
+  border: 1px solid rgb(246 181 0 / 32%);
+  border-radius: 9px;
+  background: rgb(246 181 0 / 9%);
+  color: #ffd45a;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.market-status-rail a:hover,
+.market-status-rail button:hover,
+.market-prices-checked button:hover {
+  border-color: rgb(246 181 0 / 55%);
+  background: rgb(246 181 0 / 16%);
+}
+
 .market-prices-checked {
   margin: 1.1rem 0 0;
   color: #b9b9be;
   font-size: 0.8rem;
   text-align: center;
+}
+
+.market-prices-checked button {
+  margin-inline-start: 0.65rem;
+}
+
+@keyframes market-status-pulse {
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
 }
 
 .market-prices-checked b {
@@ -169,7 +264,28 @@
 }
 
 @media (max-width: 480px) {
+  .market-status-rail {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .market-status-rail > a,
+  .market-status-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .market-status-actions > *,
+  .market-status-rail > a {
+    flex: 1;
+  }
+
   .market-prices-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .market-status-dot.is-loading {
+    animation: none;
   }
 }

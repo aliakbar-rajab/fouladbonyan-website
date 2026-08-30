@@ -67,51 +67,72 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
 
 export function MarketPrices() {
   const state = useMarketPrices();
+  const isStatusOnly = state.status !== "ready";
 
   return (
     <section
-      className="market-prices market-context section"
+      className={`market-prices market-context section${isStatusOnly ? " is-status-only" : ""}`}
       id="market-prices"
       aria-labelledby="market-prices-title"
     >
       <div className="shell">
-        <div className="section-heading market-prices-heading">
-          <h2 id="market-prices-title">زمینه بازار، کنار قیمت فولاد</h2>
-          <p>
-            نرخ طلا، ارز و تتر برای خوانش بهتر فضای بازار؛ مرجع اصلی خرید در
-            جدول‌های تخصصی قیمت فولاد پایین‌تر است.
-          </p>
-        </div>
-
-        {state.status === "loading" ? (
-          <p className="market-prices-state" role="status" aria-live="polite">
-            در حال دریافت نرخ‌های بازار…
-          </p>
-        ) : null}
-
-        {state.status === "unavailable" ? (
-          <p className="market-prices-state" role="alert">
-            نرخ‌های بازار در حال حاضر در دسترس نیست. قیمت مقاطع فولادی در بخش
-            زیر همچنان در دسترس است.
-          </p>
-        ) : null}
-
         {state.status === "ready" ? (
           <>
+            <div className="section-heading market-prices-heading">
+              <h2 id="market-prices-title">زمینه بازار، کنار قیمت فولاد</h2>
+              <p>
+                نرخ طلا، ارز و تتر برای خوانش بهتر فضای بازار؛ مرجع اصلی خرید در
+                جدول‌های تخصصی قیمت فولاد پایین‌تر است.
+              </p>
+            </div>
             <div className="market-prices-grid">
               {state.data.items.map((item) => (
                 <MarketPriceCard item={item} key={item.id} />
               ))}
             </div>
             <p className="market-prices-checked" role="status">
-              نرخ‌ها هر ۵ دقیقه به‌روزرسانی می‌شوند · آخرین بررسی:{" "}
+              {state.isStale
+                ? "نمایش آخرین نرخ معتبر · زمان دریافت: "
+                : "نرخ‌ها هر ۵ دقیقه به‌روزرسانی می‌شوند · آخرین بررسی: "}
               <b>
                 <time dateTime={state.data.fetchedAt}>
                   {formatCheckedAt(state.data.fetchedAt)}
                 </time>
               </b>
+              {state.isStale ? (
+                <button type="button" onClick={state.retry}>
+                  به‌روزرسانی دوباره
+                </button>
+              ) : null}
             </p>
           </>
+        ) : null}
+
+        {state.status === "loading" ? (
+          <div className="market-status-rail" role="status" aria-live="polite">
+            <span className="market-status-dot is-loading" aria-hidden="true" />
+            <div>
+              <h2 id="market-prices-title">در حال دریافت زمینه بازار</h2>
+              <p>جدول قیمت فولاد آماده است و پایین‌تر در دسترس شماست.</p>
+            </div>
+            <a href="#price-workspace">مشاهده قیمت فولاد</a>
+          </div>
+        ) : null}
+
+        {state.status === "unavailable" ? (
+          <div className="market-status-rail" role="alert">
+            <span className="market-status-dot is-unavailable" aria-hidden="true" />
+            <div>
+              <h2 id="market-prices-title">نرخ‌های مکمل بازار دریافت نشد</h2>
+              <p>قیمت مقاطع فولادی مستقل از این سرویس و همچنان در دسترس است.</p>
+            </div>
+            <div className="market-status-actions">
+              <button type="button" onClick={state.retry}>
+                تلاش دوباره
+              </button>
+              <a href="#price-workspace">مشاهده قیمت فولاد</a>
+            </div>
+          </div>
         ) : null}
       </div>
     </section>

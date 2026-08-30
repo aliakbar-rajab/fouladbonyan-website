@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type MarketPriceItem = {
   id: string;
@@ -21,6 +21,10 @@ export type MarketPricesState =
   | { status: "loading" }
   | { status: "unavailable" }
   | { status: "ready"; data: MarketPriceData; isStale: boolean };
+
+export type MarketPricesResult = MarketPricesState & {
+  retry: () => void;
+};
 
 // The endpoint's own fresh window is 5 minutes; treating anything past
 // ~15 minutes as stale gives one missed refresh of slack before surfacing
@@ -64,9 +68,14 @@ function isMarketPriceData(value: unknown): value is MarketPriceData {
   );
 }
 
-export function useMarketPrices(): MarketPricesState {
+export function useMarketPrices(): MarketPricesResult {
   const [state, setState] = useState<MarketPricesState>({ status: "loading" });
+  const [requestVersion, setRequestVersion] = useState(0);
   const lastGoodRef = useRef<MarketPriceData | null>(null);
+  const retry = useCallback(() => {
+    setState({ status: "loading" });
+    setRequestVersion((version) => version + 1);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -106,7 +115,7 @@ export function useMarketPrices(): MarketPricesState {
       active = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [requestVersion]);
 
-  return state;
+  return { ...state, retry };
 }

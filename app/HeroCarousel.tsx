@@ -192,9 +192,6 @@ export function HeroCarousel({
           </div>
           <p>تفکیک محصول، کارخانه و مشخصات فنی</p>
           <p>منبع و زمان دریافت کنار جدول‌ها</p>
-          <button type="button" onClick={onGoToPrices}>
-            مشاهده قیمت‌ها
-          </button>
         </div>
 
         <div className="shell carousel-controls">

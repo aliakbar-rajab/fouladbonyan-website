@@ -77,8 +77,8 @@ test("a direct category route activates its tab and scrolls to prices", async ()
   await waitFor(() => {
     assert.deepEqual(scrollCalls, [
       {
-        id: "prices",
-        options: { behavior: "smooth", block: "start" },
+        id: "price-workspace",
+        options: { behavior: "auto", block: "start" },
       },
     ]);
   });
@@ -121,6 +121,19 @@ test("the homepage keeps its default tab and does not auto-scroll", async () => 
   // Verify overview table is present and has crawlable links to all 8 category pages
   const overviewTable = document.getElementById("overview-table");
   assert.ok(overviewTable, "Overview table must be present on homepage");
+  const productGuide = document.getElementById("products");
+  assert.ok(productGuide, "Editorial product guide must remain present");
+  assert.equal(
+    overviewTable.compareDocumentPosition(productGuide) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    Node.DOCUMENT_POSITION_FOLLOWING,
+    "The live price overview must precede the editorial product guide",
+  );
+  assert.equal(
+    productGuide.querySelector("[aria-current]"),
+    null,
+    "The homepage product guide must not imply a user selection",
+  );
 
   const expectedCategories = [
     "rebar",
@@ -147,12 +160,12 @@ test("the homepage hero price action reaches the live price workspace", async ()
 
   screen.getByRole("button", { name: "ورود به مرکز قیمت فولاد" }).click();
   assert.deepEqual(scrollCalls.at(-1), {
-    id: "prices",
-    options: { behavior: "smooth", block: "start" },
+    id: "price-workspace",
+    options: { behavior: "auto", block: "start" },
   });
 });
 
-test("a direct category route respects reduced-motion scrolling", async () => {
+test("a direct category route keeps the price jump immediate under reduced motion", async () => {
   prefersReducedMotion = true;
   addRoot("rebar");
   render(React.createElement(App));
@@ -167,7 +180,7 @@ test("a direct category route respects reduced-motion scrolling", async () => {
   await waitFor(() => {
     assert.deepEqual(scrollCalls, [
       {
-        id: "prices",
+        id: "price-workspace",
         options: { behavior: "auto", block: "start" },
       },
     ]);
@@ -219,8 +232,8 @@ test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and
   await waitFor(() => {
     assert.deepEqual(scrollCalls, [
       {
-        id: "prices",
-        options: { behavior: "smooth", block: "start" },
+        id: "price-workspace",
+        options: { behavior: "auto", block: "start" },
       },
     ]);
   });
