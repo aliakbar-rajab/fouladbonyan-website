@@ -32,12 +32,4 @@ export function getTrendPresentation(status, percent) {
   return { direction: "بدون تغییر", symbol: "—", amount: 0 };
 }
 
-export function getCategoryPricingState(category) {
-  const pricedRows = category.factories
-    .flatMap((factory) => factory.rows)
-    .filter((row) => row.price !== null);
-  return {
-    hasPrices: pricedRows.length > 0,
-    units: [...new Set(pricedRows.map((row) => row.unit).filter(Boolean))],
-  };
-}
+export { categoryPricingState as getCategoryPricingState } from "./catalog-pricing.mjs";

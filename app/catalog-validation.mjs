@@ -1,3 +1,5 @@
+import { summarisePricedRows } from "./catalog-pricing.mjs";
+
 const VALID_STATUSES = new Set(["up", "down", "same"]);
 
 function isRecord(value) {
@@ -11,20 +13,12 @@ function assert(condition, message) {
 /**
  * The single definition of what a category summary means: it describes the
  * priced rows of that category and nothing else. Both the fetch scripts and
- * the validator use this, so a summary can never drift from its rows.
+ * the validator use this, so a summary can never drift from its rows. The
+ * definition itself lives in catalog-pricing.mjs, shared with every UI
+ * consumer.
  */
 export function deriveSummaryFromRows(rows) {
-  const prices = rows
-    .map((row) => Number(row.price))
-    .filter((price) => Number.isFinite(price) && price > 0);
-  if (!prices.length) return { min: 0, max: 0, average: 0 };
-  return {
-    min: Math.min(...prices),
-    max: Math.max(...prices),
-    average: Math.round(
-      prices.reduce((total, price) => total + price, 0) / prices.length,
-    ),
-  };
+  return summarisePricedRows(rows);
 }
 
 function validateSummary(summary, location, rows) {

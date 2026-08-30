@@ -6,6 +6,11 @@ import {
   getCategoryPricingState,
   getTrendPresentation,
 } from "../app/catalog-behavior.mjs";
+import {
+  categoryPricedRows,
+  hasDisplayablePriceRange,
+  priceRangesByUnit,
+} from "../app/catalog-pricing.mjs";
 import { buildCatalogSearchGroups } from "../app/catalog-search-coordinator.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-reader.ts";
@@ -256,4 +261,86 @@ test("trend and calculator helpers preserve business meaning", () => {
   assert.equal(calculateRebarWeight(16, 12, 2), (16 ** 2 / 162) * 12 * 2);
   assert.equal(calculateRebarWeight(16, 12, 1.5), null);
   assert.equal(calculateRebarWeight(16, 12, 0), null);
+});
+
+test("catalog-pricing: priced-row extraction ignores null, zero, and non-finite prices", () => {
+  const category = {
+    factories: [
+      {
+        rows: [
+          { price: 1000, unit: "کیلوگرم" },
+          { price: null, unit: "کیلوگرم" },
+          { price: 0, unit: "کیلوگرم" },
+          { price: NaN, unit: "کیلوگرم" },
+          { price: "1000", unit: "کیلوگرم" },
+        ],
+      },
+    ],
+  };
+  const priced = categoryPricedRows(category);
+  assert.equal(priced.length, 1);
+  assert.equal(priced[0].price, 1000);
+});
+
+test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md invariants", () => {
+  const makeCategory = (rows) => ({ factories: [{ rows }] });
+
+  const singleUnit = makeCategory([
+    { price: 10, unit: "کیلوگرم" },
+    { price: 20, unit: "کیلوگرم" },
+    { price: null, unit: "کیلوگرم" },
+  ]);
+  assert.deepEqual(getCategoryPricingState(singleUnit), {
+    hasPrices: true,
+    units: ["کیلوگرم"],
+  });
+  assert.equal(
+    hasDisplayablePriceRange(
+      getCategoryPricingState(singleUnit),
+      { min: 10, max: 20 },
+    ),
+    true,
+  );
+
+  const mixedUnits = makeCategory([
+    { price: 10, unit: "کیلوگرم" },
+    { price: 30, unit: "شاخه" },
+  ]);
+  assert.deepEqual(getCategoryPricingState(mixedUnits), {
+    hasPrices: true,
+    units: ["کیلوگرم", "شاخه"],
+  });
+  assert.equal(
+    hasDisplayablePriceRange(
+      getCategoryPricingState(mixedUnits),
+      { min: 10, max: 30 },
+    ),
+    false,
+  );
+
+  const unpriced = makeCategory([{ price: null, unit: "کیلوگرم" }]);
+  assert.deepEqual(getCategoryPricingState(unpriced), {
+    hasPrices: false,
+    units: [],
+  });
+  assert.equal(
+    hasDisplayablePriceRange(getCategoryPricingState(unpriced), {
+      min: 0,
+      max: 0,
+    }),
+    false,
+  );
+});
+
+test("catalog-pricing: per-unit ranges never cross Sales units", () => {
+  const rows = [
+    { price: 10, unit: "کیلوگرم" },
+    { price: 20, unit: "کیلوگرم" },
+    { price: 100, unit: "شاخه" },
+    { price: null, unit: "شاخه" },
+  ];
+  assert.deepEqual(priceRangesByUnit(rows), [
+    { unit: "کیلوگرم", min: 10, max: 20 },
+    { unit: "شاخه", min: 100, max: 100 },
+  ]);
 });

@@ -1,3 +1,4 @@
+import { hasDisplayablePriceRange } from "./catalog-pricing.mjs";
 import { getCategoryPricingState, getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { formatCatalogNumber } from "./catalog-utils";
@@ -21,10 +22,7 @@ function CategoryOverviewRow({
 }) {
   const href = `/${groupId}/${category.id}/`;
   const pricingState = getCategoryPricingState(category);
-  const hasRange =
-    pricingState.units.length === 1 &&
-    category.summary.min > 0 &&
-    category.summary.max > 0;
+  const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
   const trend = getTrendPresentation(category.summary.status, category.summary.percent);
 
   return (
@@ -85,10 +83,7 @@ function CategoryOverviewCard({
 }) {
   const href = `/${groupId}/${category.id}/`;
   const pricingState = getCategoryPricingState(category);
-  const hasRange =
-    pricingState.units.length === 1 &&
-    category.summary.min > 0 &&
-    category.summary.max > 0;
+  const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
 
   return (
     <article className="overview-card">

@@ -1,4 +1,8 @@
 import {
+  priceRangesByUnit,
+  categoriesPricedRows,
+} from "./catalog-pricing.mjs";
+import {
   productGroups,
   type ProductGroup,
   type ProductGroupId,
@@ -260,26 +264,6 @@ export function buildFallbackOverviews(): CategoryPriceOverview[] {
   }));
 }
 
-function priceRangesByUnit(categories: CatalogCategory[]): OverviewPriceRange[] {
-  const pricesByUnit = new Map<string, number[]>();
-  for (const category of categories) {
-    for (const factory of category.factories) {
-      for (const row of factory.rows) {
-        if (typeof row.price !== "number" || row.price <= 0) continue;
-        const prices = pricesByUnit.get(row.unit) ?? [];
-        prices.push(row.price);
-        pricesByUnit.set(row.unit, prices);
-      }
-    }
-  }
-
-  return Array.from(pricesByUnit, ([unit, prices]) => ({
-    unit,
-    min: Math.min(...prices),
-    max: Math.max(...prices),
-  }));
-}
-
 function summariseGroup(
   group: ProductGroup,
   categories: CatalogCategory[],
@@ -288,7 +272,7 @@ function summariseGroup(
 
   return {
     ...groupFields(group),
-    priceRanges: priceRangesByUnit(categories),
+    priceRanges: priceRangesByUnit(categoriesPricedRows(categories)),
     date: firstSummary?.date || "امروز",
     status: firstSummary?.status || "steady",
     percent: firstSummary?.percent || 0,

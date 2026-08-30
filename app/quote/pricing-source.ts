@@ -1,3 +1,4 @@
+import { categoryPricedRows } from "../catalog-pricing.mjs";
 import type {
   CatalogCategory,
   CatalogSnapshot,
@@ -51,15 +52,8 @@ const averageToman = (prices: number[]) =>
   Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length);
 
 function extractKilogramPrices(category: CatalogCategory): number[] {
-  return category.factories
-    .flatMap((factory) => factory.rows)
-    .filter(
-      (row): row is typeof row & { price: number } =>
-        row.unit === "کیلوگرم" &&
-        typeof row.price === "number" &&
-        Number.isFinite(row.price) &&
-        row.price > 0,
-    )
+  return categoryPricedRows(category)
+    .filter((row) => row.unit === "کیلوگرم")
     .map((row) => row.price);
 }
 
@@ -74,14 +68,8 @@ function extractPieceOptions(
     { size: string; specification?: string; prices: number[] }
   >();
 
-  for (const row of category.factories.flatMap((factory) => factory.rows)) {
-    if (
-      row.unit !== unit ||
-      typeof row.price !== "number" ||
-      !Number.isFinite(row.price) ||
-      row.price <= 0 ||
-      !row.size
-    ) {
+  for (const row of categoryPricedRows(category)) {
+    if (row.unit !== unit || !row.size) {
       continue;
     }
     const groupKey = `${row.size}|${row.specification ?? ""}`;

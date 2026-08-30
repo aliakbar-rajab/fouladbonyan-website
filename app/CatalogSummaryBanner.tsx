@@ -1,4 +1,5 @@
 import { getTrendPresentation } from "./catalog-behavior.mjs";
+import { hasDisplayablePriceRange } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { displayPrice, formatCatalogNumber } from "./catalog-utils";
 import { toPersianDigits } from "./persian-numbers.mjs";
@@ -58,7 +59,7 @@ export function CatalogSummaryBanner({
           قرار دارد.
         </p>
       )}
-      {pricingState.hasPrices && pricingState.units.length === 1 ? (
+      {hasDisplayablePriceRange(pricingState, category.summary) ? (
         <div className="rebar-stats">
           <article className="is-max">
             <StatMarker type="max" />
