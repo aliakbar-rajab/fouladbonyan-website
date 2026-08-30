@@ -7,13 +7,16 @@ import {
 } from "./form-validation";
 import {
   formatToman,
+} from "./quote/calculation";
+import {
   isQuoteProduct,
   isQuoteUnit,
   quoteDisclaimer,
   quoteProductNames,
   type GeneratedQuote,
   type RawQuoteItem,
-} from "./quote-engine";
+} from "./quote-types";
+import { validateQuoteField } from "./quote/validation";
 import type { QuoteItemEstimate } from "./quote-request-estimate";
 import { QuoteDocument } from "./QuoteDocument";
 import { ErrorMessage } from "./request-form-shared";
@@ -132,6 +135,7 @@ export function QuoteRequestForm() {
   const prepared = usePreparedRequest();
   const {
     estimate,
+    evaluator,
     isLoading: isPriceLoading,
     loadError: priceLoadError,
   } = useQuoteRequestEstimate();
@@ -169,7 +173,7 @@ export function QuoteRequestForm() {
     const isCheckbox =
       element instanceof HTMLInputElement && element.type === "checkbox";
     const fieldValue = isCheckbox ? element.checked : value;
-    const errorMsg = estimate.validateField(name, fieldValue);
+    const errorMsg = validateQuoteField(name, fieldValue);
     setFieldError(setErrors, name, errorMsg);
   };
 
@@ -191,7 +195,7 @@ export function QuoteRequestForm() {
       const index = next.findIndex((item) => item.id === itemId);
       if (index !== -1) {
         if ("product" in patch) {
-          const errorMsg = estimate.validateField(
+          const errorMsg = validateQuoteField(
             "product",
             patch.product,
             { itemIndex: index },
@@ -199,7 +203,7 @@ export function QuoteRequestForm() {
           setFieldError(setErrors, `itemProduct-${itemId}`, errorMsg);
         }
         if ("quantity" in patch || "unit" in patch) {
-          const errorMsg = estimate.validateField(
+          const errorMsg = validateQuoteField(
             "quantity",
             next[index].quantity,
             { unit: next[index].unit, itemIndex: index },
@@ -242,7 +246,7 @@ export function QuoteRequestForm() {
       notes: String(form.get("notes") ?? ""),
     };
 
-    const evaluation = estimate.evaluateRequest({
+    const evaluation = evaluator.evaluateRequest({
       contact,
       items,
       acceptDisclaimer: form.get("acceptDisclaimer") === "on",

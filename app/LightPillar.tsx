@@ -408,4 +408,3 @@ export function LightPillar() {
   );
 }
 
-export default LightPillar;

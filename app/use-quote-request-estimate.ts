@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  createRetryableLoader,
+  loadAllGroupCatalogs,
+} from "./catalog-reader";
+import {
+  createQuoteEvaluator,
+  type QuoteEvaluator,
+} from "./quote/evaluator";
+import { extractQuotePricingBaselines } from "./quote/pricing-source";
+import {
   createQuoteRequestEstimate,
   type QuoteRequestEstimate,
 } from "./quote-request-estimate";
-import { loadQuoteEvaluator } from "./quote/catalog-pricing-adapter";
 
-const emptyEstimate = createQuoteRequestEstimate();
+const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
+  async () =>
+    createQuoteEvaluator(
+      extractQuotePricingBaselines(await loadAllGroupCatalogs()),
+    ),
+);
+
+const emptyEvaluator = createQuoteEvaluator();
+const emptyEstimate = createQuoteRequestEstimate(emptyEvaluator);
 
 export function useQuoteRequestEstimate() {
-  const [loadedEstimate, setLoadedEstimate] =
-    useState<QuoteRequestEstimate | null>(null);
+  const [loaded, setLoaded] = useState<{
+    estimate: QuoteRequestEstimate;
+    evaluator: QuoteEvaluator;
+  } | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -17,7 +35,10 @@ export function useQuoteRequestEstimate() {
     loadQuoteEvaluator()
       .then((evaluator) => {
         if (!active) return;
-        setLoadedEstimate(createQuoteRequestEstimate(evaluator));
+        setLoaded({
+          estimate: createQuoteRequestEstimate(evaluator),
+          evaluator,
+        });
         setLoadError(false);
       })
       .catch(() => {
@@ -32,10 +53,11 @@ export function useQuoteRequestEstimate() {
 
   return useMemo(
     () => ({
-      estimate: loadedEstimate ?? emptyEstimate,
-      isLoading: !loadedEstimate && !loadError,
+      estimate: loaded?.estimate ?? emptyEstimate,
+      evaluator: loaded?.evaluator ?? emptyEvaluator,
+      isLoading: !loaded && !loadError,
       loadError,
     }),
-    [loadedEstimate, loadError],
+    [loaded, loadError],
   );
 }

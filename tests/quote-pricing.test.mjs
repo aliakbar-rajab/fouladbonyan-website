@@ -6,22 +6,26 @@ import {
   rialToWords,
 } from "../app/persian-numbers.mjs";
 import {
+  formatToman,
+} from "../app/quote/calculation.ts";
+import { createQuoteEvaluator } from "../app/quote/evaluator.ts";
+import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
+import {
   buildQuoteDocument,
   buildQuoteMessage,
-  createQuoteEvaluator,
-  formatToman,
+} from "../app/quote/serialization.ts";
+import {
+  validateQuoteField,
+  validateQuoteRequestInput,
+} from "../app/quote/validation.ts";
+import {
   isQuoteProduct,
   isQuoteUnit,
   quoteDisclaimer,
   quoteProductNames,
   quoteUnits,
-  validateQuoteField,
-  validateQuoteRequestInput,
-} from "../app/quote-engine.ts";
-import {
-  createQuoteEvaluatorFromCatalog,
-  loadQuoteEvaluator,
-} from "../app/quote/catalog-pricing-adapter.ts";
+} from "../app/quote-types.ts";
+import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
 import { createQuoteRequestEstimate } from "../app/quote-request-estimate.ts";
 
 const contact = {
@@ -37,7 +41,8 @@ test("React consumes the quote estimate flow without coordinating evaluator inte
     "utf8",
   );
   assert.match(source, /estimate\.estimateItems\(items\)/);
-  assert.match(source, /estimate\.evaluateRequest\(/);
+  assert.match(source, /evaluator\.evaluateRequest\(/);
+  assert.match(source, /validateQuoteField\(/);
   assert.doesNotMatch(source, /createQuoteEvaluator|loadQuoteEvaluator|QuoteEvaluator/);
   assert.doesNotMatch(source, /supportsPieceUnits|getPieceOptions/);
   assert.doesNotMatch(source, /approximateTotalToman\s*\/\s*priced\.weightInKg/);
@@ -232,7 +237,9 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
     ],
   };
 
-  const evaluator = createQuoteEvaluatorFromCatalog(mockSnapshot);
+  const evaluator = createQuoteEvaluator(
+    extractQuotePricingBaselines(mockSnapshot),
+  );
   assert.equal(evaluator.supportsPieceUnits("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
@@ -450,11 +457,7 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
   const estimate = createQuoteRequestEstimate(
     createQuoteEvaluator(allEstimates),
   );
-  assert.deepEqual(Object.keys(estimate).sort(), [
-    "estimateItems",
-    "evaluateRequest",
-    "validateField",
-  ]);
+  assert.deepEqual(Object.keys(estimate).sort(), ["estimateItems"]);
 
   const result = estimate.estimateItems([
     {
@@ -484,7 +487,7 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
   assert.equal(result.items[1].unitPriceTomanPerKg, 45_000);
   assert.equal(result.totals.pricedItemCount, 2);
   assert.equal(
-    estimate.validateField("quantity", "۲.۵", {
+    validateQuoteField("quantity", "۲.۵", {
       unit: "شاخه",
       itemIndex: 0,
     }),
@@ -666,8 +669,10 @@ test("rialToWords handles zero, negative, and normal values safely", () => {
   assert.equal(rialToWords(10_000_000), "ده میلیون ریال");
 });
 
-test("loadQuoteEvaluator memoizes and evaluates against live catalog files", async () => {
-  const evaluator = await loadQuoteEvaluator();
+test("quote evaluator evaluates against live catalog files", async () => {
+  const evaluator = createQuoteEvaluator(
+    extractQuotePricingBaselines(await loadAllGroupCatalogs()),
+  );
   const rebarEvaluation = evaluator.evaluateItem({
     id: 1,
     product: "میلگرد",

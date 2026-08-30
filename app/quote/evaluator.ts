@@ -1,88 +1,25 @@
 import {
   aggregateQuoteTotals,
   evaluateItemPricing,
-  formatToman,
-} from "./quote/calculation";
-import type { QuotePricingBaselines } from "./quote/pricing-types";
+} from "./calculation";
+import type { QuotePricingBaselines } from "./pricing-types";
 import {
   buildQuoteDocument,
   buildQuoteMessage,
-} from "./quote/serialization";
+} from "./serialization";
 import {
   normalizeQuoteContact,
-  validateQuoteField,
   validateQuoteRequestInput,
-  type FieldValidationOptions,
-} from "./quote/validation";
-import {
-  isQuoteProduct,
-  isQuoteUnit,
-  quoteDisclaimer,
-  quoteProductNames,
-  quoteUnits,
-  type GeneratedQuote,
-  type GeneratedQuoteItem,
-  type QuoteEvaluationResult,
-  type QuoteItemEvaluation,
-  type QuotePieceOptionChoice,
-  type QuoteProductName,
-  type QuoteTotals,
-  type QuoteUnit,
-  type QuoteValidationResult,
-  type RawQuoteContact,
-  type RawQuoteItem,
-  type RawQuoteRequest,
-} from "./quote-types";
-
-// ---------------------------------------------------------------------------
-// 1. PUBLIC DOMAIN METADATA & UI VALUES
-// ---------------------------------------------------------------------------
-
-export {
-  formatToman,
-  isQuoteProduct,
-  isQuoteUnit,
-  quoteDisclaimer,
-  quoteProductNames,
-  quoteUnits,
-};
-
-export type {
-  GeneratedQuote,
-  GeneratedQuoteItem,
+} from "./validation";
+import type {
   QuoteEvaluationResult,
   QuoteItemEvaluation,
   QuotePieceOptionChoice,
   QuoteProductName,
   QuoteTotals,
-  QuoteUnit,
-  QuoteValidationResult,
-  RawQuoteContact,
   RawQuoteItem,
   RawQuoteRequest,
-};
-
-// ---------------------------------------------------------------------------
-// 2. PURE QUOTE OPERATIONS — no pricing baselines, no catalog load required
-// ---------------------------------------------------------------------------
-
-/** Validate a single form field. Returns empty string if valid, error message otherwise. */
-export { validateQuoteField };
-
-/** Validate a complete quote request input (contact, items, disclaimer). */
-export { validateQuoteRequestInput };
-
-/** Format already-evaluated items/totals into a human-readable Persian copy message. */
-export { buildQuoteMessage };
-
-/** Generate the final printable invoice/quote document from already-evaluated items/totals. */
-export { buildQuoteDocument };
-
-export type { FieldValidationOptions };
-
-// ---------------------------------------------------------------------------
-// 3. BASELINE-BOUND QUOTE EVALUATOR — pricing-dependent operations only
-// ---------------------------------------------------------------------------
+} from "../quote-types";
 
 export type QuoteEvaluator = {
   /** Evaluate a single line item against market pricing baselines. */
@@ -111,7 +48,7 @@ export type QuoteEvaluator = {
 
 /**
  * Construct a QuoteEvaluator over already-derived pricing baselines.
- * Catalog translation belongs to the infrastructure adapter.
+ * Catalog translation belongs to the infrastructure layer (pricing-source).
  */
 export function createQuoteEvaluator(
   source?: QuotePricingBaselines | null,

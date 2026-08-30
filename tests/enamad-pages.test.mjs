@@ -9,10 +9,9 @@ import {
   validateRequired,
 } from "../app/form-validation.ts";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
-import {
-  createQuoteEvaluator,
-} from "../app/quote-engine.ts";
-import { loadQuoteEvaluator } from "../app/quote/catalog-pricing-adapter.ts";
+import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
+import { createQuoteEvaluator } from "../app/quote/evaluator.ts";
+import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
@@ -138,7 +137,9 @@ test("quote estimates reuse site price data and calculate weight-based totals", 
   );
   assert.equal(pieceItem.approximateTotalToman, null);
 
-  const evaluator = await loadQuoteEvaluator();
+  const evaluator = createQuoteEvaluator(
+    extractQuotePricingBaselines(await loadAllGroupCatalogs()),
+  );
   for (const product of ["میلگرد", "تیرآهن", "هاش", "ورق فولادی"]) {
     const evaluated = evaluator.evaluateItem({ product, quantity: "1", unit: "تن" });
     assert.ok(evaluated.approximateTotalToman !== null && evaluated.approximateTotalToman > 0);

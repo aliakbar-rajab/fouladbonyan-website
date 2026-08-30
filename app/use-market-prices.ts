@@ -29,7 +29,7 @@ export type MarketPricesResult = MarketPricesState & {
 // The endpoint's own fresh window is 5 minutes; treating anything past
 // ~15 minutes as stale gives one missed refresh of slack before surfacing
 // it, rather than waiting hours.
-export const STALE_AFTER_MS = 15 * 60 * 1000;
+const STALE_AFTER_MS = 15 * 60 * 1000;
 
 function isTimestampStale(value: unknown, now: number): boolean {
   if (typeof value !== "string") return true;

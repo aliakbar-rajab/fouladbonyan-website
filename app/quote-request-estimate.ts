@@ -1,18 +1,14 @@
 import {
   createQuoteEvaluator,
-  validateQuoteField,
-  type FieldValidationOptions,
   type QuoteEvaluator,
-} from "./quote-engine";
+} from "./quote/evaluator";
 import {
   quoteUnits,
-  type QuoteEvaluationResult,
   type QuoteItemEvaluation,
   type QuotePieceOptionChoice,
   type QuoteTotals,
   type QuoteUnit,
   type RawQuoteItem,
-  type RawQuoteRequest,
 } from "./quote-types";
 
 export type QuoteItemEstimate = QuoteItemEvaluation & {
@@ -29,17 +25,12 @@ export type QuoteItemsEstimate = {
 
 export type QuoteRequestEstimate = {
   estimateItems: (items: RawQuoteItem[]) => QuoteItemsEstimate;
-  evaluateRequest: (request: RawQuoteRequest) => QuoteEvaluationResult;
-  validateField: (
-    field: string,
-    value: unknown,
-    options?: FieldValidationOptions,
-  ) => string;
 };
 
 /**
- * Complete application flow consumed by the quote form. Pricing baselines stay
- * inside QuoteEvaluator; React receives presentation-ready item estimates.
+ * Presentation-ready item estimates consumed by the quote form. Pricing
+ * baselines stay inside QuoteEvaluator; validation and request evaluation are
+ * used directly from the quote modules.
  */
 export function createQuoteRequestEstimate(
   evaluator: QuoteEvaluator = createQuoteEvaluator(),
@@ -65,7 +56,5 @@ export function createQuoteRequestEstimate(
         })),
       };
     },
-    evaluateRequest: (request) => evaluator.evaluateRequest(request),
-    validateField: validateQuoteField,
   };
 }
