@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { siteConfig } from "./site-config";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
+import { PrimaryNav } from "./site-ui";
 import { Breadcrumb, type BreadcrumbItem } from "./Breadcrumb";
 
 /**
@@ -42,23 +43,7 @@ export function InnerPageLayout({
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
-            <a href="/" onClick={closeMobileNav}>
-              صفحه اصلی
-            </a>
-            <a href="/#products" onClick={closeMobileNav}>
-              محصولات
-            </a>
-            <a href="/#prices" onClick={closeMobileNav}>
-              قیمت‌های اطلاع‌رسانی
-            </a>
-            <a href="/about/" onClick={closeMobileNav}>
-              درباره ما
-            </a>
-            <a href="/contact/" onClick={closeMobileNav}>
-              تماس با ما
-            </a>
-          </nav>
+          <PrimaryNav onLinkClick={closeMobileNav} />
         )}
       />
       <main id="main-content" className="info-main">

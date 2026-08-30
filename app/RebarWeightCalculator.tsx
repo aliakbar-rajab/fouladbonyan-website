@@ -14,15 +14,32 @@ export function RebarWeightCalculator() {
   const [length, setLength] = useState("12");
   const [quantity, setQuantity] = useState("1");
 
-  const weight = useMemo(
-    () => calculateRebarWeight(diameter, length, quantity),
-    [diameter, length, quantity],
-  );
-
   const quantityNum = parsePersianNumber(quantity);
   const quantityInvalid =
     quantity !== "" &&
     (quantityNum === null || !Number.isInteger(quantityNum) || quantityNum <= 0);
+
+  /*
+   * Diameter and length get the same invalid treatment as quantity: a weight
+   * computed from silent garbage (0.5 mm, 0 m) is worse than an error. The
+   * diameter floor mirrors the input's own min="1" -- no real rebar is under
+   * 1 mm. Empty stays valid while the field is being cleared mid-edit. An
+   * invalid field suppresses the weight entirely instead of printing one the
+   * inputs contradict.
+   */
+  const diameterNum = parsePersianNumber(diameter);
+  const diameterInvalid =
+    diameter !== "" && (diameterNum === null || diameterNum < 1);
+  const lengthNum = parsePersianNumber(length);
+  const lengthInvalid = length !== "" && (lengthNum === null || lengthNum <= 0);
+
+  const weight = useMemo(
+    () =>
+      diameterInvalid || lengthInvalid || quantityInvalid
+        ? null
+        : calculateRebarWeight(diameter, length, quantity),
+    [diameter, length, quantity, diameterInvalid, lengthInvalid, quantityInvalid],
+  );
 
   return (
     <section className="calculator-card">
@@ -49,9 +66,18 @@ export function RebarWeightCalculator() {
               min="1"
               step="0.1"
               value={diameter}
+              aria-invalid={diameterInvalid}
+              aria-describedby={
+                diameterInvalid ? "rebar-diameter-error" : undefined
+              }
               onChange={(event) => setDiameter(event.target.value)}
             />
           </label>
+          {diameterInvalid ? (
+            <small id="rebar-diameter-error" role="alert">
+              قطر باید حداقل ۱ میلی‌متر باشد.
+            </small>
+          ) : null}
           <label>
             طول هر شاخه (متر)
             <input
@@ -60,9 +86,18 @@ export function RebarWeightCalculator() {
               min="0.1"
               step="0.1"
               value={length}
+              aria-invalid={lengthInvalid}
+              aria-describedby={
+                lengthInvalid ? "rebar-length-error" : undefined
+              }
               onChange={(event) => setLength(event.target.value)}
             />
           </label>
+          {lengthInvalid ? (
+            <small id="rebar-length-error" role="alert">
+              طول هر شاخه باید عددی بزرگ‌تر از صفر باشد.
+            </small>
+          ) : null}
           <label>
             تعداد شاخه
             <input

@@ -17,9 +17,10 @@ import { loadQuoteEvaluator } from "../app/quote/catalog-pricing-adapter.ts";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("all required informational pages are defined and the intended links stay in place", async () => {
-  const [footer, megaMenu] = await Promise.all([
+  const [footer, megaMenu, config] = await Promise.all([
     read("../app/SiteFooter.tsx"),
     read("../app/MegaMenu.tsx"),
+    read("../app/site-config.ts"),
   ]);
   const expectedPages = [
     "about",
@@ -33,8 +34,10 @@ test("all required informational pages are defined and the intended links stay i
   // Every enamad-required info page must remain defined as a route.
   assert.deepEqual(Object.keys(infoPageDefinitions), expectedPages);
 
-  // The redesigned footer keeps the quote CTA and the legal page links.
-  assert.match(footer, /href: "\/quote-process\/"/);
+  // The redesigned footer keeps the quote CTA and the legal page links. Its
+  // quick links come from the shared nav config in site-config.ts.
+  assert.match(config, /footerQuickLinks = \[[\s\S]*?href: "\/quote-process\/"/);
+  assert.match(footer, /footerQuickLinks\.map/);
   assert.match(footer, /href="\/privacy\/"/);
   assert.match(footer, /href="\/terms\/"/);
 

@@ -77,6 +77,13 @@ export function PriceCatalog({
     timeZone: "Asia/Tehran",
   }).format(new Date(catalog.fetchedAt));
 
+  /*
+   * Roving-tabindex focus only, the same contract as the home product tabs in
+   * App.tsx: these tabs are real links, so arrow keys move focus like
+   * Tab/Shift+Tab and the browser's own Enter/click activation of the
+   * now-focused link commits the category. Committing on keydown would switch
+   * the visible catalog without the URL, <title> or metadata following it.
+   */
   const moveCategoryTabFocus = (
     event: ReactKeyboardEvent<HTMLElement>,
     currentIndex: number,
@@ -89,7 +96,6 @@ export function PriceCatalog({
     if (targetIndex === null) return;
 
     event.preventDefault();
-    changeCategory(catalog.categories[targetIndex].id);
     categoryTabRefs.current[targetIndex]?.focus();
   };
 

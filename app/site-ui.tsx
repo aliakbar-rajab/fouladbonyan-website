@@ -1,3 +1,35 @@
+import { primaryNavLinks } from "./site-config";
+
+/**
+ * The plain primary navigation for the non-home shells. The home route renders
+ * the MegaMenu instead. Every destination and label comes from
+ * `siteConfig.primaryNavLinks` so no shell ever renames a route another shell
+ * uses, and `currentHref` marks this shell's own route with
+ * `aria-current="page"` when it is one of the destinations.
+ */
+export function PrimaryNav({
+  currentHref,
+  onLinkClick,
+}: {
+  currentHref?: string;
+  onLinkClick?: () => void;
+}) {
+  return (
+    <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
+      {primaryNavLinks.map((link) => (
+        <a
+          key={link.href}
+          href={link.href}
+          onClick={onLinkClick}
+          aria-current={currentHref === link.href ? "page" : undefined}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 export function Brand({
   headerLogo = false,
   href = "#top",

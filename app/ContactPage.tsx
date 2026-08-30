@@ -9,6 +9,7 @@ import {
 } from "./site-config";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
+import { PrimaryNav } from "./site-ui";
 
 const googleMapsUrl = buildGoogleMapsUrl(siteConfig.officeCoordinates);
 const wazeUrl = buildWazeUrl(siteConfig.officeCoordinates);
@@ -42,23 +43,7 @@ export default function ContactPage() {
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
-            <a href="/" onClick={closeMobileNav}>
-              صفحه اصلی
-            </a>
-            <a href="/#products" onClick={closeMobileNav}>
-              قیمت روز محصولات
-            </a>
-            <a href="/#prices" onClick={closeMobileNav}>
-              راهنمای استعلام
-            </a>
-            <a href="/about/" onClick={closeMobileNav}>
-              درباره ما
-            </a>
-            <a href="/contact/" aria-current="page">
-              تماس با ما
-            </a>
-          </nav>
+          <PrimaryNav currentHref="/contact/" onLinkClick={closeMobileNav} />
         )}
       />
 

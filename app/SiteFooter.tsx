@@ -1,16 +1,8 @@
 import GlassSurface, { type GlassSurfaceProps } from "./GlassSurface";
 import { LightPillar } from "./LightPillar";
 import { WhatsAppIcon } from "./icons";
-import { siteConfig } from "./site-config";
+import { footerQuickLinks, siteConfig } from "./site-config";
 import { Brand } from "./site-ui";
-
-const quickAccessLinks = [
-  { href: "/", label: "صفحه اصلی" },
-  { href: "/#products", label: "محصولات فولادی" },
-  { href: "/#prices", label: "قیمت روز آهن و فولاد" },
-  { href: "/quote-process/", label: "درخواست پیش‌فاکتور" },
-  { href: "/contact/", label: "تماس با ما" },
-] as const;
 
 /*
  * Sales lines are judged by look, not order: repeated digits and round
@@ -95,7 +87,7 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
                 دسترسی سریع
               </p>
               <ul className="footer-link-list">
-                {quickAccessLinks.map((link) => (
+                {footerQuickLinks.map((link) => (
                   <li key={link.href}>
                     <a href={link.href}>{link.label}</a>
                   </li>

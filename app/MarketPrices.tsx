@@ -56,7 +56,7 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
         {trend.amount ? <span>{formatPercent(trend.amount)}٪</span> : null}
       </p>
       <p className="market-price-updated">
-        بروزرسانی:{" "}
+        به‌روزرسانی:{" "}
         <b>
           <time dateTime={item.updatedAt}>{formatUpdatedAt(item.updatedAt)}</time>
         </b>

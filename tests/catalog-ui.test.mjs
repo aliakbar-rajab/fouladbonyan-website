@@ -185,12 +185,22 @@ test("catalog tabs use roving focus and connected tabpanels", async () => {
   assert.equal(firstPanel.id, tabs[0].getAttribute("aria-controls"));
   assert.equal(firstPanel.getAttribute("aria-labelledby"), tabs[0].id);
 
+  // Arrow keys move focus only, exactly like the home product tabs: the
+  // selection must not commit until the focused link is activated.
   tabs[0].focus();
   await user.keyboard("{ArrowLeft}");
   assert.equal(document.activeElement, tabs[1]);
-  assert.equal(tabs[1].getAttribute("aria-selected"), "true");
+  assert.equal(tabs[0].getAttribute("aria-selected"), "true");
+  assert.equal(tabs[1].getAttribute("aria-selected"), "false");
+
+  // Activation (Enter on the focused link) commits, the same path a click uses.
+  await user.keyboard("{Enter}");
+  await waitFor(() =>
+    assert.equal(tabs[1].getAttribute("aria-selected"), "true"),
+  );
   const secondPanel = screen.getByRole("tabpanel");
   assert.equal(secondPanel.id, tabs[1].getAttribute("aria-controls"));
+  assert.equal(secondPanel.getAttribute("aria-labelledby"), tabs[1].id);
 });
 
 test("trend direction is textual and no fake chart is exposed", () => {
@@ -329,6 +339,46 @@ test("calculator rejects fractional branch quantities", async () => {
   assert.equal(quantity.getAttribute("aria-invalid"), "true");
   assert.ok(screen.getByRole("alert"));
   assert.match(screen.getByText(/وزن تقریبی/).textContent, /—/);
+});
+
+test("calculator rejects zero or non-numeric diameter and length", async () => {
+  const user = userEvent.setup({ document });
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+      sidebarExtra: React.createElement(RebarWeightCalculator),
+    }),
+  );
+
+  await user.click(
+    screen.getByRole("button", { name: /محاسبه وزن میلگرد/ }),
+  );
+
+  // A sub-one millimetre diameter used to compute a silently wrong weight.
+  const diameter = screen.getByRole("spinbutton", { name: "قطر (میلی‌متر)" });
+  await user.clear(diameter);
+  await user.type(diameter, "0.5");
+  assert.equal(diameter.getAttribute("aria-invalid"), "true");
+  assert.match(
+    screen.getByRole("alert").textContent,
+    /قطر باید حداقل ۱ میلی‌متر باشد/,
+  );
+  assert.match(screen.getByText(/وزن تقریبی/).textContent, /—/);
+
+  await user.clear(diameter);
+  await user.type(diameter, "16");
+  assert.equal(diameter.getAttribute("aria-invalid"), "false");
+
+  const length = screen.getByRole("spinbutton", { name: "طول هر شاخه (متر)" });
+  await user.clear(length);
+  await user.type(length, "0");
+  assert.equal(length.getAttribute("aria-invalid"), "true");
+  assert.match(
+    screen.getByRole("alert").textContent,
+    /طول هر شاخه باید عددی بزرگ‌تر از صفر باشد/,
+  );
 });
 
 test("a quote request grows and shrinks one item at a time", async () => {

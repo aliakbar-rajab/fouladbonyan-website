@@ -84,7 +84,7 @@ function getRowDetails(
         value: row.factory || factoryName || "—",
       },
       {
-        label: "آخرین بروزرسانی",
+        label: "آخرین به‌روزرسانی",
         value: toPersianDigits(row.updatedDate) || "—",
         iso: unixSecondsToIso(row.updatedAt),
       },
@@ -110,7 +110,7 @@ function getRowDetails(
       value: row.factory || factoryName || "—",
     },
     {
-      label: "آخرین بروزرسانی",
+      label: "آخرین به‌روزرسانی",
       value: toPersianDigits(row.updatedDate) || "—",
       iso: unixSecondsToIso(row.updatedAt),
     },
@@ -181,7 +181,7 @@ export function FactoryPriceCardList({
                 قیمت {category.label} {factory.name}
               </h4>
               <p>
-                آخرین بروزرسانی:{" "}
+                آخرین به‌روزرسانی:{" "}
                 <b>
                   <time dateTime={unixSecondsToIso(factory.updatedAt)}>
                     {toPersianDigits(factory.updatedDate) || "—"}

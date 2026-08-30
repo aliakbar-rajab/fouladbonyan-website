@@ -64,6 +64,32 @@ export function buildWazeUrl({ lat, lng }: typeof siteConfig.officeCoordinates) 
   return `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 }
 
+/*
+ * One canonical primary navigation for every shell. The inner-page nav and the
+ * contact quick nav render exactly this list; the footer swaps the About link
+ * for the quote flow. The header on the home route renders the MegaMenu
+ * instead, which drills into the same destinations. This is the source of
+ * truth so no shell ever renames a route another shell uses -- the label drift
+ * the critique caught between the inner and contact navs.
+ */
+export type NavLink = { href: string; label: string };
+
+export const primaryNavLinks = [
+  { href: "/", label: "صفحه اصلی" },
+  { href: "/#products", label: "محصولات فولادی" },
+  { href: "/#prices", label: "قیمت روز آهن و فولاد" },
+  { href: "/about/", label: "درباره ما" },
+  { href: "/contact/", label: "تماس با ما" },
+] as const satisfies readonly NavLink[];
+
+export const footerQuickLinks = [
+  { href: "/", label: "صفحه اصلی" },
+  { href: "/#products", label: "محصولات فولادی" },
+  { href: "/#prices", label: "قیمت روز آهن و فولاد" },
+  { href: "/quote-process/", label: "درخواست پیش‌فاکتور" },
+  { href: "/contact/", label: "تماس با ما" },
+] as const satisfies readonly NavLink[];
+
 export function buildOrganizationStructuredData() {
   return {
     "@context": "https://schema.org",

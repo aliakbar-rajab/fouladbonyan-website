@@ -122,7 +122,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                     ) : loaded ? (
                       <span className="price-call">تماس بگیرید</span>
                     ) : (
-                      <span className="price-loading">در حال بروزرسانی…</span>
+                      <span className="price-loading">در حال به‌روزرسانی…</span>
                     )}
                   </td>
                   <td className="overview-cell-unit">
