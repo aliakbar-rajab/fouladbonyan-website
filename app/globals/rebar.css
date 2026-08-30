@@ -183,8 +183,8 @@
 }
 
 .rebar-stats small {
-  color: #6b6c76;
-  font-size: 0.68rem;
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .rebar-result-status {
@@ -436,8 +436,8 @@
 }
 
 .rebar-price-table .row-price small {
-  color: #6b6c76;
-  font-size: 0.66rem;
+  color: var(--muted);
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
@@ -535,8 +535,8 @@
 }
 
 .rebar-row-detail dt {
-  color: #6b6c76;
-  font-size: 0.68rem;
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .rebar-row-detail dd {
@@ -722,7 +722,7 @@
 
 .calculator-card > button small {
   color: #888993;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 
 .calculator-card > button > b {
@@ -784,7 +784,7 @@
 
 .price-source-card > span {
   color: #81828b;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .price-source-card > strong {
@@ -1037,14 +1037,14 @@
   .factory-price-card > header p {
     grid-column: 1;
     grid-row: 2;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     text-align: start;
   }
 
   .tax-switch {
     grid-column: 2;
     grid-row: 2;
-    font-size: 0.64rem;
+    font-size: 0.75rem;
   }
 
   .table-scroll {
@@ -1090,7 +1090,7 @@
     content: attr(data-label);
     display: block;
     color: #878891;
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     font-weight: 700;
     margin-bottom: 0.15rem;
   }

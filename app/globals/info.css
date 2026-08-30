@@ -167,7 +167,7 @@
 
 .page-updated {
   padding-top: 1rem;
-  border-top: 1px solid #dddde1;
+  border-top: 1px solid var(--line);
   font-size: 0.88rem;
 }
 

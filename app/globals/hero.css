@@ -134,20 +134,6 @@
   padding-block: 5rem 8rem;
 }
 
-.hero-kicker {
-  width: fit-content;
-  margin: 0 0 1.1rem;
-  padding: 0.4rem 0.85rem;
-  border-inline-start: 4px solid var(--brand-yellow);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  font-size: 0.92rem;
-  font-weight: 800;
-}
-
 .hero h1 {
   max-width: 1000px;
   margin: 0;
@@ -195,13 +181,13 @@
 
 .hero-actions a:first-child {
   border-color: rgba(255, 255, 255, 0.4);
-  background: linear-gradient(135deg, #f6b500 0%, #e09e00 100%);
+  background: linear-gradient(135deg, var(--brand-yellow) 0%, #e09e00 100%);
   color: var(--ink);
   box-shadow: 0 6px 20px rgba(246, 181, 0, 0.35);
 }
 
 .hero-actions a:first-child:hover {
-  background: linear-gradient(135deg, #ffc82d 0%, #f6b500 100%);
+  background: linear-gradient(135deg, #ffc82d 0%, var(--brand-yellow) 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 26px rgba(246, 181, 0, 0.48);
 }

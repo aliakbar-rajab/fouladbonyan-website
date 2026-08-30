@@ -1136,7 +1136,7 @@ body {
   width: 2.1rem;
   height: 2.1rem;
   flex-shrink: 0;
-  color: #f6b500;
+  color: var(--brand-yellow);
 }
 
 .quote-feature-icon svg,
@@ -1297,7 +1297,7 @@ body {
 }
 
 .quote-cta-btn {
-  background: linear-gradient(135deg, #ffd764 0%, #f6b500 50%, #e09900 100%);
+  background: linear-gradient(135deg, #ffd764 0%, var(--brand-yellow) 50%, #e09900 100%);
   color: #0b0f13;
   box-shadow:
     0 10px 30px rgba(246, 181, 0, 0.38),

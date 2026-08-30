@@ -18,7 +18,7 @@
   max-width: 100%;
   margin-block: 1.25rem;
   overflow-x: auto;
-  border: 1px solid #dddde1;
+  border: 1px solid var(--line);
   border-radius: 10px;
 }
 
@@ -35,7 +35,7 @@
 
 .guide-table caption {
   padding: 0.9rem 1rem;
-  border-bottom: 1px solid #dddde1;
+  border-bottom: 1px solid var(--line);
   background: #f1f1f4;
   color: #3d3d43;
   font-size: 0.9rem;
@@ -104,7 +104,7 @@
 .guide-note {
   margin: 1rem 0 0;
   padding-top: 0.9rem;
-  border-top: 1px solid #dddde1;
+  border-top: 1px solid var(--line);
   color: #5b5b61;
   font-size: 0.9rem;
   line-height: 2;
@@ -114,8 +114,8 @@
   display: block;
   margin: 0 0 1rem;
   padding: 1rem 1.15rem;
-  border-inline-start: 5px solid var(--brand-yellow);
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: #f1f1f4;
   color: #252529;
   font-size: clamp(1rem, 2.4vw, 1.2rem);

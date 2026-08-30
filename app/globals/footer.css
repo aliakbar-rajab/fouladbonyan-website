@@ -352,7 +352,7 @@
   justify-content: center;
   gap: 0.55rem;
   border-radius: 13px;
-  background: linear-gradient(140deg, #ffc82f 0%, #f6b500 46%, #d99700 100%);
+  background: linear-gradient(140deg, #ffc82f 0%, var(--brand-yellow) 46%, #d99700 100%);
   color: var(--ink);
   font-size: 1.04rem;
   font-weight: 900;
@@ -783,7 +783,7 @@
 
   .mobile-actions a:last-child {
     border-color: rgba(255, 255, 255, 0.35);
-    background: linear-gradient(135deg, #f6b500 0%, #e29e00 100%);
+    background: linear-gradient(135deg, var(--brand-yellow) 0%, #e29e00 100%);
     box-shadow: 0 4px 12px rgba(246, 181, 0, 0.3);
   }
 }

@@ -72,7 +72,7 @@
   width: 0.7rem;
   height: 0.7rem;
   border-radius: 50%;
-  background: #f6b500;
+  background: var(--brand-yellow);
   box-shadow: 0 0 0 0.3rem rgb(246 181 0 / 12%);
 }
 
@@ -248,7 +248,7 @@
   margin: 0.3rem 0 0;
   padding-top: 0.65rem;
   border-top: 1px solid var(--line);
-  color: #6b6c76;
+  color: var(--muted);
   font-size: 0.74rem;
 }
 

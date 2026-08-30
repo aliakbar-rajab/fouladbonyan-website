@@ -358,10 +358,11 @@
 
 .rebar-mega-menu .mega-group-label {
   margin: 0 0 0.75rem;
-  padding-inline-start: 0.55rem;
-  border-inline-start: 3px solid var(--brand-yellow);
   color: #2d2e35;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .rebar-mega-menu button,
@@ -597,8 +598,8 @@
   }
 
   .site-header .brand-copy span {
-    font-size: 0.58rem;
-    letter-spacing: 0.1em;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
   }
 }
 
