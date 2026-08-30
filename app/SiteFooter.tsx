@@ -12,14 +12,15 @@ const quickAccessLinks = [
   { href: "/contact/", label: "تماس با ما" },
 ] as const;
 
-const infoPageLinks = [
-  { href: "/guide/", label: "راهنمای فنی و جدول وزن" },
-  { href: "/about/", label: "درباره ما" },
-  { href: "/shipping-delivery/", label: "ارسال و تحویل" },
-  { href: "/terms/", label: "شرایط استفاده" },
-  { href: "/privacy/", label: "حریم خصوصی" },
-  { href: "/complaints/", label: "ثبت شکایت و پیگیری" },
-] as const;
+/*
+ * Sales lines are judged by look, not order: repeated digits and round
+ * endings read as "prettier" in Iranian phone-number culture. This maps
+ * `siteConfig.contact.phones` indices to display slots so the prettiest
+ * number (the one already used as the primary CTA number, index 0) anchors
+ * the center, flanked by the next-prettiest, with the two plainer numbers
+ * pushed to the outer edges.
+ */
+const phoneDisplayOrder = [3, 2, 0, 1, 4] as const;
 
 /*
  * Two tunings of the same material — the refraction half. Large panes bend a
@@ -107,14 +108,19 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             className="fg-glass fg-glass--nav"
             {...largeGlass}
           >
-            <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-info">
-              <p className="footer-card-title" id="footer-nav-info">
-                راهنما و قوانین
+            <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-mgmt">
+              <p className="footer-card-title" id="footer-nav-mgmt">
+                تماس با مدیریت
               </p>
-              <ul className="footer-link-list">
-                {infoPageLinks.map((link) => (
-                  <li key={link.href}>
-                    <a href={link.href}>{link.label}</a>
+              <ul className="footer-link-list footer-link-list--contacts">
+                {siteConfig.contact.management.map((contact) => (
+                  <li key={contact.href}>
+                    <a href={contact.href}>
+                      <span className="footer-contact-name">{contact.name}</span>
+                      <span className="footer-contact-number" dir="ltr">
+                        {contact.label}
+                      </span>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -155,48 +161,25 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             </a>
           </div>
 
-          <ul className="footer-lines-list footer-lines-list--primary">
-            {siteConfig.contact.phones.slice(0, 1).map((phone) => (
-              <li key={phone.href}>
-                <GlassSurface className="fg-pill" {...smallGlass}>
-                  <a className="fg-pill-link" href={phone.href} dir="ltr">
-                    {phone.label}
-                  </a>
-                </GlassSurface>
-              </li>
-            ))}
-          </ul>
-
-          <details className="footer-lines-more">
-            <summary>
-              سایر خطوط فروش و مدیریت
-              <span aria-hidden="true">+</span>
-            </summary>
-            <ul className="footer-lines-list footer-lines-list--secondary">
-              {siteConfig.contact.phones.slice(1).map((phone) => (
+          <ul className="footer-lines-list footer-lines-list--spread">
+            {phoneDisplayOrder.map((phoneIndex) => {
+              const phone = siteConfig.contact.phones[phoneIndex];
+              return (
                 <li key={phone.href}>
-                  <GlassSurface className="fg-pill" {...smallGlass}>
+                  <GlassSurface
+                    className={
+                      phoneIndex === 0 ? "fg-pill fg-pill--primary" : "fg-pill"
+                    }
+                    {...smallGlass}
+                  >
                     <a className="fg-pill-link" href={phone.href} dir="ltr">
                       {phone.label}
                     </a>
                   </GlassSurface>
                 </li>
-              ))}
-              {siteConfig.contact.management.map((contact) => (
-                <li className="footer-line-item--named" key={contact.href}>
-                  <GlassSurface
-                    className="fg-pill fg-pill--named"
-                    {...smallGlass}
-                  >
-                    <a className="fg-pill-link" href={contact.href}>
-                      <span className="fg-pill-name">{contact.name}</span>
-                      <span dir="ltr">{contact.label}</span>
-                    </a>
-                  </GlassSurface>
-                </li>
-              ))}
-            </ul>
-          </details>
+              );
+            })}
+          </ul>
         </div>
 
         <div className="footer-base">

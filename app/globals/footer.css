@@ -313,6 +313,31 @@
   transform: scale(1.7);
 }
 
+/* Management contacts carry a name as well as a number, so they drop the
+   bullet and space the two ends of the line instead. */
+.footer-link-list--contacts a {
+  justify-content: space-between;
+}
+
+.footer-link-list--contacts a::before {
+  content: none;
+}
+
+.footer-contact-name {
+  color: #d2cdc5;
+  font-weight: 700;
+}
+
+.footer-contact-number {
+  color: #a29c93;
+  font-size: 0.88rem;
+  transition: color 0.18s ease;
+}
+
+.footer-link-list--contacts a:hover .footer-contact-number {
+  color: #ffd15e;
+}
+
 .footer-card--cta {
   gap: 0.55rem;
 }
@@ -462,9 +487,10 @@
 }
 
 /*
- * Flex rather than a fixed track count: the two management pills carry a name
- * as well as a number and need visibly more room than the five office lines,
- * which an equal-column grid cannot give them without overflowing.
+ * All five sales lines show at once, centered so the prettiest number (the
+ * one already used as the primary CTA number) sits in the visual middle
+ * regardless of RTL/LTR flow, flanked by the next-prettiest, with the two
+ * plainer numbers at the outer edges.
  */
 .footer-lines-list {
   display: flex;
@@ -475,63 +501,25 @@
   list-style: none;
 }
 
-.footer-lines-list li {
-  flex: 1 1 8.5rem;
+.footer-lines-list--spread {
+  justify-content: center;
 }
 
-.footer-lines-list li.footer-line-item--named {
-  flex: 1 1 11.5rem;
+.footer-lines-list--spread li {
+  flex: 0 1 10.5rem;
 }
 
-.footer-lines-list--primary li {
-  flex: 0 1 13rem;
+.fg-pill--primary {
+  border-color: rgba(246, 181, 0, 0.32);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 240, 205, 0.26),
+    0 6px 18px -3px rgba(246, 181, 0, 0.22);
 }
 
-.footer-lines-more {
-  border-top: 1px solid rgba(255, 255, 255, 0.065);
-  padding-top: 0.55rem;
-}
-
-.footer-lines-more summary {
-  min-height: 2.75rem;
-  width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding-inline: 0.8rem;
-  border-radius: 11px;
-  color: #d2cdc5;
-  font-size: 0.9rem;
+.fg-pill--primary .fg-pill-link {
+  color: var(--brand-yellow);
+  font-size: 1rem;
   font-weight: 800;
-  cursor: pointer;
-  list-style: none;
-}
-
-.footer-lines-more summary::-webkit-details-marker {
-  display: none;
-}
-
-.footer-lines-more summary:hover {
-  background: rgba(246, 181, 0, 0.08);
-  color: #ffd15e;
-}
-
-.footer-lines-more summary span {
-  display: grid;
-  place-items: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  border: 1px solid rgba(246, 181, 0, 0.24);
-  border-radius: 50%;
-  transition: transform 0.2s ease;
-}
-
-.footer-lines-more[open] summary span {
-  transform: rotate(45deg);
-}
-
-.footer-lines-list--secondary {
-  margin-top: 0.65rem;
 }
 
 .fg-pill > .glass-surface__content {
@@ -566,22 +554,6 @@
 
 .fg-pill:hover .fg-pill-link {
   color: #ffd15e;
-}
-
-.fg-pill--named .fg-pill-link {
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.fg-pill-name {
-  color: #c0bab0;
-  font-size: 0.79rem;
-  font-weight: 700;
-  transition: color 0.18s ease;
-}
-
-.fg-pill--named:hover .fg-pill-name {
-  color: #d3ac57;
 }
 
 /* --------------------------------------------------------------------------
