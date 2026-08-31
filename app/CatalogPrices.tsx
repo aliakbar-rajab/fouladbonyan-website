@@ -66,7 +66,6 @@ export function PriceCatalog({
     setSizeFilter,
     setTaxIncluded,
     setShowAllFactories,
-    changeCategory,
     clearFilters,
     toggleRow,
   } = useCatalogFilterState(catalog, requestedView);
@@ -81,8 +80,12 @@ export function PriceCatalog({
    * Roving-tabindex focus only, the same contract as the home product tabs in
    * App.tsx: these tabs are real links, so arrow keys move focus like
    * Tab/Shift+Tab and the browser's own Enter/click activation of the
-   * now-focused link commits the category. Committing on keydown would switch
-   * the visible catalog without the URL, <title> or metadata following it.
+   * now-focused link commits the category by navigating to it. Switching the
+   * category in place instead -- which this did until it was caught -- leaves
+   * the URL, <title>, canonical, hero, <h1> and breadcrumb of the page you
+   * arrived on describing a catalog the table below no longer shows. Every
+   * category has its own prerendered page, so following the href is what keeps
+   * all of them agreeing.
    */
   const moveCategoryTabFocus = (
     event: ReactKeyboardEvent<HTMLElement>,
@@ -117,10 +120,6 @@ export function PriceCatalog({
             key={item.id}
             ref={(node) => {
               categoryTabRefs.current[index] = node;
-            }}
-            onClick={(event) => {
-              event.preventDefault();
-              changeCategory(item.id);
             }}
             onKeyDown={(event) => moveCategoryTabFocus(event, index)}
           >

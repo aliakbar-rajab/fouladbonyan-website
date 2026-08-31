@@ -13,8 +13,15 @@ export function localizeCatalogValue(value: string | null | undefined) {
   return toPersianDigits(value);
 }
 
-/** The source publishes `updatedAt` as Unix seconds, for `<time dateTime>` markup. */
-export function unixSecondsToIso(value: number): string {
+/**
+ * The source publishes `updatedAt` as Unix seconds, for `<time dateTime>`
+ * markup. A row the source never dated carries 0, which is a real instant
+ * (1970-01-01) rather than a missing one -- publishing that as the machine
+ * reading beside a visible "—" states a date nobody claimed, so an undated row
+ * gets no `dateTime` at all.
+ */
+export function unixSecondsToIso(value: number): string | undefined {
+  if (!value || !Number.isFinite(value)) return undefined;
   return new Date(value * 1000).toISOString();
 }
 

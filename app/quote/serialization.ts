@@ -9,10 +9,14 @@ import {
 } from "../quote-types";
 import { formatToman } from "./calculation";
 
+// Pinned to Tehran like every other formatter on the site: the date on a quote
+// is the seller's business date, not the reader's, and without the zone a
+// visitor abroad could print one a day off.
 const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
+  timeZone: "Asia/Tehran",
 });
 
 export const persianToday = () => persianDateFormatter.format(new Date());

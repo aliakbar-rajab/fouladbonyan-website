@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
 import { productGroups, type ProductGroupId } from "./category-meta";
+import { primaryNavLinks } from "./site-config";
 import { loadMenuGroup } from "./catalog-reader";
 import { CatalogLoadMessage } from "./site-ui";
 import { ChevronDownIcon } from "./icons";
@@ -82,6 +83,21 @@ type MegaMenuProps = {
   activeGroup: ProductGroupId;
 };
 
+/*
+ * The flat links are siteConfig.primaryNavLinks, in its order, so this shell
+ * cannot rename a destination the other shells use -- /#prices read
+ * "راهنمای استعلام" here while PrimaryNav and the footer called the same href
+ * "قیمت روز آهن و فولاد", which is exactly the drift that config exists to
+ * prevent. The products dropdown stands in for the /#products entry: it is a
+ * disclosure button rather than a link, and it drills into the same
+ * destinations that anchor reaches.
+ */
+const productsEntryIndex = primaryNavLinks.findIndex(
+  (link) => link.href === "/#products",
+);
+const navLinksBeforeProducts = primaryNavLinks.slice(0, productsEntryIndex);
+const navLinksAfterProducts = primaryNavLinks.slice(productsEntryIndex + 1);
+
 export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
   const [megaProduct, setMegaProduct] = useState<ProductGroupId>("rebar");
@@ -120,9 +136,11 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
 
   return (
     <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
-      <a href="/" onClick={onMobileClose}>
-        صفحه اصلی
-      </a>
+      {navLinksBeforeProducts.map((link) => (
+        <a key={link.href} href={link.href} onClick={onMobileClose}>
+          {link.label}
+        </a>
+      ))}
       <div className="products-menu" ref={productMenuRef}>
         <button
           type="button"
@@ -168,15 +186,11 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
         </div>
 
       </div>
-      <a href="/#prices" onClick={onMobileClose}>
-        راهنمای استعلام
-      </a>
-      <a href="/about/" onClick={onMobileClose}>
-        درباره ما
-      </a>
-      <a href="/contact/" onClick={onMobileClose}>
-        تماس با ما
-      </a>
+      {navLinksAfterProducts.map((link) => (
+        <a key={link.href} href={link.href} onClick={onMobileClose}>
+          {link.label}
+        </a>
+      ))}
     </nav>
   );
 }

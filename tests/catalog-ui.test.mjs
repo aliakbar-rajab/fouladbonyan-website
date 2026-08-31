@@ -16,6 +16,7 @@ const { RebarWeightCalculator } = await import(
   "../app/RebarWeightCalculator.tsx"
 );
 const App = (await import("../app/App.tsx")).default;
+const { Breadcrumb } = await import("../app/Breadcrumb.tsx");
 
 afterEach(cleanup);
 
@@ -193,14 +194,38 @@ test("catalog tabs use roving focus and connected tabpanels", async () => {
   assert.equal(tabs[0].getAttribute("aria-selected"), "true");
   assert.equal(tabs[1].getAttribute("aria-selected"), "false");
 
-  // Activation (Enter on the focused link) commits, the same path a click uses.
-  await user.keyboard("{Enter}");
-  await waitFor(() =>
-    assert.equal(tabs[1].getAttribute("aria-selected"), "true"),
+  // Committing is a navigation to the category's own prerendered page, not an
+  // in-place swap: every tab keeps a real href and nothing cancels it. Doing
+  // it in place left the URL, <title>, hero, <h1> and breadcrumb describing
+  // the category the visitor arrived on while the table showed another.
+  for (const [index, tab] of tabs.entries()) {
+    assert.equal(
+      tab.getAttribute("href"),
+      `/${catalog.id}/${catalog.categories[index].id}/`,
+    );
+  }
+
+  // The listener runs after React's own (React 19 delegates at the render
+  // container, which this bubbles past), so it reads the app's decision --
+  // then cancels the event itself, since jsdom cannot navigate.
+  let cancelledByTheApp = null;
+  const observeClick = (event) => {
+    cancelledByTheApp = event.defaultPrevented;
+    event.preventDefault();
+  };
+  document.addEventListener("click", observeClick);
+  try {
+    await user.keyboard("{Enter}");
+  } finally {
+    document.removeEventListener("click", observeClick);
+  }
+
+  assert.equal(
+    cancelledByTheApp,
+    false,
+    "a category tab must be left to the browser so the URL follows the table",
   );
-  const secondPanel = screen.getByRole("tabpanel");
-  assert.equal(secondPanel.id, tabs[1].getAttribute("aria-controls"));
-  assert.equal(secondPanel.getAttribute("aria-labelledby"), tabs[1].id);
+  assert.equal(tabs[0].getAttribute("aria-selected"), "true");
 });
 
 test("trend direction is textual and no fake chart is exposed", () => {
@@ -488,4 +513,37 @@ test("a fractional شاخه quantity is rejected instead of producing a printed 
     null,
     "an invalid submission must not produce a printed quote document",
   );
+});
+
+test("a breadcrumb trail whose crumbs repeat a label still renders one item each", () => {
+  /*
+   * /beam/beam/, /angle/angle/, /channel/channel/ and /profile/box-profile/
+   * all name their leaf exactly what they name their group, so keying the
+   * trail by label collided two crumbs on four shipped pages.
+   */
+  const consoleError = console.error;
+  const complaints = [];
+  console.error = (...args) => complaints.push(String(args[0]));
+
+  try {
+    render(
+      React.createElement(Breadcrumb, {
+        items: [
+          { label: "صفحه اصلی", href: "/" },
+          { label: "تیرآهن", href: "/beam/" },
+          { label: "تیرآهن" },
+        ],
+      }),
+    );
+  } finally {
+    console.error = consoleError;
+  }
+
+  assert.deepEqual(complaints, []);
+  const crumbs = screen.getAllByRole("listitem");
+  assert.equal(crumbs.length, 3);
+  assert.equal(crumbs[2].getAttribute("aria-current"), "page");
+  // The middle crumb keeps its link; only the leaf drops to plain text.
+  assert.equal(within(crumbs[1]).getByRole("link").getAttribute("href"), "/beam/");
+  assert.equal(within(crumbs[2]).queryByRole("link"), null);
 });

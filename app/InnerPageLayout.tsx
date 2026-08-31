@@ -15,6 +15,8 @@ export type InnerPageLayoutProps = {
   eyebrow: string;
   title: string;
   description: string;
+  /** This page's own path, so the primary nav can mark it when it lists it. */
+  currentHref?: string;
   breadcrumbItems: BreadcrumbItem[];
   /** Extra class on the content grid, for pages that need their own rules. */
   contentClassName?: string;
@@ -26,6 +28,7 @@ export function InnerPageLayout({
   eyebrow,
   title,
   description,
+  currentHref,
   breadcrumbItems,
   contentClassName,
   children,
@@ -43,7 +46,7 @@ export function InnerPageLayout({
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <PrimaryNav onLinkClick={closeMobileNav} />
+          <PrimaryNav currentHref={currentHref} onLinkClick={closeMobileNav} />
         )}
       />
       <main id="main-content" className="info-main">

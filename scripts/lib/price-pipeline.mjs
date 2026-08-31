@@ -28,12 +28,11 @@ const SOURCE_ENVELOPE = {
 
 const SOURCE_ROOT = "https://www.fooladiranian.com/productlist/";
 
-/** Build a source URL from a Persian slug, keeping hyphens unescaped. */
+/** Build a source URL from a Persian slug. */
 function sourceUrl(slug) {
-  return new URL(
-    `${encodeURIComponent(slug).replaceAll("%2D", "-")}/`,
-    SOURCE_ROOT,
-  ).href;
+  // encodeURIComponent leaves "-" alone (it is an unreserved character), so
+  // the hyphens in these slugs need no restoring.
+  return new URL(`${encodeURIComponent(slug)}/`, SOURCE_ROOT).href;
 }
 
 const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {

@@ -71,6 +71,12 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
   },
 };
 
+/**
+ * Own keys only. A plain `in` check also answers yes to everything on
+ * Object.prototype, so `/constructor/` and `/toString/` were routed here and
+ * rendered a page with an undefined title, an empty <h1> and the last
+ * section's body. Matches isGuidePageKey.
+ */
 export function isInfoPageKey(value: string): value is InfoPageKey {
-  return value in infoPageDefinitions;
+  return Object.prototype.hasOwnProperty.call(infoPageDefinitions, value);
 }

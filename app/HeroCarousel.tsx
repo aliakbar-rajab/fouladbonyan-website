@@ -26,7 +26,17 @@ export function HeroCarousel({
   subcategory,
 }: HeroCarouselProps) {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [carouselPaused, setCarouselPaused] = useState(false);
+  /*
+   * Two separate reasons to hold the carousel, because they are not the same
+   * promise. Hovering or focusing the hero suspends it for as long as the
+   * pointer or focus is there; pressing the pause button stops it until the
+   * visitor says otherwise. Sharing one flag let a mouse leaving the hero
+   * silently restart a carousel the visitor had explicitly paused -- and flip
+   * the button's own aria-pressed back with it.
+   */
+  const [userPaused, setUserPaused] = useState(false);
+  const [hoverPaused, setHoverPaused] = useState(false);
+  const carouselPaused = userPaused || hoverPaused;
 
   const isCategory = Boolean(categoryGroup);
 
@@ -121,12 +131,12 @@ export function HeroCarousel({
         className="hero"
         aria-roledescription="carousel"
         aria-label="محصولات منتخب بنیان فولاد داریا"
-        onMouseEnter={() => setCarouselPaused(true)}
-        onMouseLeave={() => setCarouselPaused(false)}
-        onFocus={() => setCarouselPaused(true)}
+        onMouseEnter={() => setHoverPaused(true)}
+        onMouseLeave={() => setHoverPaused(false)}
+        onFocus={() => setHoverPaused(true)}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) {
-            setCarouselPaused(false);
+            setHoverPaused(false);
           }
         }}
       >
@@ -233,12 +243,12 @@ export function HeroCarousel({
               className="carousel-pause"
               type="button"
               aria-label={
-                carouselPaused ? "ادامه پخش اسلایدها" : "توقف اسلایدها"
+                userPaused ? "ادامه پخش اسلایدها" : "توقف اسلایدها"
               }
-              aria-pressed={carouselPaused}
-              onClick={() => setCarouselPaused((paused) => !paused)}
+              aria-pressed={userPaused}
+              onClick={() => setUserPaused((paused) => !paused)}
             >
-              {carouselPaused ? "پخش" : "توقف"}
+              {userPaused ? "پخش" : "توقف"}
             </button>
           ) : null}
         </div>

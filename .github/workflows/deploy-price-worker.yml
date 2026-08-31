@@ -13,9 +13,15 @@ name: Deploy price-refresh Worker
 on:
   push:
     branches: ["main"]
+    # Everything the Worker bundle actually pulls in. catalog-validation.mjs
+    # imports catalog-pricing.mjs -- the definition of a priced row and of a
+    # category summary -- so a change there moves what the live Worker accepts
+    # while leaving the deployed copy behind, which is the exact drift this
+    # workflow exists to close.
     paths:
       - "workers/price-refresh/**"
       - "app/catalog-validation.mjs"
+      - "app/catalog-pricing.mjs"
       - "scripts/price-catalog-config.mjs"
 
   workflow_dispatch:

@@ -190,8 +190,9 @@
 
 /*
  * The overflow past the first six factory cards is rendered and then hidden,
- * not left unrendered -- see INITIAL_FACTORY_COUNT in RebarPrices.tsx. The rows
- * have to exist in the prerendered HTML; only their visibility is conditional.
+ * not left unrendered -- see INITIAL_FACTORY_COUNT in app/catalog-types.ts,
+ * applied in FactoryPriceCardList.tsx. The rows have to exist in the
+ * prerendered HTML; only their visibility is conditional.
  */
 .factory-price-card.is-collapsed {
   display: none;

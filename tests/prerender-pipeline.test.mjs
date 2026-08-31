@@ -147,6 +147,65 @@ test("renderStaticDocument transforms shell cleanly and embeds React SSR markup"
   assert.match(html, /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"/);
 });
 
+test("a hostile upstream label cannot break out of the markup it is spliced into", () => {
+  // Titles, descriptions and dataset values are built from category and product
+  // labels scraped off fooladiranian.com, and the payload scripts carry that
+  // catalog verbatim. One quote or one closing script tag in any of them used
+  // to end the attribute or the element early.
+  const nasty = 'میلگرد" onload="x' + "</script><script>alert(1)</script>";
+  const html = renderStaticDocument(MOCK_TEMPLATE, {
+    title: `قیمت ${nasty}`,
+    description: `توضیحات ${nasty}`,
+    pageUrl: "https://fouladbonyan.com/rebar/x/",
+    rootElement: React.createElement("h1", null, "محتوا"),
+    rootAttributes: ` data-initial-subcategory-label="${nasty.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")}"`,
+    heroPreload: null,
+    payloads: [{ id: "initial-page-data", data: { label: nasty } }],
+    breadcrumb: [{ name: nasty, url: "https://fouladbonyan.com/rebar/x/" }],
+    organizationData: null,
+  });
+
+  // No raw quote ever lands inside an attribute value, and no payload or
+  // JSON-LD block ever contains a literal tag delimiter.
+  assert.doesNotMatch(html, /content="[^"]*"\s*onload/);
+  assert.doesNotMatch(html, /<title>[^<]*<script/);
+  for (const [, body] of html.matchAll(
+    /<script[^>]*type="application\/(?:json|ld\+json)"[^>]*>([\s\S]*?)<\/script>/g,
+  )) {
+    assert.doesNotMatch(body, /</);
+    JSON.parse(body);
+  }
+  assert.match(html, /&quot;/);
+  assert.equal(html.split("<script").length - 1, html.split("</script>").length - 1);
+});
+
+test("a replacement-pattern sequence in page content survives the splice verbatim", () => {
+  // String.replace reads $&, $' and $` out of a replacement *string*. Every
+  // splice uses a function replacer so payloads carrying those keep their bytes.
+  const dollars = "قیمت $& و $' و $` و $1";
+  const html = renderStaticDocument(MOCK_TEMPLATE, {
+    title: dollars,
+    description: dollars,
+    pageUrl: "https://fouladbonyan.com/x/",
+    rootElement: React.createElement("p", null, dollars),
+    rootAttributes: "",
+    heroPreload: null,
+    payloads: [{ id: "initial-page-data", data: { note: dollars } }],
+    breadcrumb: [],
+    organizationData: null,
+  });
+
+  // `&` is escaped and React escapes its own `'`; what matters is that no `$`
+  // sequence was *expanded* -- each one is still sitting there literally.
+  assert.match(html, /<title>قیمت \$&amp; و \$' و \$` و \$1<\/title>/);
+  assert.match(html, /<p>قیمت \$&amp; و \$&#x27; و \$` و \$1<\/p>/);
+  // The payload is JSON, not markup, so it keeps every byte.
+  assert.match(html, /"note":"قیمت \$& و \$' و \$` و \$1"/);
+  // `$&` would have pasted the whole matched element back into itself.
+  assert.equal(html.split('<div id="root"').length - 1, 1);
+  assert.equal(html.split("<title>").length - 1, 1);
+});
+
 test("renderStaticDocument injects organization data when provided", () => {
   const orgPayload = { "@type": "Organization", name: "بنیان فولاد داریا" };
   const descriptor = {

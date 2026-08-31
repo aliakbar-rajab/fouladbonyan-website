@@ -70,12 +70,42 @@ export function buildHeroPreloadTag(group) {
     />`;
 }
 
+/*
+ * Titles, descriptions, dataset values and JSON payloads on these pages are
+ * built from category and product labels that come off fooladiranian.com. They
+ * are spliced into a finished HTML document as text, so they are escaped for
+ * the position they land in rather than trusted: one `"` in a scraped label
+ * would otherwise end a meta attribute early, and one `</script` would end a
+ * payload element early.
+ *
+ * Every splice below also uses a *function* replacer. `String.replace` reads
+ * `$&`, `$'` and `` $` `` out of a replacement *string*, which would quietly
+ * corrupt any payload that happened to contain them; a function's return value
+ * is inserted verbatim.
+ */
+const escapeHtmlText = (value) =>
+  String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+const escapeHtmlAttribute = (value) =>
+  escapeHtmlText(value).replace(/"/g, "&quot;");
+
+/** JSON bound for a <script> element: `<` cannot start a tag inside it. */
+const jsonForScript = (data) => JSON.stringify(data).replace(/</g, "\\u003c");
+
+const insert = (value) => () => value;
+
 const datasetAttributeName = (key) =>
   `data-${key.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`)}`;
 
 export function buildRouteRootAttributes(route) {
   return Object.entries(siteRouteDataset(route))
-    .map(([key, value]) => ` ${datasetAttributeName(key)}="${value}"`)
+    .map(
+      ([key, value]) =>
+        ` ${datasetAttributeName(key)}="${escapeHtmlAttribute(value)}"`,
+    )
     .join("");
 }
 
@@ -100,13 +130,13 @@ export function buildBreadcrumbJsonLd(items) {
       item: item.url,
     })),
   };
-  return `\n    <script type="application/ld+json">${JSON.stringify(payload)}</script>`;
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
 const replaceMetaContent = (html, attrMatcher, value) =>
   html.replace(
     new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
-    `$1${value}$2`,
+    (match, prefix, suffix) => `${prefix}${escapeHtmlAttribute(value)}${suffix}`,
   );
 
 export function replaceSocialMeta(html, { title, description, pageUrl }) {
@@ -136,15 +166,22 @@ export function renderStaticDocument(
   },
 ) {
   let html = baseHtml
-    .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
-    .replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${pageUrl}$2`);
+    .replace(
+      /<title>[^<]*<\/title>/,
+      insert(`<title>${escapeHtmlText(title)}</title>`),
+    )
+    .replace(
+      /(<link rel="canonical" href=")[^"]*(")/,
+      (match, prefix, suffix) =>
+        `${prefix}${escapeHtmlAttribute(pageUrl)}${suffix}`,
+    );
 
   // Organization JSON-LD: inject structured data or strip placeholder
   if (organizationData) {
-    const orgJson = JSON.stringify(organizationData);
+    const orgJson = jsonForScript(organizationData);
     html = html.replace(
       /(<script id="organization-structured-data" type="application\/ld\+json">)[\s\S]*?(<\/script>)/,
-      `$1${orgJson}$2`,
+      (match, open, close) => `${open}${orgJson}${close}`,
     );
   } else {
     html = html.replace(
@@ -157,7 +194,7 @@ export function renderStaticDocument(
   if (heroPreload !== undefined) {
     html = html.replace(
       /\s*<link\s+id="hero-image-preload"[\s\S]*?\/>/,
-      heroPreload ? `\n    ${heroPreload}` : "",
+      insert(heroPreload ? `\n    ${heroPreload}` : ""),
     );
   }
 
@@ -167,7 +204,7 @@ export function renderStaticDocument(
   const rootHtml = renderToString(rootElement);
   html = html.replace(
     /<div id="root"[\s\S]*<\/div>/,
-    `<div id="root"${rootAttributes}>${rootHtml}</div>`,
+    insert(`<div id="root"${rootAttributes}>${rootHtml}</div>`),
   );
 
   // Append hydration payloads before </body>
@@ -175,17 +212,17 @@ export function renderStaticDocument(
     const scripts = payloads
       .map(
         ({ id, data }) =>
-          `\n    <script id="${id}" type="application/json">${JSON.stringify(data)}</script>`,
+          `\n    <script id="${id}" type="application/json">${jsonForScript(data)}</script>`,
       )
       .join("");
-    html = html.replace("</body>", `${scripts}\n  </body>`);
+    html = html.replace("</body>", insert(`${scripts}\n  </body>`));
   }
 
   // Inject Breadcrumb JSON-LD before </head>
   if (breadcrumb.length > 0) {
     html = html.replace(
       "</head>",
-      `${buildBreadcrumbJsonLd(breadcrumb)}\n  </head>`,
+      insert(`${buildBreadcrumbJsonLd(breadcrumb)}\n  </head>`),
     );
   }
 

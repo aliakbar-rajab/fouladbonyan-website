@@ -12,7 +12,15 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
             const isLast = index === items.length - 1;
             return (
               <li
-                key={item.label}
+                /*
+                 * Position, not label: a trail is a fixed ordered list that is
+                 * never reordered, and a crumb's label is not unique within it.
+                 * /beam/beam/, /angle/angle/, /channel/channel/ and
+                 * /profile/box-profile/ all repeat their group's label as the
+                 * leaf, which collided the keys and had React warning on four
+                 * shipped pages.
+                 */
+                key={index}
                 className="breadcrumb-item"
                 aria-current={isLast ? "page" : undefined}
               >

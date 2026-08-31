@@ -164,7 +164,7 @@ test("evaluateCatalogSearch handles queries with no matching products cleanly", 
 
   assert.equal(result.matchedGroups.length, 0);
   assert.equal(result.totalResultCount, 0);
-  assert.match(result.statusMessage, /نتیجه‌ای برای «محصول_ناموجود_xyz» پیدا شد/);
+  assert.match(result.statusMessage, /نتیجه‌ای برای «محصول_ناموجود_xyz» پیدا نشد/);
 });
 
 test("priceSectionHeading formats headings for category, subcategory, and home routes", () => {

@@ -82,7 +82,11 @@ function ItemPriceHint({
       </span>
     );
   }
-  if (byPiece && priced.pieceOption && !priced.pieceOptionKey) {
+  // `pieceOption` is resolved *from* `pieceOptionKey`, so testing it here could
+  // never be true and this advice never reached anyone who needed it -- they
+  // got the "enter a valid amount" line below instead, with a valid amount
+  // already entered. The list is what says whether a pick is owed.
+  if (byPiece && priced.pieceOptions.length > 0 && !priced.pieceOptionKey) {
     return (
       <span>
         برای محاسبه قیمت، آیتم دقیق را از فهرست قیمت سایت در فیلد بالا انتخاب
@@ -188,39 +192,57 @@ export function QuoteRequestForm() {
   };
 
   const updateItem = (itemId: number, patch: Partial<RawQuoteItem>) => {
-    setItems((current) => {
-      const next = current.map((item) =>
-        item.id === itemId ? { ...item, ...patch } : item,
+    const index = items.findIndex((item) => item.id === itemId);
+    if (index === -1) return;
+
+    // Patched through the estimate, which reconciles the fields pricing couples
+    // together -- a product that cannot be sold by the piece takes the item's
+    // شاخه unit down with it rather than leaving it stranded.
+    const patched = estimate.applyItemChange(items[index], patch);
+
+    setItems(items.map((item, position) => (position === index ? patched : item)));
+
+    if ("product" in patch) {
+      setFieldError(
+        setErrors,
+        `itemProduct-${itemId}`,
+        validateQuoteField("product", patched.product, { itemIndex: index }),
       );
-      const index = next.findIndex((item) => item.id === itemId);
-      if (index !== -1) {
-        if ("product" in patch) {
-          const errorMsg = validateQuoteField(
-            "product",
-            patch.product,
-            { itemIndex: index },
-          );
-          setFieldError(setErrors, `itemProduct-${itemId}`, errorMsg);
-        }
-        if ("quantity" in patch || "unit" in patch) {
-          const errorMsg = validateQuoteField(
-            "quantity",
-            next[index].quantity,
-            { unit: next[index].unit, itemIndex: index },
-          );
-          setFieldError(setErrors, `itemQuantity-${itemId}`, errorMsg);
-        }
-      }
-      return next;
-    });
+    }
+    // A product change can move the unit, so the quantity rule it is checked
+    // against moves with it.
+    if ("product" in patch || "quantity" in patch || "unit" in patch) {
+      setFieldError(
+        setErrors,
+        `itemQuantity-${itemId}`,
+        validateQuoteField("quantity", patched.quantity, {
+          unit: patched.unit,
+          itemIndex: index,
+        }),
+      );
+    }
     clearDraft();
   };
+
+  /*
+   * Item error messages name the item by its position ("کالای ۲"), so adding or
+   * removing a row makes the messages under it stale and they are dropped.
+   * Contact errors are not renumbered by that, so they stay: clearing every
+   * error made the visitor's outstanding name or phone problem disappear from
+   * the page the moment they added a second product.
+   */
+  const dropItemErrors = () =>
+    setErrors((current) =>
+      Object.fromEntries(
+        Object.entries(current).filter(([field]) => !field.startsWith("item")),
+      ),
+    );
 
   const addItem = () => {
     if (items.length >= MAX_QUOTE_ITEMS) return;
     const added = createQuoteItem(nextItemId.current++);
     setItems((current) => [...current, added]);
-    setErrors({});
+    dropItemErrors();
     clearDraft();
     window.requestAnimationFrame(() => {
       document
@@ -232,7 +254,7 @@ export function QuoteRequestForm() {
   const removeItem = (itemId: number) => {
     if (items.length === 1) return;
     setItems((current) => current.filter((item) => item.id !== itemId));
-    setErrors({});
+    dropItemErrors();
     clearDraft();
   };
 
@@ -567,6 +589,7 @@ export function QuoteRequestForm() {
       {generatedQuote ? (
         <QuoteDocument
           quote={generatedQuote}
+          preparedText={prepared.preparedText}
           onCopy={prepared.copy}
           copyMessage={prepared.copyMessage}
         />

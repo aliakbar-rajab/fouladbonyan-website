@@ -156,7 +156,7 @@ export function evaluateCatalogSearch(
     matchedGroups: [],
     totalResultCount: 0,
     selectedGroupId: productGroups[0].id,
-    statusMessage: `نتیجه‌ای برای «${trimmed}» پیدا شد.`,
+    statusMessage: `نتیجه‌ای برای «${trimmed}» پیدا نشد.`,
   };
 }
 

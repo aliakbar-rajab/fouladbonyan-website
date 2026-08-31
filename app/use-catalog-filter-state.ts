@@ -19,9 +19,15 @@ export function useCatalogFilterState(
     throw new Error(`داده قیمت ${catalog.label} در دسترس نیست.`);
   }
 
-  const [categoryId, setCategoryId] = useState(
-    requestedView?.categoryId ?? initialCategory.id,
-  );
+  /*
+   * Derived, not state: the category a catalog is showing is decided by the
+   * route (or by the view a search asked for), and the tabs that change it are
+   * links that navigate. Holding it in state is what once let the table move
+   * to another category while the page around it still described the one in
+   * the URL.
+   */
+  const categoryId = requestedView?.categoryId ?? initialCategory.id;
+
   const [factoryFilter, setFactoryFilter] = useState(
     requestedView?.factory ?? "",
   );
@@ -62,14 +68,6 @@ export function useCatalogFilterState(
     [category],
   );
 
-  const changeCategory = (id: string) => {
-    setCategoryId(id);
-    setFactoryFilter("");
-    setSizeFilter("");
-    setExpandedRows(new Set());
-    setShowAllFactories(false);
-  };
-
   const clearFilters = () => {
     setFactoryFilter("");
     setSizeFilter("");
@@ -101,7 +99,6 @@ export function useCatalogFilterState(
     setSizeFilter,
     setTaxIncluded,
     setShowAllFactories,
-    changeCategory,
     clearFilters,
     toggleRow,
   };

@@ -457,7 +457,10 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
   const estimate = createQuoteRequestEstimate(
     createQuoteEvaluator(allEstimates),
   );
-  assert.deepEqual(Object.keys(estimate).sort(), ["estimateItems"]);
+  assert.deepEqual(Object.keys(estimate).sort(), [
+    "applyItemChange",
+    "estimateItems",
+  ]);
 
   const result = estimate.estimateItems([
     {
@@ -493,6 +496,74 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
     }),
     "مقدار تقریبی کالای ۱ برای واحد شاخه باید عدد صحیح باشد.",
   );
+});
+
+test("changing to a product that is not sold by the piece takes the piece unit with it", () => {
+  const estimate = createQuoteRequestEstimate(
+    createQuoteEvaluator(allEstimates),
+  );
+  const beamByBranch = {
+    id: 1,
+    product: "تیرآهن",
+    quantity: "2.5",
+    unit: "شاخه",
+    dimensions: "",
+    rebarDiameterMm: "",
+    pieceOptionKey: "",
+  };
+
+  // لوله فولادی is priced by weight only. Left on شاخه, the item was still
+  // priced and validated by the piece while its <select> -- which no longer
+  // listed شاخه -- displayed تن, so a decimal quantity was refused for a unit
+  // the form never showed and could not be selected back.
+  const switched = estimate.applyItemChange(beamByBranch, {
+    product: "لوله فولادی",
+  });
+  assert.equal(switched.unit, "تن");
+
+  const [priced] = estimate.estimateItems([switched]).items;
+  assert.ok(priced.availableUnits.includes(priced.unit));
+  assert.equal(
+    validateQuoteField("quantity", priced.quantity, { unit: priced.unit }),
+    "",
+  );
+
+  // A piece unit survives a change between two products that both sell by it.
+  assert.equal(
+    estimate.applyItemChange(beamByBranch, { product: "میلگرد" }).unit,
+    "شاخه",
+  );
+  // Edits that are not product changes never touch the unit.
+  assert.equal(
+    estimate.applyItemChange(beamByBranch, { quantity: "9" }).unit,
+    "شاخه",
+  );
+});
+
+test("a unit already chosen stays listed when a late price load narrows the options", () => {
+  // The evaluator starts empty while catalog prices load, so every product
+  // offers every unit; the narrowing arrives later. Whatever the item already
+  // carries has to stay in its own <select>, or the control would display a
+  // different unit from the one being priced.
+  const narrowed = createQuoteRequestEstimate(
+    createQuoteEvaluator(allEstimates),
+  ).estimateItems([
+    {
+      id: 1,
+      product: "لوله فولادی",
+      quantity: "3",
+      unit: "شاخه",
+      dimensions: "",
+      rebarDiameterMm: "",
+      pieceOptionKey: "",
+    },
+  ]);
+
+  assert.deepEqual(narrowed.items[0].availableUnits, [
+    "تن",
+    "کیلوگرم",
+    "شاخه",
+  ]);
 });
 
 test("buildQuoteMessage creates a human-readable Persian quote summary with disclaimer", () => {

@@ -65,6 +65,23 @@ function TaxSwitch({
   );
 }
 
+/**
+ * A <time> only when there is a real instant to attach: an undated group has
+ * nothing but a dash to show, and a <time> whose text is "—" carries no
+ * machine reading at all.
+ */
+function FactoryUpdatedTime({
+  updatedAt,
+  updatedDate,
+}: {
+  updatedAt: number;
+  updatedDate: string;
+}) {
+  const iso = unixSecondsToIso(updatedAt);
+  const label = toPersianDigits(updatedDate) || "—";
+  return iso ? <time dateTime={iso}>{label}</time> : <>{label}</>;
+}
+
 function getRowDetails(
   row: CatalogRow,
   factoryName: string,
@@ -183,9 +200,10 @@ export function FactoryPriceCardList({
               <p>
                 آخرین به‌روزرسانی:{" "}
                 <b>
-                  <time dateTime={unixSecondsToIso(factory.updatedAt)}>
-                    {toPersianDigits(factory.updatedDate) || "—"}
-                  </time>
+                  <FactoryUpdatedTime
+                    updatedAt={factory.updatedAt}
+                    updatedDate={factory.updatedDate}
+                  />
                 </b>
               </p>
             </header>

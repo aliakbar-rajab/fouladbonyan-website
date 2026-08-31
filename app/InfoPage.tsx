@@ -182,7 +182,7 @@ function QuoteProcessContent() {
       </ol>
       <aside className="important-notice">
         <strong>توجه مهم</strong>
-        <p>قیمت و شرایط نهایی پس از تماس با واحد فروش اعلام میشود.</p>
+        <p>قیمت و شرایط نهایی پس از تماس با واحد فروش اعلام می‌شود.</p>
         <a className="important-notice-phones-link" href="#phone-numbers">
           مشاهده شماره‌های تماس
         </a>
@@ -274,6 +274,9 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
       eyebrow={definition.eyebrow}
       title={definition.title}
       description={definition.description}
+      // Only /about/ is one of the primary destinations today; the rest simply
+      // match nothing, the same way the contact page's own href does its job.
+      currentHref={`/${page}/`}
       breadcrumbItems={[
         { label: "صفحه اصلی", href: "/" },
         { label: definition.title },

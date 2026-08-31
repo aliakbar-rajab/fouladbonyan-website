@@ -41,7 +41,12 @@ test("all required informational pages are defined and the intended links stay i
   assert.match(footer, /href="\/terms\/"/);
 
   // "about" left the footer in the redesign but stays linked from the nav.
-  assert.match(megaMenu, /href="\/about\/"/);
+  // The mega menu renders the shared nav config rather than its own copy of
+  // these links, so the destination is asserted where it is now declared.
+  assert.match(config, /primaryNavLinks = \[[\s\S]*?href: "\/about\/"/);
+  assert.match(megaMenu, /navLinksBeforeProducts\.map/);
+  assert.match(megaMenu, /navLinksAfterProducts\.map/);
+  assert.match(megaMenu, /primaryNavLinks/);
 });
 
 test("owner-only legal information remains explicitly unset, except the confirmed official email", async () => {

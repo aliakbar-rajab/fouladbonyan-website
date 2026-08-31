@@ -19,10 +19,13 @@ function formatQuoteQuantity(quantity: string) {
 
 export function QuoteDocument({
   quote,
+  preparedText,
   onCopy,
   copyMessage,
 }: {
   quote: GeneratedQuote;
+  /** The same summary the copy button puts on the clipboard. */
+  preparedText: string;
   onCopy: () => void;
   copyMessage: string;
 }) {
@@ -49,6 +52,11 @@ export function QuoteDocument({
             copyLabel="کپی مشخصات درخواست"
             contactLabel="تماس با واحد فروش"
             contactHref={siteConfig.contact.phones[0].href}
+            // The complaint form has offered this route all along; the quote --
+            // the request the sales desk most wants in writing -- did not,
+            // because these two props were simply never passed.
+            emailTitle="درخواست پیش‌فاکتور غیرقطعی"
+            emailBody={preparedText}
           />
         </div>
         <p className="copy-status" role="status" aria-live="polite">
@@ -173,11 +181,14 @@ export function QuoteDocument({
             </div>
 
             <section className="quote-print-summary">
+              {/*
+                One total, once. "جمع ردیف‌های قابل محاسبه" used to sit above
+                it printing the identical number, which read as two different
+                figures that happened to agree. What the reader actually needs
+                beside the total is how much of the request it covers, and that
+                is the row count.
+              */}
               <div className="quote-total-box">
-                <div>
-                  <span>جمع ردیف‌های قابل محاسبه</span>
-                  <strong>{formatRial(quote.totalRial)}</strong>
-                </div>
                 <div>
                   <span>تعداد ردیف‌های برآوردشده</span>
                   <strong>
