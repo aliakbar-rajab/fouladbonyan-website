@@ -77,3 +77,66 @@ test("every prerendered internal navigation and content link resolves", async ()
   assert.ok(checkedLinks > 1_000, "the audit should cover the full prerendered catalog");
   assert.deepEqual(failures, []);
 });
+
+test("every indexable URL in sitemap.xml has at least one internal link from another indexable page", async () => {
+  const sitemapContent = await readFile(resolve(distDir, "sitemap.xml"), "utf8");
+  const sitemapUrls = new Set(
+    (sitemapContent.match(/<loc>[^<]+<\/loc>/g) ?? []).map((loc) =>
+      loc.replace(/<\/?loc>/g, ""),
+    ),
+  );
+
+  assert.equal(sitemapUrls.size, 66, "sitemap must contain 66 indexable URLs");
+
+  const files = await collectHtmlFiles(distDir);
+  const htmlByFile = new Map(
+    await Promise.all(files.map(async (file) => [file, await readFile(file, "utf8")])),
+  );
+
+  // Track in-degree from other indexable pages
+  const inDegreeByUrl = new Map();
+  for (const url of sitemapUrls) {
+    inDegreeByUrl.set(url, 0);
+  }
+
+  // Exemptions: homepage is the root entry point
+  const exemptedUrls = new Set(["https://fouladbonyan.com/"]);
+
+  for (const [sourceFile, html] of htmlByFile) {
+    const sourceUrl = pageUrlFor(sourceFile).href;
+    // Only count links originating from indexable pages in sitemap
+    if (!sitemapUrls.has(sourceUrl)) continue;
+
+    const seenTargetsForPage = new Set();
+    for (const href of anchorHrefs(html)) {
+      if (/^(?:tel:|mailto:)/i.test(href)) continue;
+
+      const target = new URL(href, sourceUrl);
+      if (target.origin !== siteOrigin) continue;
+
+      // Normalize target to match sitemap format (always ends in /)
+      const targetNormalized = target.origin + target.pathname.replace(/\/?$/, "/");
+      if (sitemapUrls.has(targetNormalized) && targetNormalized !== sourceUrl) {
+        seenTargetsForPage.add(targetNormalized);
+      }
+    }
+
+    for (const targetUrl of seenTargetsForPage) {
+      inDegreeByUrl.set(targetUrl, (inDegreeByUrl.get(targetUrl) ?? 0) + 1);
+    }
+  }
+
+  const orphans = [];
+  for (const [url, inDegree] of inDegreeByUrl) {
+    if (exemptedUrls.has(url)) continue;
+    if (inDegree === 0) {
+      orphans.push(url);
+    }
+  }
+
+  assert.deepEqual(
+    orphans,
+    [],
+    `Found indexable URLs with 0 inbound links from other indexable pages: ${orphans.join(", ")}`,
+  );
+});

@@ -149,22 +149,24 @@ export function buildWebSiteJsonLd({ siteUrl }) {
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
-export function buildTechArticleJsonLd({
+export function buildArticleJsonLd({
   headline,
   description,
   pageUrl,
   lastmod,
   siteUrl,
+  image,
 }) {
   const payload = {
     "@context": "https://schema.org",
-    "@type": "TechArticle",
+    "@type": "Article",
     mainEntityOfPage: {
       "@type": "WebPage",
       "@id": pageUrl,
     },
     headline,
     description,
+    ...(image ? { image: [image] } : {}),
     inLanguage: "fa",
     dateModified: lastmod,
     author: {
@@ -184,6 +186,8 @@ export function buildTechArticleJsonLd({
   };
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
+
+export const buildTechArticleJsonLd = buildArticleJsonLd;
 
 const replaceMetaContent = (html, attrMatcher, value) =>
   html.replace(
@@ -386,6 +390,8 @@ export async function collectSitePageDescriptors({
     const groupOgImage = `${siteUrl}/categories/hero-${group.id}-1280.jpg`;
     const groupOgImageAlt = `قیمت ${group.label} | بنیان فولاد داریا`;
 
+    const isSingleCategoryGroup = group.id === "angle" || group.id === "channel";
+
     // Category landing page
     pages.push({
       ...groupLocation,
@@ -394,40 +400,46 @@ export async function collectSitePageDescriptors({
       description: group.seoDescription,
       ogImage: groupOgImage,
       ogImageAlt: groupOgImageAlt,
-      rootElement: React.createElement(App, { initialCategory: group.id }),
+      rootElement: React.createElement(App, {
+        initialCategory: group.id,
+        initialSubcategory: isSingleCategoryGroup ? group.id : undefined,
+      }),
       heroPreload,
       payloads: catalogPayloads,
       organizationData: null,
       breadcrumb: [homeCrumb, groupCrumb],
     });
 
-    // Subcategory pages
-    for (const sub of catalog.categories) {
-      const subRoute = {
-        kind: "catalog",
-        category: group.id,
-        subcategory: sub.id,
-        subcategoryLabel: sub.label,
-      };
-      const subLocation = routeLocation(subRoute, siteUrl);
-      const subUrl = subLocation.pageUrl;
-      pages.push({
-        ...subLocation,
-        lastmod,
-        title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
-        description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
-        ogImage: groupOgImage,
-        ogImageAlt: `قیمت روز ${sub.label} | بنیان فولاد داریا`,
-        rootElement: React.createElement(App, {
-          initialCategory: group.id,
-          initialSubcategory: sub.id,
-          initialSubcategoryLabel: sub.label,
-        }),
-        heroPreload,
-        payloads: catalogPayloads,
-        organizationData: null,
-        breadcrumb: [homeCrumb, groupCrumb, { name: sub.label, url: subUrl }],
-      });
+    // Subcategory pages: single-subcategory families (angle, channel)
+    // are consolidated onto their parent category page.
+    if (!isSingleCategoryGroup) {
+      for (const sub of catalog.categories) {
+        const subRoute = {
+          kind: "catalog",
+          category: group.id,
+          subcategory: sub.id,
+          subcategoryLabel: sub.label,
+        };
+        const subLocation = routeLocation(subRoute, siteUrl);
+        const subUrl = subLocation.pageUrl;
+        pages.push({
+          ...subLocation,
+          lastmod,
+          title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
+          description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
+          ogImage: groupOgImage,
+          ogImageAlt: `قیمت روز ${sub.label} | بنیان فولاد داریا`,
+          rootElement: React.createElement(App, {
+            initialCategory: group.id,
+            initialSubcategory: sub.id,
+            initialSubcategoryLabel: sub.label,
+          }),
+          heroPreload,
+          payloads: catalogPayloads,
+          organizationData: null,
+          breadcrumb: [homeCrumb, groupCrumb, { name: sub.label, url: subUrl }],
+        });
+      }
     }
   }
 
@@ -485,6 +497,14 @@ export async function collectSitePageDescriptors({
     breadcrumb: [homeCrumb, guideIndexCrumb],
   });
 
+  const guideImages = {
+    "rebar-weight-chart": `${siteUrl}/categories/hero-rebar-1280.jpg`,
+    "ribbed-vs-plain-rebar": `${siteUrl}/categories/hero-rebar-1280.jpg`,
+    "beam-weight-chart": `${siteUrl}/categories/hero-beam-1280.jpg`,
+    "ipe-vs-hash-beam": `${siteUrl}/categories/hero-beam-1280.jpg`,
+    "units-and-quote-specs": `${siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
+  };
+
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
     const guideLocation = routeLocation({ kind: "guide", guide: key }, siteUrl);
@@ -498,12 +518,13 @@ export async function collectSitePageDescriptors({
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,
-      extraHeadHtml: buildTechArticleJsonLd({
+      extraHeadHtml: buildArticleJsonLd({
         headline: definition.title,
         description: definition.seoDescription,
         pageUrl,
         lastmod: definition.lastmod,
         siteUrl,
+        image: guideImages[key],
       }),
       breadcrumb: [
         homeCrumb,
@@ -514,6 +535,36 @@ export async function collectSitePageDescriptors({
   }
 
   return { pages, rootLastmod, siteUrl };
+}
+
+export const REDIRECT_ROUTES = [
+  {
+    fromPath: ["angle", "angle"],
+    toUrl: "https://fouladbonyan.com/angle/",
+    targetLabel: "نبشی",
+  },
+  {
+    fromPath: ["channel", "channel"],
+    toUrl: "https://fouladbonyan.com/channel/",
+    targetLabel: "ناودانی",
+  },
+];
+
+export function buildRedirectHtml({ toUrl, targetLabel }) {
+  return `<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=${toUrl}" />
+    <link rel="canonical" href="${toUrl}" />
+    <meta name="robots" content="noindex, follow" />
+    <title>انتقال به قیمت ${targetLabel} | بنیان فولاد داریا</title>
+    <script>location.replace("${toUrl}");</script>
+  </head>
+  <body>
+    <p>در حال انتقال به <a href="${toUrl}">قیمت ${targetLabel}</a>...</p>
+  </body>
+</html>\n`;
 }
 
 /**
@@ -546,6 +597,17 @@ export async function writePrerenderArtifacts({
 
   // 4. Write sitemap.xml
   await writeFile(resolve(distDir, "sitemap.xml"), sitemapXml, "utf8");
+
+  // 5. Write permanent redirect stubs for single subcategory URLs
+  for (const { fromPath, toUrl, targetLabel } of REDIRECT_ROUTES) {
+    const outDir = resolve(distDir, ...fromPath);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(
+      resolve(outDir, "index.html"),
+      buildRedirectHtml({ toUrl, targetLabel }),
+      "utf8",
+    );
+  }
 
   return {
     pageCount: pages.length,

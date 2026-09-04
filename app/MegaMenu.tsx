@@ -29,13 +29,17 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
   }
 
   const group = state.data;
+  const isSingleCategoryGroup = groupId === "angle" || groupId === "channel";
 
   return (
     <>
       <section className="mega-rebar-types" aria-label={`انواع ${group.label}`}>
         <p className="mega-group-label">انواع {group.label}</p>
         {group.categories.map((category) => (
-          <a href={`/${groupId}/${category.id}/`} key={category.id}>
+          <a
+            href={isSingleCategoryGroup ? `/${groupId}/` : `/${groupId}/${category.id}/`}
+            key={category.id}
+          >
             {`قیمت ${category.label}`}
           </a>
         ))}
@@ -52,7 +56,11 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <div>
           {group.factories.map((factory) => (
             <a
-              href={`/${groupId}/${group.initialCategoryId}/?factory=${encodeURIComponent(factory)}`}
+              href={
+                isSingleCategoryGroup
+                  ? `/${groupId}/?factory=${encodeURIComponent(factory)}`
+                  : `/${groupId}/${group.initialCategoryId}/?factory=${encodeURIComponent(factory)}`
+              }
               key={factory}
             >
               {group.label} {factory}
@@ -66,7 +74,11 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <div>
           {group.sizes.map((size) => (
             <a
-              href={`/${groupId}/${group.initialCategoryId}/?size=${encodeURIComponent(size)}`}
+              href={
+                isSingleCategoryGroup
+                  ? `/${groupId}/?size=${encodeURIComponent(size)}`
+                  : `/${groupId}/${group.initialCategoryId}/?size=${encodeURIComponent(size)}`
+              }
               key={size}
             >
               {group.label} {localizeCatalogValue(size)}
@@ -100,7 +112,13 @@ const navLinksAfterProducts = primaryNavLinks.slice(productsEntryIndex + 1);
 
 export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
-  const [megaProduct, setMegaProduct] = useState<ProductGroupId>("rebar");
+  const [megaProduct, setMegaProduct] = useState<ProductGroupId>(() => activeGroup ?? "rebar");
+
+  useEffect(() => {
+    if (!productsOpen) {
+      setMegaProduct(activeGroup ?? "rebar");
+    }
+  }, [activeGroup, productsOpen]);
 
   const productMenuRef = useRef<HTMLDivElement>(null);
   const productTriggerRef = useRef<HTMLButtonElement>(null);

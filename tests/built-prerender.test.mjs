@@ -127,9 +127,13 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
   let truncatedBefore = 0;
 
   for (const { groupId, categories } of groups) {
+    const isSingleCategoryGroup = groupId === "angle" || groupId === "channel";
     for (const sub of categories) {
-      const html = await readDist(`${groupId}/${sub.id}/index.html`);
-      const page = `${groupId}/${sub.id}`;
+      const pagePath = isSingleCategoryGroup
+        ? `${groupId}/index.html`
+        : `${groupId}/${sub.id}/index.html`;
+      const html = await readDist(pagePath);
+      const page = isSingleCategoryGroup ? groupId : `${groupId}/${sub.id}`;
 
       assert.equal(
         countRows(html),
@@ -164,35 +168,46 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
       }
     }
 
-    // A category landing page must render CategoryOverview -- one summary
-    // row per subcategory -- never a subcategory's own PriceCatalog rows.
-    // (It used to silently prerender its default subcategory's full table,
-    // making the landing page a near-duplicate of that one subcategory page;
-    // see CategoryOverview.tsx.) The siblings' full tables live on their own
-    // URLs, linked from here.
+    // A category landing page for multi-category families must render CategoryOverview
+    // -- one summary row per subcategory -- never a subcategory's own PriceCatalog rows.
+    // Single-subcategory families (angle, channel) consolidate their full catalog
+    // directly onto the parent landing page as the primary price page.
     const landingHtml = await readDist(`${groupId}/index.html`);
-    assert.equal(
-      countRows(landingHtml),
-      0,
-      `${groupId}/ must not prerender any subcategory's PriceCatalog rows, found ${countRows(landingHtml)}`,
-    );
-    assert.equal(
-      countFactoryCards(landingHtml),
-      0,
-      `${groupId}/ must not prerender any subcategory's factory cards, found ${countFactoryCards(landingHtml)}`,
-    );
-    const overviewRowCount = (landingHtml.match(/class="overview-row"/g) ?? []).length;
-    assert.equal(
-      overviewRowCount,
-      categories.length,
-      `${groupId}/ must prerender one CategoryOverview row per subcategory (${categories.length}), found ${overviewRowCount}`,
-    );
-    for (const sub of categories) {
-      assert.match(
-        landingHtml,
-        new RegExp(`href="/${groupId}/${sub.id}/"`),
-        `${groupId}/ must link to its ${sub.id} subcategory rather than hide it behind a tab click`,
+    if (isSingleCategoryGroup) {
+      assert.equal(
+        countRows(landingHtml),
+        categories[0].rows,
+        `${groupId}/ must prerender all ${categories[0].rows} rows as the primary price page, found ${countRows(landingHtml)}`,
       );
+      assert.equal(
+        countFactoryCards(landingHtml),
+        categories[0].factories,
+        `${groupId}/ must prerender all ${categories[0].factories} factory cards, found ${countFactoryCards(landingHtml)}`,
+      );
+    } else {
+      assert.equal(
+        countRows(landingHtml),
+        0,
+        `${groupId}/ must not prerender any subcategory's PriceCatalog rows, found ${countRows(landingHtml)}`,
+      );
+      assert.equal(
+        countFactoryCards(landingHtml),
+        0,
+        `${groupId}/ must not prerender any subcategory's factory cards, found ${countFactoryCards(landingHtml)}`,
+      );
+      const overviewRowCount = (landingHtml.match(/class="overview-row"/g) ?? []).length;
+      assert.equal(
+        overviewRowCount,
+        categories.length,
+        `${groupId}/ must prerender one CategoryOverview row per subcategory (${categories.length}), found ${overviewRowCount}`,
+      );
+      for (const sub of categories) {
+        assert.match(
+          landingHtml,
+          new RegExp(`href="/${groupId}/${sub.id}/"`),
+          `${groupId}/ must link to its ${sub.id} subcategory rather than hide it behind a tab click`,
+        );
+      }
     }
   }
 
@@ -295,7 +310,7 @@ test("F14: widening row coverage creates no factory or size URLs", async () => {
   const locs = (sitemap.match(/<loc>([^<]+)<\/loc>/g) ?? []).map((loc) =>
     loc.replace(/<\/?loc>/g, ""),
   );
-  assert.equal(locs.length, 68, "the sitemap must not grow");
+  assert.equal(locs.length, 66, "the sitemap must not grow");
   for (const loc of locs) {
     const depth = loc
       .replace("https://fouladbonyan.com/", "")

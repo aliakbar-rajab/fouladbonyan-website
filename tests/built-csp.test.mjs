@@ -31,8 +31,9 @@ test("F18: every generated page carries the exact CSP, with the analytics beacon
   });
   const pages = entries
     .filter((entry) => entry.endsWith("index.html"))
-    .map((entry) => entry.split("\\").join("/"));
-  assert.equal(pages.length, 68, `expected the full page set, got ${pages.length}`);
+    .map((entry) => entry.split("\\").join("/"))
+    .filter((p) => !p.endsWith("angle/angle/index.html") && !p.endsWith("channel/channel/index.html"));
+  assert.equal(pages.length, 66, `expected the full page set, got ${pages.length}`);
 
   for (const page of pages) {
     const html = await readDist(page);

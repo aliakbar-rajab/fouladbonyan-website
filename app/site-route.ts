@@ -77,7 +77,11 @@ export function interpretSiteRoute({
 
   const category = dataset.initialCategory || segments[0];
   if (isProductGroupId(category)) {
-    const subcategory = dataset.initialSubcategory || segments[1] || undefined;
+    const rawSubcategory = dataset.initialSubcategory || segments[1] || undefined;
+    const isSingleCategoryDuplicate =
+      (category === "angle" && rawSubcategory === "angle") ||
+      (category === "channel" && rawSubcategory === "channel");
+    const subcategory = isSingleCategoryDuplicate ? undefined : rawSubcategory;
     return {
       kind: "catalog",
       category,

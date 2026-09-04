@@ -208,6 +208,8 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             </span>
             <a href="/privacy/">حریم خصوصی</a>
             <a href="/terms/">شرایط استفاده</a>
+            <a href="/shipping-delivery/">شرایط ارسال</a>
+            <a href="/complaints/">ثبت شکایت</a>
             <a className="footer-top-link" href={topHref}>
               بازگشت به بالا <span aria-hidden="true">↑</span>
             </a>

@@ -71,6 +71,7 @@ test("the mega menu payload ships exactly where <App /> is rendered", async () =
 
   for (const page of pages) {
     const html = await readDist(page.split("\\").join("/"));
+    if (/<meta\s+http-equiv="refresh"/i.test(html)) continue;
     const rendersApp = !/<div id="root"[^>]*\sdata-page=/.test(html);
     assert.equal(
       html.includes('<script id="initial-menu-data"'),

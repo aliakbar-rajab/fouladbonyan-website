@@ -53,12 +53,15 @@ test("every category and subcategory page renders its family hero", async () => 
     assert.ok(group.heroImage, `${group.id} must define a dedicated hero image`);
     const heroBase = group.heroImage.replace(/-1680\.jpg$/, "");
     const escapedHeroBase = heroBase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const isSingleCategoryGroup = group.id === "angle" || group.id === "channel";
     const groupDirectory = new URL(`../dist/${group.id}/`, import.meta.url);
-    const subcategoryDirectories = (await readdir(groupDirectory, {
-      withFileTypes: true,
-    }))
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `${group.id}/${entry.name}/index.html`);
+    const subcategoryDirectories = isSingleCategoryGroup
+      ? []
+      : (await readdir(groupDirectory, {
+          withFileTypes: true,
+        }))
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => `${group.id}/${entry.name}/index.html`);
     const pagePaths = [`${group.id}/index.html`, ...subcategoryDirectories];
 
     for (const pagePath of pagePaths) {

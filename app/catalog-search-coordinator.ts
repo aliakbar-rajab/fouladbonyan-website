@@ -280,7 +280,10 @@ export function useCatalogWorkspace({
   );
 
   const isCategoryRoute = Boolean(route.category);
-  const isCategoryOverviewRoute = isCategoryRoute && !route.subcategory;
+  const isSingleCategoryGroup =
+    route.category === "angle" || route.category === "channel";
+  const isCategoryOverviewRoute =
+    isCategoryRoute && !route.subcategory && !isSingleCategoryGroup;
 
   const [activeGroup, setActiveGroup] = useState<ProductGroupId>(
     () => route.category ?? productGroups[0].id,
@@ -319,15 +322,26 @@ export function useCatalogWorkspace({
   );
 
   const subcategoryInfo = useMemo(() => {
-    if (!route.subcategory) return null;
+    const sub =
+      route.subcategory ??
+      (isSingleCategoryGroup && route.category
+        ? initialCategoryIdOf(route.category)
+        : undefined);
+    if (!sub) return null;
     return {
-      id: route.subcategory,
+      id: sub,
       label:
         route.subcategoryLabel ||
-        getSubcategoryLabel(route.subcategory) ||
-        route.subcategory,
+        getSubcategoryLabel(sub) ||
+        (route.category ? getCategoryById(route.category)?.label : undefined) ||
+        sub,
     };
-  }, [route.subcategory, route.subcategoryLabel]);
+  }, [
+    route.subcategory,
+    route.subcategoryLabel,
+    route.category,
+    isSingleCategoryGroup,
+  ]);
 
   const filteredGroups: ProductGroup[] = useMemo(
     () =>
@@ -487,7 +501,7 @@ export function useCatalogWorkspace({
     brandHref: isCategoryRoute ? "/" : "#top",
     hero: {
       categoryGroup,
-      subcategory: subcategoryInfo,
+      subcategory: isSingleCategoryGroup ? null : subcategoryInfo,
     },
     search: {
       query: committedQuery,

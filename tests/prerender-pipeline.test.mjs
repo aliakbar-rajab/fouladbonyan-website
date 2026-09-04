@@ -54,7 +54,7 @@ const MOCK_TEMPLATE = `<!doctype html>
   </body>
 </html>`;
 
-test("collectSitePageDescriptors compiles all 68 static site descriptors with distinct metadata", async () => {
+test("collectSitePageDescriptors compiles all 66 static site descriptors with distinct metadata", async () => {
   const snapshotRaw = await readFile(
     new URL("../app/data/catalog-prices.json", import.meta.url),
     "utf8",
@@ -75,7 +75,7 @@ test("collectSitePageDescriptors compiles all 68 static site descriptors with di
     reference,
   });
 
-  assert.equal(pages.length, 68, "Must generate exactly 68 static page descriptors");
+  assert.equal(pages.length, 66, "Must generate exactly 66 static page descriptors");
   assert.ok(rootLastmod, "Must provide rootLastmod");
   assert.equal(siteUrl, "https://fouladbonyan.com");
 
@@ -113,8 +113,8 @@ test("collectSitePageDescriptors compiles all 68 static site descriptors with di
     }
   }
 
-  assert.equal(urls.size, 68, "All 68 page URLs must be globally unique");
-  assert.equal(titles.size, 68, "All 68 page titles must be globally unique");
+  assert.equal(urls.size, 66, "All 66 page URLs must be globally unique");
+  assert.equal(titles.size, 66, "All 66 page titles must be globally unique");
 });
 
 test("renderStaticDocument transforms shell cleanly and embeds React SSR markup", () => {
@@ -224,7 +224,7 @@ test("renderStaticDocument injects organization data when provided", () => {
   );
 });
 
-test("buildSitemapXml produces well-formed XML with all 68 URLs", () => {
+test("buildSitemapXml produces well-formed XML with all 66 URLs", () => {
   const mockPages = [
     { pageUrl: "https://fouladbonyan.com/", lastmod: "2026-08-28" },
     { pageUrl: "https://fouladbonyan.com/rebar/", lastmod: "2026-08-28" },
