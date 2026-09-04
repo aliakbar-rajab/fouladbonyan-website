@@ -175,8 +175,13 @@ export function HeroCarousel({
         })}
         <div className="hero-overlay" />
         <div className="shell hero-content">
+          {/*
+            The spans are `display: block`, so this space collapses visually --
+            but without it the two lines concatenate into
+            "...فولاد؛بنیان..." for anything reading textContent.
+          */}
           <h1>
-            <span>قیمت روز آهن و فولاد؛</span>
+            <span>قیمت روز آهن و فولاد؛</span>{" "}
             <span>بنیان فولاد داریا</span>
           </h1>
           <p className="hero-lede">

@@ -3,7 +3,11 @@ import {
   type ReactNode,
 } from "react";
 import type { CatalogViewRequest } from "./catalog-types";
-import { getCategoryById, type ProductGroupId } from "./category-meta";
+import {
+  getCategoryById,
+  subcategoryHref,
+  type ProductGroupId,
+} from "./category-meta";
 import { loadGroupCatalog, type GroupCatalog } from "./catalog-reader";
 import { RebarWeightCalculator } from "./RebarWeightCalculator";
 import { CatalogLoadMessage } from "./site-ui";
@@ -79,7 +83,7 @@ export function PriceCatalog({
       >
         {catalog.categories.map((item) => (
           <a
-            href={`/${catalog.id}/${item.id}/`}
+            href={subcategoryHref(catalog.id, item.id)}
             aria-current={item.id === category.id ? "page" : undefined}
             key={item.id}
           >

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { localizeCatalogValue } from "./catalog-utils";
-import { productGroups, type ProductGroupId } from "./category-meta";
+import {
+  productGroups,
+  subcategoryHref,
+  type ProductGroupId,
+} from "./category-meta";
 import { primaryNavLinks } from "./site-config";
 import { loadMenuGroup } from "./catalog-reader";
 import { CatalogLoadMessage } from "./site-ui";
@@ -29,7 +33,12 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
   }
 
   const group = state.data;
-  const isSingleCategoryGroup = groupId === "angle" || groupId === "channel";
+  // A factory or size has no page of its own, so its link lands on the group's
+  // initial subcategory page -- which for a single-subcategory group is the
+  // category URL itself. subcategoryHref owns that collapse.
+  const filterBaseHref = subcategoryHref(groupId, group.initialCategoryId);
+  const filterHref = (param: "factory" | "size", value: string) =>
+    `${filterBaseHref}?${param}=${encodeURIComponent(value)}`;
 
   return (
     <>
@@ -37,7 +46,7 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <p className="mega-group-label">انواع {group.label}</p>
         {group.categories.map((category) => (
           <a
-            href={isSingleCategoryGroup ? `/${groupId}/` : `/${groupId}/${category.id}/`}
+            href={subcategoryHref(groupId, category.id)}
             key={category.id}
           >
             {`قیمت ${category.label}`}
@@ -56,11 +65,7 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <div>
           {group.factories.map((factory) => (
             <a
-              href={
-                isSingleCategoryGroup
-                  ? `/${groupId}/?factory=${encodeURIComponent(factory)}`
-                  : `/${groupId}/${group.initialCategoryId}/?factory=${encodeURIComponent(factory)}`
-              }
+              href={filterHref("factory", factory)}
               key={factory}
             >
               {group.label} {factory}
@@ -74,11 +79,7 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <div>
           {group.sizes.map((size) => (
             <a
-              href={
-                isSingleCategoryGroup
-                  ? `/${groupId}/?size=${encodeURIComponent(size)}`
-                  : `/${groupId}/${group.initialCategoryId}/?size=${encodeURIComponent(size)}`
-              }
+              href={filterHref("size", size)}
               key={size}
             >
               {group.label} {localizeCatalogValue(size)}
@@ -112,13 +113,20 @@ const navLinksAfterProducts = primaryNavLinks.slice(productsEntryIndex + 1);
 
 export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
-  const [megaProduct, setMegaProduct] = useState<ProductGroupId>(() => activeGroup ?? "rebar");
+  const [megaProduct, setMegaProduct] = useState<ProductGroupId>(
+    () => activeGroup ?? "rebar",
+  );
 
-  useEffect(() => {
-    if (!productsOpen) {
-      setMegaProduct(activeGroup ?? "rebar");
-    }
-  }, [activeGroup, productsOpen]);
+  /*
+   * While the panel is shut, the group it shows is not a choice anyone has
+   * made yet -- it is just the group of the page you are on. That was kept in
+   * sync by an effect that called setMegaProduct whenever the panel was
+   * closed, which is a render triggering a second render to copy a prop into
+   * state (react-hooks/set-state-in-effect). Derive it instead: `megaProduct`
+   * now only holds a pick made *inside* an open panel, and a closed panel
+   * always reads straight from `activeGroup`.
+   */
+  const shownProduct = productsOpen ? megaProduct : (activeGroup ?? "rebar");
 
   const productMenuRef = useRef<HTMLDivElement>(null);
   const productTriggerRef = useRef<HTMLButtonElement>(null);
@@ -179,7 +187,7 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
           className="product-dropdown rebar-mega-menu"
           hidden={!productsOpen}
         >
-          <MegaMenuSections groupId={megaProduct} />
+          <MegaMenuSections groupId={shownProduct} />
 
           <section className="mega-other-products" aria-label="گروه محصولات">
             <p className="mega-group-label">گروه محصولات</p>
@@ -188,8 +196,8 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
                 <a
                   href={`/${group.id}/`}
                   key={group.id}
-                  className={`mega-group-link${megaProduct === group.id ? " is-active" : ""}`}
-                  aria-current={megaProduct === group.id ? "true" : undefined}
+                  className={`mega-group-link${shownProduct === group.id ? " is-active" : ""}`}
+                  aria-current={shownProduct === group.id ? "true" : undefined}
                   onClick={(event) => {
                     event.preventDefault();
                     setMegaProduct(group.id);

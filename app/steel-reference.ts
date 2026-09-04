@@ -15,6 +15,7 @@
  * hydrate against exactly the bytes they were prerendered from.
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
+import { subcategoryHref } from "./category-meta";
 import { parsePersianNumber } from "./persian-numbers.mjs";
 import type {
   CatalogCategory,
@@ -155,7 +156,7 @@ function buildProfile(
     groupHref: `/${groupId}/`,
     id: category.id,
     label: category.label,
-    href: `/${groupId}/${category.id}/`,
+    href: subcategoryHref(groupId, category.id),
     specificationLabel: category.specificationLabel,
     standards: uniqueSorted(rows.map((row) => row.standard)),
     grades: uniqueSorted(rows.map((row) => row.grade)),
@@ -212,7 +213,7 @@ function buildRebarTables(rebar: {
     tables.push({
       id: category.id,
       label: category.label,
-      href: `/rebar/${category.id}/`,
+      href: subcategoryHref("rebar", category.id),
       branchLengthM,
       standards: uniqueSorted(allRows(category).map((row) => row.standard)),
       factoryCount: category.filters.factories.length,
@@ -306,7 +307,7 @@ function buildBeamTable(beam: {
   return {
     id: category.id,
     label: category.label,
-    href: `/beam/${category.id}/`,
+    href: subcategoryHref("beam", category.id),
     rows,
     missingWeightLabels,
   };

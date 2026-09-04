@@ -157,6 +157,42 @@ export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
 }
 
+/*
+ * Groups whose catalog holds exactly one subcategory. Their subcategory page is
+ * consolidated onto the parent category URL, so /angle/angle/ and
+ * /channel/channel/ exist in dist only as noindex redirect stubs. Nothing
+ * indexable may link to them.
+ *
+ * This list is the single source of truth for that rule. It used to be
+ * open-coded as `id === "angle" || id === "channel"` in the mega menu, the
+ * route interpreter and the prerender pipeline -- three copies that agreed,
+ * next to three href builders that did not, which is how the catalog tab bar
+ * on /angle/ and the /guide/units-and-quote-specs/ product list ended up
+ * linking at the stubs.
+ */
+export const singleSubcategoryGroupIds = [
+  "angle",
+  "channel",
+] as const satisfies readonly ProductGroupId[];
+
+export function isSingleSubcategoryGroup(groupId: string): boolean {
+  return (singleSubcategoryGroupIds as readonly string[]).includes(groupId);
+}
+
+/**
+ * The one canonical, indexable URL for a (group, subcategory) pair. Every href
+ * pointing at a subcategory must come from here.
+ */
+export function subcategoryHref(
+  groupId: string,
+  subcategoryId?: string,
+): string {
+  if (!subcategoryId || isSingleSubcategoryGroup(groupId)) {
+    return `/${groupId}/`;
+  }
+  return `/${groupId}/${subcategoryId}/`;
+}
+
 export const subcategoryLabels: Record<string, string> = {
   // rebar
   ribbed: "میلگرد آجدار",

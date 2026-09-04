@@ -397,7 +397,87 @@ test("a quote request grows and shrinks one item at a time", async () => {
   assert.equal(screen.queryByRole("button", { name: /حذف کالای/ }), null);
 });
 
+/*
+ * The row action used to be `<a href="/quote-process/?product=&dimensions=">`,
+ * which minted one crawlable URL per price row -- 1,720 across the site. It is
+ * form state, so it now rides in sessionStorage and the control is a button.
+ * These tests pin all of that: the href is the one clean URL, the prefill still
+ * arrives through storage, and the anchor is still an anchor.
+ */
+/*
+ * Clicking the quote link really does start a navigation now -- that is the
+ * point of it being an anchor -- and jsdom answers a cross-document navigation
+ * by reporting "Not implemented" on its virtual console. Expected, and only
+ * noise in the test output, so keep it out of the way while a click lands.
+ */
+async function withClickNavigation(run) {
+  const original = console.error;
+  console.error = () => {};
+  try {
+    return await run();
+  } finally {
+    console.error = original;
+  }
+}
+
+const { QUOTE_HANDOFF_KEY, QUOTE_FORM_HREF, resetQuoteHandoffCache } =
+  await import("../app/quote-handoff.ts");
+
+/* Each test below stands for a separate page load. */
+const newPageLoad = () => {
+  resetQuoteHandoffCache();
+  window.sessionStorage.clear();
+};
+
+const storedHandoff = () => {
+  const raw = window.sessionStorage.getItem(QUOTE_HANDOFF_KEY);
+  return raw ? JSON.parse(raw) : null;
+};
+
+test("the row quote action targets one clean, parameter-free URL", () => {
+  assert.equal(QUOTE_FORM_HREF, "/quote-process/#quote-form");
+});
+
+test("every row's quote action is an anchor on the one clean URL", async () => {
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+    }),
+  );
+
+  const quoteLinks = [...document.querySelectorAll(".row-quote-cell a")];
+  assert.ok(quoteLinks.length > 0, "the row must still offer a quote action");
+
+  for (const link of quoteLinks) {
+    // A real destination, so a visitor without JavaScript still gets there and
+    // middle-click still opens a tab.
+    assert.equal(link.tagName, "A");
+    assert.equal(link.getAttribute("href"), QUOTE_FORM_HREF);
+  }
+
+  // ...and every one of them is the *same* URL, not one per row.
+  assert.equal(
+    new Set(quoteLinks.map((link) => link.getAttribute("href"))).size,
+    1,
+    "the rows must share one href, not mint one apiece",
+  );
+
+  const anchorsWithQuoteParams = [...document.querySelectorAll("a[href]")].filter(
+    (anchor) => /[?&](?:product|dimensions)=/.test(anchor.getAttribute("href")),
+  );
+  assert.deepEqual(
+    anchorsWithQuoteParams.map((anchor) => anchor.getAttribute("href")),
+    [],
+    "no link anywhere in the catalog may carry quote prefill in its query string",
+  );
+});
+
 test("a catalog row carries validated product details into the quote form", async () => {
+  const user = userEvent.setup({ document });
+  newPageLoad();
+
   render(
     React.createElement(PriceCatalog, {
       catalog,
@@ -407,14 +487,26 @@ test("a catalog row carries validated product details into the quote form", asyn
   );
 
   const quoteLink = document.querySelector(".row-quote-cell a");
-  assert.ok(quoteLink);
-  const quoteUrl = new URL(quoteLink.href);
-  assert.equal(quoteUrl.pathname, "/quote-process/");
-  assert.equal(quoteUrl.searchParams.get("product"), "میلگرد");
-  assert.equal(quoteUrl.searchParams.get("dimensions"), "محصول 1");
+  let defaultPrevented = null;
+  quoteLink.addEventListener("click", (event) => {
+    defaultPrevented = event.defaultPrevented;
+  });
+  await withClickNavigation(() => user.click(quoteLink));
+
+  assert.deepEqual(
+    storedHandoff(),
+    { product: "میلگرد", dimensions: "محصول 1" },
+    "the click hands the row's product and dimensions to the quote form",
+  );
+  assert.equal(
+    defaultPrevented,
+    false,
+    "the handler must not preventDefault: the browser does the navigating",
+  );
 
   cleanup();
-  window.history.replaceState({}, "", quoteUrl.href);
+  // Deliberately a bare path: the prefill must survive without a query string.
+  window.history.replaceState({}, "", "/quote-process/");
   const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
   render(React.createElement(QuoteRequestForm));
 
@@ -426,6 +518,150 @@ test("a catalog row carries validated product details into the quote form", asyn
     assert.equal(
       screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
       "محصول 1",
+    );
+  });
+
+  // Storage is drained by the read, so a genuine reload starts clean...
+  assert.equal(window.sessionStorage.getItem(QUOTE_HANDOFF_KEY), null);
+  cleanup();
+  resetQuoteHandoffCache(); // ...which is what a fresh document looks like.
+  render(React.createElement(QuoteRequestForm));
+  await settle();
+  assert.equal(
+    screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
+    "",
+  );
+  window.history.replaceState({}, "", "/");
+});
+
+/*
+ * React StrictMode runs an effect, tears it down and runs it again. The first
+ * version of this handoff drained storage on that first run, the teardown
+ * cancelled the frame that would have applied the prefill, and the second run
+ * found nothing -- the field arrived empty in a real browser while this suite
+ * stayed green. Re-reading must be stable within one page load.
+ */
+test("the prefill survives a remount of the quote form", async () => {
+  newPageLoad();
+  const { writeQuoteHandoff } = await import("../app/quote-handoff.ts");
+  writeQuoteHandoff({ product: "نبشی", dimensions: "نبشی 6" });
+  window.history.replaceState({}, "", "/quote-process/");
+
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+  await settle();
+  cleanup();
+
+  // Same document, second mount: storage is already drained, so this can only
+  // pass if the read is cached for the life of the page load.
+  assert.equal(window.sessionStorage.getItem(QUOTE_HANDOFF_KEY), null);
+  render(React.createElement(QuoteRequestForm));
+  await waitFor(() => {
+    assert.equal(
+      screen.getByRole("combobox", { name: "نوع محصول" }).value,
+      "نبشی",
+    );
+    assert.equal(
+      screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
+      "نبشی 6",
+    );
+  });
+  window.history.replaceState({}, "", "/");
+});
+
+test("the quote action is reachable and activatable from the keyboard", async () => {
+  const user = userEvent.setup({ document });
+  newPageLoad();
+
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+    }),
+  );
+
+  const quoteLink = document.querySelector(".row-quote-cell a");
+  quoteLink.focus();
+  assert.equal(
+    document.activeElement,
+    quoteLink,
+    "the quote action must be focusable",
+  );
+  // A distinct accessible name per row: every row's link reads
+  // "افزودن به درخواست", which would be indistinguishable in a link list.
+  assert.match(
+    quoteLink.getAttribute("aria-label"),
+    /محصول 1/,
+    "each row's link must name the row it belongs to",
+  );
+
+  await withClickNavigation(() => user.keyboard("{Enter}"));
+  assert.deepEqual(storedHandoff(), {
+    product: "میلگرد",
+    dimensions: "محصول 1",
+  });
+  newPageLoad();
+});
+
+/*
+ * A modified click is the browser's to handle: it opens a new tab, and the
+ * handler must not stand in the way of that. The handoff is still written --
+ * session storage is copied into the tab a link opens, so the new tab arrives
+ * prefilled just as the old ?product= URL used to.
+ */
+test("a modifier-click still opens normally and still hands off the prefill", async () => {
+  const user = userEvent.setup({ document });
+  newPageLoad();
+
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+    }),
+  );
+
+  const quoteLink = document.querySelector(".row-quote-cell a");
+  let defaultPrevented = null;
+  quoteLink.addEventListener("click", (event) => {
+    defaultPrevented = event.defaultPrevented;
+  });
+
+  await user.keyboard("{Control>}");
+  await withClickNavigation(() => user.click(quoteLink));
+  await user.keyboard("{/Control}");
+
+  assert.equal(
+    defaultPrevented,
+    false,
+    "a ctrl-click must reach the browser untouched",
+  );
+  assert.deepEqual(storedHandoff(), {
+    product: "میلگرد",
+    dimensions: "محصول 1",
+  });
+  newPageLoad();
+});
+
+test("a shared ?product= quote link still prefills the form", async () => {
+  newPageLoad();
+  window.history.replaceState(
+    {},
+    "",
+    `/quote-process/?product=${encodeURIComponent("تیرآهن")}&dimensions=${encodeURIComponent("IPE 18")}`,
+  );
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+
+  await waitFor(() => {
+    assert.equal(
+      screen.getByRole("combobox", { name: "نوع محصول" }).value,
+      "تیرآهن",
+    );
+    assert.equal(
+      screen.getByRole("textbox", { name: "ابعاد، گرید یا استاندارد" }).value,
+      "IPE 18",
     );
   });
   window.history.replaceState({}, "", "/");

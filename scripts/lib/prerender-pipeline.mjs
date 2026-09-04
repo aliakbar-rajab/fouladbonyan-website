@@ -3,7 +3,12 @@ import { resolve } from "node:path";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import App from "../../app/App.tsx";
-import { productGroups } from "../../app/category-meta.ts";
+import {
+  isSingleSubcategoryGroup,
+  productGroups,
+  singleSubcategoryGroupIds,
+  subcategoryHref,
+} from "../../app/category-meta.ts";
 import ContactPage from "../../app/ContactPage.tsx";
 import {
   guideIndex,
@@ -39,6 +44,18 @@ import {
  *   3. Transforming the pristine template HTML shell
  *   4. Atomic artifact output writing (HTML + sitemap.xml)
  */
+
+/*
+ * The category hero variant used for social previews, with the dimensions that
+ * have to be advertised alongside it. scripts/optimize-images.mjs renders every
+ * `hero-*-1280` at this size; built-seo.test.mjs reads the real files back and
+ * fails if that ever stops being true.
+ */
+export const HERO_OG_IMAGE = {
+  variant: "1280",
+  width: 1280,
+  height: 720,
+};
 
 export function buildHeroPreloadTag(group) {
   const heroImg = group.heroImage ?? group.image;
@@ -195,9 +212,26 @@ const replaceMetaContent = (html, attrMatcher, value) =>
     (match, prefix, suffix) => `${prefix}${escapeHtmlAttribute(value)}${suffix}`,
   );
 
+/*
+ * og:image:width and og:image:height describe the *selected* image, so they
+ * have to move with it. The template ships /og.png at 1730x909; swapping only
+ * the URL left 52 catalog pages advertising those dimensions for a 1280x720
+ * hero, which is why a caller passing ogImage without them is a build error
+ * rather than a silent skip. built-seo.test.mjs re-checks the emitted numbers
+ * against the real file on disk.
+ */
 export function replaceSocialMeta(
   html,
-  { title, description, pageUrl, ogImage, ogImageAlt },
+  {
+    title,
+    description,
+    pageUrl,
+    ogType,
+    ogImage,
+    ogImageAlt,
+    ogImageWidth,
+    ogImageHeight,
+  },
 ) {
   let next = replaceMetaContent(html, 'name="description"', description);
   next = replaceMetaContent(next, 'property="og:title"', title);
@@ -205,9 +239,27 @@ export function replaceSocialMeta(
   next = replaceMetaContent(next, 'property="og:url"', pageUrl);
   next = replaceMetaContent(next, 'name="twitter:title"', title);
   next = replaceMetaContent(next, 'name="twitter:description"', description);
+  if (ogType) {
+    next = replaceMetaContent(next, 'property="og:type"', ogType);
+  }
   if (ogImage) {
+    if (!ogImageWidth || !ogImageHeight) {
+      throw new Error(
+        `og:image "${ogImage}" was set without ogImageWidth/ogImageHeight; the template's dimensions describe a different file.`,
+      );
+    }
     next = replaceMetaContent(next, 'property="og:image"', ogImage);
     next = replaceMetaContent(next, 'name="twitter:image"', ogImage);
+    next = replaceMetaContent(
+      next,
+      'property="og:image:width"',
+      String(ogImageWidth),
+    );
+    next = replaceMetaContent(
+      next,
+      'property="og:image:height"',
+      String(ogImageHeight),
+    );
     if (ogImageAlt) {
       next = replaceMetaContent(next, 'property="og:image:alt"', ogImageAlt);
     }
@@ -224,8 +276,11 @@ export function renderStaticDocument(
     title,
     description,
     pageUrl,
+    ogType,
     ogImage,
     ogImageAlt,
+    ogImageWidth,
+    ogImageHeight,
     extraHeadHtml = "",
     rootElement,
     rootAttributes = "",
@@ -272,8 +327,11 @@ export function renderStaticDocument(
     title,
     description,
     pageUrl,
+    ogType,
     ogImage,
     ogImageAlt,
+    ogImageWidth,
+    ogImageHeight,
   });
 
   // Render React markup inside #root
@@ -387,10 +445,10 @@ export async function collectSitePageDescriptors({
       menuPayload,
       { id: "initial-page-data", data: groupSnapshot },
     ];
-    const groupOgImage = `${siteUrl}/categories/hero-${group.id}-1280.jpg`;
+    const groupOgImage = `${siteUrl}/categories/hero-${group.id}-${HERO_OG_IMAGE.variant}.jpg`;
     const groupOgImageAlt = `قیمت ${group.label} | بنیان فولاد داریا`;
 
-    const isSingleCategoryGroup = group.id === "angle" || group.id === "channel";
+    const isSingleCategoryGroup = isSingleSubcategoryGroup(group.id);
 
     // Category landing page
     pages.push({
@@ -400,6 +458,8 @@ export async function collectSitePageDescriptors({
       description: group.seoDescription,
       ogImage: groupOgImage,
       ogImageAlt: groupOgImageAlt,
+      ogImageWidth: HERO_OG_IMAGE.width,
+      ogImageHeight: HERO_OG_IMAGE.height,
       rootElement: React.createElement(App, {
         initialCategory: group.id,
         initialSubcategory: isSingleCategoryGroup ? group.id : undefined,
@@ -429,6 +489,8 @@ export async function collectSitePageDescriptors({
           description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
           ogImage: groupOgImage,
           ogImageAlt: `قیمت روز ${sub.label} | بنیان فولاد داریا`,
+          ogImageWidth: HERO_OG_IMAGE.width,
+          ogImageHeight: HERO_OG_IMAGE.height,
           rootElement: React.createElement(App, {
             initialCategory: group.id,
             initialSubcategory: sub.id,
@@ -518,6 +580,9 @@ export async function collectSitePageDescriptors({
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,
+      // These five carry Article JSON-LD, so the Open Graph type has to agree.
+      // The guide index above is a listing, and stays the template's "website".
+      ogType: "article",
       extraHeadHtml: buildArticleJsonLd({
         headline: definition.title,
         description: definition.seoDescription,
@@ -537,18 +602,18 @@ export async function collectSitePageDescriptors({
   return { pages, rootLastmod, siteUrl };
 }
 
-export const REDIRECT_ROUTES = [
-  {
-    fromPath: ["angle", "angle"],
-    toUrl: "https://fouladbonyan.com/angle/",
-    targetLabel: "نبشی",
-  },
-  {
-    fromPath: ["channel", "channel"],
-    toUrl: "https://fouladbonyan.com/channel/",
-    targetLabel: "ناودانی",
-  },
-];
+/*
+ * The noindex stubs standing at the collapsed subcategory URLs. Derived from
+ * singleSubcategoryGroupIds rather than written out, so a group that gains or
+ * loses its collapse cannot leave a stub behind or go without one. Keep
+ * public/_redirects in step -- built-seo.test.mjs asserts the two agree.
+ */
+export const REDIRECT_ROUTES = singleSubcategoryGroupIds.map((groupId) => ({
+  fromPath: [groupId, groupId],
+  toUrl: `${siteConfig.siteUrl}${subcategoryHref(groupId)}`,
+  targetLabel:
+    productGroups.find((group) => group.id === groupId)?.label ?? groupId,
+}));
 
 export function buildRedirectHtml({ toUrl, targetLabel }) {
   return `<!doctype html>

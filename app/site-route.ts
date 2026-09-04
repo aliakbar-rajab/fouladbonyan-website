@@ -5,7 +5,9 @@ import {
 import { isInfoPageKey, type InfoPageKey } from "./info-page-data";
 import {
   getSubcategoryLabel,
+  isSingleSubcategoryGroup,
   productGroups,
+  subcategoryHref,
   type ProductGroupId,
 } from "./category-meta";
 
@@ -78,10 +80,11 @@ export function interpretSiteRoute({
   const category = dataset.initialCategory || segments[0];
   if (isProductGroupId(category)) {
     const rawSubcategory = dataset.initialSubcategory || segments[1] || undefined;
-    const isSingleCategoryDuplicate =
-      (category === "angle" && rawSubcategory === "angle") ||
-      (category === "channel" && rawSubcategory === "channel");
-    const subcategory = isSingleCategoryDuplicate ? undefined : rawSubcategory;
+    // /angle/angle/ and /channel/channel/ are redirect stubs, not routes: a
+    // single-subcategory group is always the category page itself.
+    const subcategory = isSingleSubcategoryGroup(category)
+      ? undefined
+      : rawSubcategory;
     return {
       kind: "catalog",
       category,
@@ -127,7 +130,7 @@ export function siteRoutePath(route: SiteRoute): string {
     case "home":
       return "/";
     case "catalog":
-      return `/${route.category}/${route.subcategory ? `${route.subcategory}/` : ""}`;
+      return subcategoryHref(route.category, route.subcategory);
     case "contact":
       return "/contact/";
     case "info":

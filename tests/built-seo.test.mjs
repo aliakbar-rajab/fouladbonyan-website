@@ -1,13 +1,39 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readdir } from "node:fs/promises";
-import { productGroups } from "../app/category-meta.ts";
+import { readdir, readFile } from "node:fs/promises";
+import sharp from "sharp";
+import {
+  productGroups,
+  singleSubcategoryGroupIds,
+  subcategoryHref,
+} from "../app/category-meta.ts";
 import {
   loadGroupCatalogs,
   parseBreadcrumbLd,
   readDist,
   readJson,
 } from "./helpers/dist.mjs";
+
+const SITE_ORIGIN = "https://fouladbonyan.com";
+
+/** Every generated HTML file in dist, as forward-slashed relative paths. */
+async function distHtmlFiles() {
+  const entries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  return entries
+    .filter((entry) => entry.endsWith(".html"))
+    .map((entry) => entry.split("\\").join("/"))
+    .sort();
+}
+
+/** Collapse a tag that the template wraps across several lines. */
+const flat = (html) => html.replace(/\s+/g, " ");
+
+const metaContent = (html, attribute, value) =>
+  flat(html).match(
+    new RegExp(`<meta ${attribute}="${value}" content="([^"]*)"`),
+  )?.[1] ?? null;
 
 test("category landing pages have unique metadata, a CSP-safe initial tab, and sitemap entries", async () => {
   const categories = [
@@ -584,4 +610,331 @@ test("category and subcategory pages use category-specific og:image and distinct
     /href="\/guide\/beam-weight-chart\/"/,
     "beam overview must link to beam weight chart guide",
   );
+});
+
+/*
+ * The template ships /og.png and hardcodes its 1730x909 into og:image:width and
+ * og:image:height. When category pages started overriding og:image with a
+ * 1280x720 hero, only the URL moved -- so 52 pages advertised dimensions that
+ * belonged to a different file, and every existing og:image assertion still
+ * passed because they all checked the URL alone. Read the real pixels back.
+ */
+test("every page's declared og:image dimensions match the image it actually points at", async () => {
+  const files = await distHtmlFiles();
+  const measured = new Map();
+
+  const measure = async (imageUrl) => {
+    assert.ok(
+      imageUrl.startsWith(`${SITE_ORIGIN}/`),
+      `og:image must be an absolute URL on this origin, got "${imageUrl}"`,
+    );
+    const relative = imageUrl.slice(SITE_ORIGIN.length + 1);
+    if (!measured.has(relative)) {
+      const bytes = await readFile(
+        new URL(`../dist/${relative}`, import.meta.url),
+      );
+      const { width, height } = await sharp(bytes).metadata();
+      measured.set(relative, { width, height });
+    }
+    return measured.get(relative);
+  };
+
+  let checked = 0;
+  for (const file of files) {
+    const html = await readDist(file);
+    const image = metaContent(html, "property", "og:image");
+    const twitterImage = metaContent(html, "name", "twitter:image");
+    if (!image) {
+      // 404.html and the two redirect stubs carry no social card at all.
+      assert.match(
+        file,
+        /^(404\.html|angle\/angle\/index\.html|channel\/channel\/index\.html)$/,
+        `${file} is missing og:image`,
+      );
+      continue;
+    }
+
+    assert.equal(
+      twitterImage,
+      image,
+      `${file}: twitter:image must be the same file as og:image`,
+    );
+
+    const declaredWidth = metaContent(html, "property", "og:image:width");
+    const declaredHeight = metaContent(html, "property", "og:image:height");
+    assert.ok(
+      declaredWidth && declaredHeight,
+      `${file} must declare og:image dimensions`,
+    );
+
+    const actual = await measure(image);
+    assert.equal(
+      Number(declaredWidth),
+      actual.width,
+      `${file}: og:image:width says ${declaredWidth} but ${image} is ${actual.width}px wide`,
+    );
+    assert.equal(
+      Number(declaredHeight),
+      actual.height,
+      `${file}: og:image:height says ${declaredHeight} but ${image} is ${actual.height}px tall`,
+    );
+    checked += 1;
+  }
+
+  assert.equal(checked, 66, "every indexable page must have been checked");
+  // Guards the swap this test exists for: the catalog hero really is a
+  // different size from the template's /og.png default.
+  assert.deepEqual(measured.get("og.png"), { width: 1730, height: 909 });
+  assert.deepEqual(measured.get("categories/hero-rebar-1280.jpg"), {
+    width: 1280,
+    height: 720,
+  });
+});
+
+/*
+ * /angle/angle/ and /channel/channel/ are noindex redirect stubs. Three href
+ * builders open-coded `/${group}/${sub}/` without the collapse rule, so the
+ * catalog tab bar on /angle/ and the product list on
+ * /guide/units-and-quote-specs/ both pointed at them -- and built-links.test.mjs
+ * did not notice, because it only asks whether a link resolves to a file, and a
+ * stub is a file. Ask whether the target is indexable.
+ */
+test("no indexable page links to a noindex or redirecting URL", async () => {
+  const files = await distHtmlFiles();
+  const byPathname = new Map();
+  for (const file of files) {
+    const html = await readDist(file);
+    const pathname =
+      file === "index.html" ? "/" : `/${file.replace(/index\.html$/, "")}`;
+    byPathname.set(pathname, html);
+  }
+
+  const isIndexable = (html) =>
+    !/<meta name="robots" content="[^"]*noindex/.test(html) &&
+    !/<meta http-equiv="refresh"/i.test(html);
+
+  const failures = [];
+  let checkedLinks = 0;
+
+  for (const [pathname, html] of byPathname) {
+    if (!isIndexable(html)) continue;
+    for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
+      const href = match[1].replaceAll("&amp;", "&");
+      if (/^(?:tel:|mailto:)/i.test(href)) continue;
+      const target = new URL(href, `${SITE_ORIGIN}${pathname}`);
+      if (target.origin !== SITE_ORIGIN) continue;
+      const targetHtml = byPathname.get(target.pathname);
+      if (!targetHtml) continue; // built-links.test.mjs owns missing routes
+      checkedLinks += 1;
+      if (!isIndexable(targetHtml)) {
+        failures.push(`${pathname} -> ${href}`);
+      }
+    }
+  }
+
+  assert.ok(checkedLinks > 1_000, "the audit should cover the full link graph");
+  assert.deepEqual(
+    failures,
+    [],
+    "indexable pages must link at the canonical URL, never at a redirect stub",
+  );
+});
+
+/*
+ * The row-level quote action carried its prefill as `?product=&dimensions=`,
+ * which put a distinct crawlable URL on every one of the ~2,100 price rows,
+ * all canonicalising back to one page. It is still an anchor -- it goes to a
+ * real page, and has to work without JavaScript -- but the prefill now travels
+ * in sessionStorage (app/quote-handoff.ts), so every row shares one clean href.
+ */
+test("no built page emits a parameterised quote URL", async () => {
+  const files = await distHtmlFiles();
+  const offenders = [];
+  let quoteLinks = 0;
+
+  for (const file of files) {
+    const html = await readDist(file);
+    for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
+      const href = match[1].replaceAll("&amp;", "&");
+      if (!href.includes("/quote-process/")) continue;
+      quoteLinks += 1;
+      if (/[?&](?:product|dimensions)=/.test(href)) {
+        offenders.push(`${file} -> ${href.slice(0, 80)}`);
+      }
+    }
+  }
+
+  assert.ok(quoteLinks > 0, "the quote flow must still be linked");
+  assert.deepEqual(offenders.slice(0, 5), []);
+  assert.equal(offenders.length, 0);
+
+  // Every row still offers the action, as a plain anchor a crawler and a
+  // no-JavaScript visitor can both follow, and they all share one href.
+  const ribbed = await readDist("rebar/ribbed/index.html");
+  const rowLinks = [
+    ...ribbed.matchAll(
+      /<td[^>]*class="row-quote-cell"[^>]*>\s*<a\b[^>]*\bhref="([^"]+)"/g,
+    ),
+  ].map((match) => match[1]);
+
+  assert.ok(
+    rowLinks.length > 100,
+    `every price row must keep its quote action, found ${rowLinks.length}`,
+  );
+  assert.deepEqual(
+    [...new Set(rowLinks)],
+    ["/quote-process/#quote-form"],
+    "every row must point at the single clean quote URL",
+  );
+
+  // The rows are told apart by their accessible name, not by their href.
+  const labelled = ribbed.match(
+    /<td[^>]*class="row-quote-cell"[^>]*><a href="\/quote-process\/#quote-form" aria-label="[^"]+"/g,
+  );
+  assert.equal(
+    labelled?.length,
+    rowLinks.length,
+    "each row's quote link must carry its own aria-label",
+  );
+});
+
+/*
+ * The `?factory=` and `?size=` links are the legitimate query URLs that remain:
+ * a factory or a size has no page of its own. Their values are Persian mill and
+ * size names, so they have to survive percent-encoding intact.
+ */
+test("every remaining query URL is correctly encoded and round-trips", async () => {
+  const files = await distHtmlFiles();
+  let checked = 0;
+
+  for (const file of files) {
+    const html = await readDist(file);
+    for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
+      const href = match[1].replaceAll("&amp;", "&");
+      if (!href.includes("?")) continue;
+      // Only our own URLs: an outbound map or source link is not ours to
+      // re-encode, and its query legitimately carries characters like ",".
+      if (!href.startsWith("/")) continue;
+      const [path, query] = href.split("?");
+
+      // The set encodeURIComponent leaves alone (RFC 3986 unreserved plus the
+      // sub-delims it permits, so "?size=10*10" is correct as written), the
+      // "%" of an escape, and the separators. Anything else -- a raw space or
+      // a raw Persian mill name -- means the value was never encoded.
+      assert.doesNotMatch(
+        query,
+        /[^A-Za-z0-9\-._~!*'()%&=+#]/,
+        `${file}: "${href}" carries a raw character that must be percent-encoded`,
+      );
+
+      const params = new URLSearchParams(query.split("#")[0]);
+      for (const [key, value] of params) {
+        assert.ok(
+          ["factory", "size"].includes(key),
+          `${file}: unexpected query parameter "${key}" on ${path}`,
+        );
+        assert.ok(
+          value.length > 0,
+          `${file}: "${key}" decoded to an empty value on ${path}`,
+        );
+        // Re-encoding what came back must reproduce what shipped.
+        assert.ok(
+          query.includes(encodeURIComponent(value)),
+          `${file}: "${value}" is not encoded as encodeURIComponent would encode it`,
+        );
+        checked += 1;
+      }
+    }
+  }
+
+  assert.ok(
+    checked > 100,
+    `expected the mega-menu filter links, saw ${checked}`,
+  );
+});
+
+/*
+ * public/_redirects and REDIRECT_ROUTES describe the same two collapsed URLs
+ * from opposite ends of the build. They were written out by hand in both
+ * places, plus a third time as the `angle`/`channel` literal in three modules.
+ * category-meta owns the rule now; this checks the static file still agrees.
+ */
+test("public/_redirects covers exactly the collapsed subcategory URLs", async () => {
+  const redirects = await readDist("_redirects");
+  const rules = redirects
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  assert.equal(
+    rules.length,
+    singleSubcategoryGroupIds.length,
+    `_redirects has ${rules.length} rules for ${singleSubcategoryGroupIds.length} collapsed groups`,
+  );
+
+  for (const groupId of singleSubcategoryGroupIds) {
+    const from = `/${groupId}/${groupId}/`;
+    const to = subcategoryHref(groupId);
+    assert.ok(
+      rules.includes(`${from} ${to} 301`),
+      `_redirects must contain "${from} ${to} 301"`,
+    );
+
+    // The stub itself must still be there, still noindex, still pointing home.
+    const stub = await readDist(`${groupId}/${groupId}/index.html`);
+    assert.match(stub, /<meta name="robots" content="noindex, follow"/);
+    assert.match(
+      stub,
+      new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}${to}"`),
+    );
+  }
+});
+
+/*
+ * og:type has to agree with the structured data on the page: the five guide
+ * articles emit Article JSON-LD, everything else is a website.
+ */
+test("og:type is article exactly on the pages that emit Article JSON-LD", async () => {
+  const files = await distHtmlFiles();
+  const articleTyped = [];
+  const articleSchema = [];
+
+  for (const file of files) {
+    const html = await readDist(file);
+    if (metaContent(html, "property", "og:type") === "article") {
+      articleTyped.push(file);
+    }
+    if (/"@type":"Article"/.test(html)) articleSchema.push(file);
+  }
+
+  const expected = [
+    "guide/beam-weight-chart/index.html",
+    "guide/ipe-vs-hash-beam/index.html",
+    "guide/rebar-weight-chart/index.html",
+    "guide/ribbed-vs-plain-rebar/index.html",
+    "guide/units-and-quote-specs/index.html",
+  ];
+  assert.deepEqual(articleSchema.sort(), expected);
+  assert.deepEqual(articleTyped.sort(), expected);
+
+  // The guide index lists the articles; it is not one of them.
+  const guideIndex = await readDist("guide/index.html");
+  assert.equal(metaContent(guideIndex, "property", "og:type"), "website");
+});
+
+/*
+ * The two hero spans are display:block, so the space between them collapses
+ * visually -- but without it the H1's textContent reads "...فولاد؛بنیان...".
+ */
+test("the homepage H1 keeps a whitespace boundary between its two lines", async () => {
+  const html = await readDist("index.html");
+  const h1 = html.match(/<h1>([\s\S]*?)<\/h1>/)?.[1];
+  assert.ok(h1, "the homepage must have an H1");
+
+  const text = h1
+    .replace(/<[^>]+>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  assert.equal(text, "قیمت روز آهن و فولاد؛ بنیان فولاد داریا");
+  assert.doesNotMatch(text, /؛بنیان/, "the two lines must not run together");
 });

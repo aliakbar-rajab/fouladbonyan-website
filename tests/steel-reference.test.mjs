@@ -213,8 +213,27 @@ test("unit usage covers real selling units and drops one-off source typos", () =
   for (const usage of reference.unitUsage) {
     assert.ok(usage.examples.length > 0);
     for (const example of usage.examples) {
-      assert.match(example.href, /^\/[a-z-]+\/[a-z0-9-]+\/$/);
+      // One segment or two: a single-subcategory group (نبشی, ناودانی) is
+      // consolidated onto its category URL. See subcategoryHref in
+      // app/category-meta.ts.
+      assert.match(example.href, /^\/[a-z-]+\/([a-z0-9-]+\/)?$/);
+      // /angle/angle/ and /channel/channel/ are noindex redirect stubs that
+      // nothing indexable may link at.
+      assert.ok(
+        !["/angle/angle/", "/channel/channel/"].includes(example.href),
+        `${example.href} points at a collapsed subcategory stub`,
+      );
     }
+  }
+
+  // The collapse is exercised, not merely tolerated: نبشی sells by کیلوگرم, so
+  // it reaches unitUsage, and its example must be the category URL.
+  const angleExamples = reference.unitUsage
+    .flatMap((usage) => usage.examples)
+    .filter((example) => example.href.startsWith("/angle/"));
+  assert.ok(angleExamples.length > 0, "نبشی should appear in unit usage");
+  for (const example of angleExamples) {
+    assert.equal(example.href, "/angle/");
   }
 });
 

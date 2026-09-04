@@ -16,6 +16,7 @@ import {
   type GeneratedQuote,
   type RawQuoteItem,
 } from "./quote-types";
+import { takeQuoteHandoff } from "./quote-handoff";
 import { validateQuoteField } from "./quote/validation";
 import type { QuoteItemEstimate } from "./quote-request-estimate";
 import { QuoteDocument } from "./QuoteDocument";
@@ -145,9 +146,22 @@ export function QuoteRequestForm() {
   } = useQuoteRequestEstimate();
 
   useEffect(() => {
+    /*
+     * Two prefill sources, in order. A price row hands its pick over in
+     * sessionStorage now (quote-handoff.ts) so it stops minting one crawlable
+     * `?product=&dimensions=` URL per row; the query string is still read
+     * second so links already shared or bookmarked keep working. Both are
+     * validated the same way -- the product must be a real option and the
+     * dimensions are length-capped -- because neither is trusted input.
+     */
+    const handoff = takeQuoteHandoff();
     const params = new URLSearchParams(window.location.search);
-    const requestedProduct = params.get("product");
-    const requestedDimensions = params.get("dimensions")?.slice(0, 240) ?? "";
+    const requestedProduct = handoff?.product ?? params.get("product");
+    const requestedDimensions = (
+      handoff?.dimensions ??
+      params.get("dimensions") ??
+      ""
+    ).slice(0, 240);
     const matchedProduct = quoteProductNames.find(
       (product) => product === requestedProduct,
     );

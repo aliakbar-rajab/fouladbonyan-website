@@ -2,7 +2,11 @@ import { hasDisplayablePriceRange } from "./catalog-pricing.mjs";
 import { getCategoryPricingState, getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { formatCatalogNumber } from "./catalog-utils";
-import { getCategoryById, type ProductGroupId } from "./category-meta";
+import {
+  getCategoryById,
+  subcategoryHref,
+  type ProductGroupId,
+} from "./category-meta";
 import { loadGroupCatalog, type GroupCatalog } from "./catalog-reader";
 import { CatalogLoadMessage } from "./site-ui";
 import { useCatalogData } from "./use-catalog-data";
@@ -20,7 +24,7 @@ function CategoryOverviewRow({
   groupId: ProductGroupId;
   category: CatalogCategory;
 }) {
-  const href = `/${groupId}/${category.id}/`;
+  const href = subcategoryHref(groupId, category.id);
   const pricingState = getCategoryPricingState(category);
   const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
   const trend = getTrendPresentation(category.summary.status, category.summary.percent);
@@ -81,7 +85,7 @@ function CategoryOverviewCard({
   groupId: ProductGroupId;
   category: CatalogCategory;
 }) {
-  const href = `/${groupId}/${category.id}/`;
+  const href = subcategoryHref(groupId, category.id);
   const pricingState = getCategoryPricingState(category);
   const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
 

@@ -14,6 +14,11 @@ import {
   unixSecondsToIso,
 } from "./catalog-utils";
 import { toPersianDigits } from "./persian-numbers.mjs";
+import {
+  QUOTE_FORM_HREF,
+  writeQuoteHandoff,
+  type QuoteHandoff,
+} from "./quote-handoff";
 import { ChevronDownIcon } from "./icons";
 
 const quoteProductByGroup: Record<ProductGroupId, string> = {
@@ -27,17 +32,33 @@ const quoteProductByGroup: Record<ProductGroupId, string> = {
   wire: "مفتول و سیم",
 };
 
-function quoteHref(
+/*
+ * The row's quote action does go somewhere -- /quote-process/ -- so it stays an
+ * anchor with a real href, and keeps everything that comes free with one:
+ * middle-click and modifier-click open a new tab, the status bar shows the
+ * destination, and a visitor without JavaScript still reaches the quote page.
+ *
+ * What it no longer does is carry the prefill in the URL. Every row used to
+ * point at `/quote-process/?product=...&dimensions=...`, which put a distinct
+ * crawlable URL on each of the ~2,100 price rows, all canonicalising back to
+ * one page. That is form state, not a destination, so it now rides in
+ * sessionStorage (see quote-handoff.ts) and the href is the single clean URL.
+ *
+ * The handler never calls preventDefault: it writes the handoff and gets out of
+ * the way, so the browser performs its own navigation exactly as it always did.
+ */
+function quoteHandoffFor(
   groupId: ProductGroupId,
   categoryLabel: string,
   row: CatalogRow,
-) {
+): QuoteHandoff {
   const product =
     groupId === "beam" && categoryLabel.includes("هاش")
       ? "هاش"
       : quoteProductByGroup[groupId];
-  return `/quote-process/?product=${encodeURIComponent(product)}&dimensions=${encodeURIComponent(row.title)}#quote-form`;
+  return { product, dimensions: row.title };
 }
+
 
 function TaxSwitch({
   checked,
@@ -290,7 +311,19 @@ export function FactoryPriceCardList({
                               : ""}
                           </td>
                           <td data-label="استعلام" className="row-quote-cell">
-                            <a href={quoteHref(catalogId, category.label, row)}>
+                            <a
+                              href={QUOTE_FORM_HREF}
+                              aria-label={`افزودن ${row.title} به درخواست پیش‌فاکتور`}
+                              onClick={() =>
+                                writeQuoteHandoff(
+                                  quoteHandoffFor(
+                                    catalogId,
+                                    category.label,
+                                    row,
+                                  ),
+                                )
+                              }
+                            >
                               افزودن به درخواست
                             </a>
                           </td>

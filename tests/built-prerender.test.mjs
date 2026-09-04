@@ -41,9 +41,11 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
     /<div id="root">[\s\S]+<\/div>/,
     "Homepage #root must not be empty",
   );
+  // The space between the two spans is deliberate: they are display:block so it
+  // collapses visually, but without it the H1's text reads "...فولاد؛بنیان...".
   assert.match(
     homeHtml,
-    /<h1><span>قیمت روز آهن و فولاد؛<\/span><span>بنیان فولاد داریا<\/span><\/h1>/,
+    /<h1><span>قیمت روز آهن و فولاد؛<\/span> <span>بنیان فولاد داریا<\/span><\/h1>/,
     "Homepage must contain the primary H1 in initial HTML",
   );
   assert.match(
