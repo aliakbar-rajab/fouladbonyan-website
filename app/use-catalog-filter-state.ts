@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { getCategoryPricingState } from "./catalog-behavior.mjs";
+import { categoryPricingState } from "./catalog-pricing.mjs";
 import {
   INITIAL_FACTORY_COUNT,
   type CatalogViewRequest,
@@ -64,7 +64,7 @@ export function useCatalogFilterState(
     Number(Boolean(factoryFilter)) + Number(Boolean(sizeFilter));
 
   const pricingState = useMemo(
-    () => getCategoryPricingState(category),
+    () => categoryPricingState(category),
     [category],
   );
 

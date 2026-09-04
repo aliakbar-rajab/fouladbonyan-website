@@ -1,5 +1,5 @@
 import { calculateRebarWeight } from "../catalog-behavior.mjs";
-import { formatCatalogNumber } from "../catalog-utils";
+import { formatPersianNumber } from "../persian-numbers.mjs";
 import { parsePersianNumber } from "../persian-numbers.mjs";
 import type {
   QuoteItemEvaluation,
@@ -20,13 +20,13 @@ export const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
 export const tomanToRial = (toman: number): number => toman * RIAL_PER_TOMAN;
 
 export const formatToman = (value: number): string =>
-  `${formatCatalogNumber(value)} تومان`;
+  `${formatPersianNumber(value)} تومان`;
 
 export const isPieceUnit = (unit: string): boolean =>
   unit === "شاخه" || unit === "عدد";
 
 export const itemIndexLabel = (index: number): string =>
-  formatCatalogNumber(index + 1);
+  formatPersianNumber(index + 1);
 
 function resolvePieceOption(
   pieceOptionKey: string,
@@ -79,7 +79,7 @@ function buildPriceExplanation({
 
   const weightDetail =
     baseline.branchWeight && byPiece
-      ? ` (بر اساس وزن تقریبی هر ${unit} با فرمول استاندارد میلگرد و طول شاخه ${formatCatalogNumber(REBAR_STANDARD_BRANCH_LENGTH_M)} متر)`
+      ? ` (بر اساس وزن تقریبی هر ${unit} با فرمول استاندارد میلگرد و طول شاخه ${formatPersianNumber(REBAR_STANDARD_BRANCH_LENGTH_M)} متر)`
       : "";
 
   return `میانگین داده قیمت سایت: ${formatToman(baseline.unitPriceTomanPerKg)} برای هر کیلوگرم${weightDetail} | قیمت تقریبی: ${formatToman(approximateTotalToman)}`;

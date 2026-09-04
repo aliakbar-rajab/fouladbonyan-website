@@ -1,14 +1,9 @@
-import {
-  formatPersianNumber,
-  toPersianDigits,
-} from "./persian-numbers.mjs";
-
-export const formatCatalogNumber = formatPersianNumber;
+import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
 
 export function localizeCatalogValue(value: string | null | undefined) {
   if (!value) return "—";
   // This formats dimensions and spec values (sizes, lengths, weights), never
-  // money -- money goes through formatCatalogNumber. Grouping must stay off
+  // money -- money goes through formatPersianNumber. Grouping must stay off
   // here, or "1250" (a length in mm) becomes "۱٬۲۵۰".
   return toPersianDigits(value);
 }
@@ -34,7 +29,7 @@ export function displayPrice(
   const adjustedPrice = taxIncluded
     ? Math.round((price * (1 + taxRate)) / 100) * 100
     : price;
-  return formatCatalogNumber(adjustedPrice);
+  return formatPersianNumber(adjustedPrice);
 }
 
 /**

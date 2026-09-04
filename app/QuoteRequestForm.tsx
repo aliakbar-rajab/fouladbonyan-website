@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { formatCatalogNumber } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
 import {
   FieldErrors,
   focusFirstError,
@@ -18,7 +18,7 @@ import {
 } from "./quote-types";
 import { takeQuoteHandoff } from "./quote-handoff";
 import { validateQuoteField } from "./quote/validation";
-import type { QuoteItemEstimate } from "./quote-request-estimate";
+import type { QuoteItemEstimate } from "./quote/evaluator";
 import { QuoteDocument } from "./QuoteDocument";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
@@ -139,7 +139,6 @@ export function QuoteRequestForm() {
   const nextItemId = useRef(2);
   const prepared = usePreparedRequest();
   const {
-    estimate,
     evaluator,
     isLoading: isPriceLoading,
     loadError: priceLoadError,
@@ -196,8 +195,8 @@ export function QuoteRequestForm() {
   };
 
   const { items: pricedItems, totals } = useMemo(
-    () => estimate.estimateItems(items),
-    [items, estimate],
+    () => evaluator.estimateItems(items),
+    [items, evaluator],
   );
 
   const clearDraft = () => {
@@ -209,10 +208,10 @@ export function QuoteRequestForm() {
     const index = items.findIndex((item) => item.id === itemId);
     if (index === -1) return;
 
-    // Patched through the estimate, which reconciles the fields pricing couples
+    // Patched through the evaluator, which reconciles the fields pricing couples
     // together -- a product that cannot be sold by the piece takes the item's
     // شاخه unit down with it rather than leaving it stranded.
-    const patched = estimate.applyItemChange(items[index], patch);
+    const patched = evaluator.applyItemChange(items[index], patch);
 
     setItems(items.map((item, position) => (position === index ? patched : item)));
 
@@ -384,7 +383,7 @@ export function QuoteRequestForm() {
         <div className="quote-items-list">
           {pricedItems.map((priced, index) => {
             const { product, unit, id, pieceOptionKey, rebarDiameterMm, dimensions } = priced;
-            const number = formatCatalogNumber(index + 1);
+            const number = formatPersianNumber(index + 1);
             const productField = `itemProduct-${id}`;
             const quantityField = `itemQuantity-${id}`;
             const productErrorId = `quote-product-${id}-error`;

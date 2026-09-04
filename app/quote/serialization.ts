@@ -1,4 +1,4 @@
-import { formatCatalogNumber } from "../catalog-utils";
+import { formatPersianNumber } from "../persian-numbers.mjs";
 import {
   quoteDisclaimer,
   type GeneratedQuote,
@@ -49,10 +49,10 @@ export function buildQuoteMessage(
     `نام: ${contact.fullName.trim()}`,
     `شماره تماس: ${contact.phone.trim()}`,
     "",
-    `کالاهای درخواست (${formatCatalogNumber(items.length)} کالا):`,
+    `کالاهای درخواست (${formatPersianNumber(items.length)} کالا):`,
     ...items.map(
       (priced, index) =>
-        `${formatCatalogNumber(index + 1)}) ${priced.product.trim()} | ${priced.quantity.trim()} ${priced.effectiveUnit} | ابعاد/استاندارد: ${priced.dimensions.trim() || "اعلام نشده"}${priceLineDescription(priced)}`,
+        `${formatPersianNumber(index + 1)}) ${priced.product.trim()} | ${priced.quantity.trim()} ${priced.effectiveUnit} | ابعاد/استاندارد: ${priced.dimensions.trim() || "اعلام نشده"}${priceLineDescription(priced)}`,
     ),
     "",
     `جمع تقریبی: ${

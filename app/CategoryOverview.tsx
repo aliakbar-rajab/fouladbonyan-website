@@ -1,7 +1,10 @@
-import { hasDisplayablePriceRange } from "./catalog-pricing.mjs";
-import { getCategoryPricingState, getTrendPresentation } from "./catalog-behavior.mjs";
+import {
+  categoryPricingState,
+  hasDisplayablePriceRange,
+} from "./catalog-pricing.mjs";
+import { getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
-import { formatCatalogNumber } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
 import {
   getCategoryById,
   subcategoryHref,
@@ -14,7 +17,7 @@ import { useCatalogData } from "./use-catalog-data";
 /** "۲۷ کارخانه" / "۴ گرید" -- whichever the category is actually grouped by. */
 function groupingCountLabel(category: CatalogCategory) {
   const count = category.filters.factories.length;
-  return `${formatCatalogNumber(count)} ${category.groupingLabel}`;
+  return `${formatPersianNumber(count)} ${category.groupingLabel}`;
 }
 
 function CategoryOverviewRow({
@@ -25,7 +28,7 @@ function CategoryOverviewRow({
   category: CatalogCategory;
 }) {
   const href = subcategoryHref(groupId, category.id);
-  const pricingState = getCategoryPricingState(category);
+  const pricingState = categoryPricingState(category);
   const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
   const trend = getTrendPresentation(category.summary.status, category.summary.percent);
 
@@ -42,14 +45,14 @@ function CategoryOverviewRow({
       </td>
       <td className="overview-cell-types">
         <span>
-          {groupingCountLabel(category)} · {formatCatalogNumber(category.filters.sizes.length)} سایز
+          {groupingCountLabel(category)} · {formatPersianNumber(category.filters.sizes.length)} سایز
         </span>
       </td>
       <td className="overview-cell-price">
         {hasRange ? (
           <span className="price-range" dir="rtl">
-            {formatCatalogNumber(category.summary.min)} تا{" "}
-            {formatCatalogNumber(category.summary.max)} <small>تومان</small>
+            {formatPersianNumber(category.summary.min)} تا{" "}
+            {formatPersianNumber(category.summary.max)} <small>تومان</small>
           </span>
         ) : (
           <span className="price-call">تماس بگیرید</span>
@@ -61,7 +64,7 @@ function CategoryOverviewRow({
       <td className="overview-cell-status">
         <span className={`overview-status-badge is-${category.summary.status}`}>
           {trend.amount
-            ? `${trend.direction} (${formatCatalogNumber(trend.amount, 2)}٪)`
+            ? `${trend.direction} (${formatPersianNumber(trend.amount, 2)}٪)`
             : trend.direction}
         </span>
       </td>
@@ -86,7 +89,7 @@ function CategoryOverviewCard({
   category: CatalogCategory;
 }) {
   const href = subcategoryHref(groupId, category.id);
-  const pricingState = getCategoryPricingState(category);
+  const pricingState = categoryPricingState(category);
   const hasRange = hasDisplayablePriceRange(pricingState, category.summary);
 
   return (
@@ -96,7 +99,7 @@ function CategoryOverviewCard({
           <h4>
             <a href={href}>قیمت {category.label}</a>
           </h4>
-          <p>{groupingCountLabel(category)} · {formatCatalogNumber(category.filters.sizes.length)} سایز</p>
+          <p>{groupingCountLabel(category)} · {formatPersianNumber(category.filters.sizes.length)} سایز</p>
         </div>
       </div>
       <div className="overview-card-details">
@@ -104,8 +107,8 @@ function CategoryOverviewCard({
           <small>حدود قیمت:</small>
           {hasRange ? (
             <strong>
-              {formatCatalogNumber(category.summary.min)} تا{" "}
-              {formatCatalogNumber(category.summary.max)} تومان
+              {formatPersianNumber(category.summary.min)} تا{" "}
+              {formatPersianNumber(category.summary.max)} تومان
             </strong>
           ) : (
             <strong>تماس بگیرید</strong>

@@ -34,25 +34,16 @@ const getSvgServerSnapshot = () => false;
  * per-instance, and it is set through CSSOM, which CSP does not police.
  */
 
-type ChannelSelector = "R" | "G" | "B" | "A";
-
 export type GlassSurfaceProps = {
   children?: ReactNode;
   /** Width of the refracting rim, as a fraction of the pane's shorter side. */
   borderWidth?: number;
-  brightness?: number;
-  opacity?: number;
   /** Softness of the displacement map's inner plate — feathers the rim. */
   blur?: number;
-  /** Gaussian blur applied to the refracted result. 0 keeps the glass optically clear. */
-  displace?: number;
   distortionScale?: number;
   redOffset?: number;
   greenOffset?: number;
   blueOffset?: number;
-  xChannel?: ChannelSelector;
-  yChannel?: ChannelSelector;
-  mixBlendMode?: string;
   className?: string;
 };
 
@@ -90,17 +81,11 @@ function supportsSVGFilters(): boolean {
 export default function GlassSurface({
   children,
   borderWidth = 0.07,
-  brightness = 50,
-  opacity = 0.93,
   blur = 6,
-  displace = 0,
   distortionScale = -48,
   redOffset = 0,
   greenOffset = 0.6,
   blueOffset = 1.2,
-  xChannel = "R",
-  yChannel = "G",
-  mixBlendMode = "difference",
   className = "",
 }: GlassSurfaceProps) {
   const uniqueId = useId().replace(/:/g, "-");
@@ -158,8 +143,8 @@ export default function GlassSurface({
           </defs>
           <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" fill="black"></rect>
           <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${redGradId})" />
-          <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${blueGradId})" style="mix-blend-mode: ${mixBlendMode}" />
-          <rect x="${edgeSize}" y="${edgeSize}" width="${actualWidth - edgeSize * 2}" height="${actualHeight - edgeSize * 2}" rx="${borderRadius}" fill="hsl(0 0% ${brightness}% / ${opacity})" style="filter:blur(${blur}px)" />
+          <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${blueGradId})" style="mix-blend-mode: difference" />
+          <rect x="${edgeSize}" y="${edgeSize}" width="${actualWidth - edgeSize * 2}" height="${actualHeight - edgeSize * 2}" rx="${borderRadius}" fill="hsl(0 0% 50% / 0.93)" style="filter:blur(${blur}px)" />
         </svg>
       `;
 
@@ -176,11 +161,11 @@ export default function GlassSurface({
         const node = ref.current;
         if (!node) continue;
         node.setAttribute("scale", (distortionScale + offset).toString());
-        node.setAttribute("xChannelSelector", xChannel);
-        node.setAttribute("yChannelSelector", yChannel);
+        node.setAttribute("xChannelSelector", "R");
+        node.setAttribute("yChannelSelector", "G");
       }
 
-      gaussianBlurRef.current?.setAttribute("stdDeviation", displace.toString());
+      gaussianBlurRef.current?.setAttribute("stdDeviation", "0");
     };
 
     let applied = false;
@@ -255,17 +240,11 @@ export default function GlassSurface({
     };
   }, [
     borderWidth,
-    brightness,
-    opacity,
     blur,
-    displace,
     distortionScale,
     redOffset,
     greenOffset,
     blueOffset,
-    xChannel,
-    yChannel,
-    mixBlendMode,
     filterId,
     redGradId,
     blueGradId,

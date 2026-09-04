@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { CatalogCategory } from "./catalog-types";
-import { formatCatalogNumber, localizeCatalogValue } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
+import { localizeCatalogValue } from "./catalog-utils";
 import { PhoneIcon } from "./icons";
 
 export function CatalogFilterSidebar({
@@ -43,7 +44,7 @@ export function CatalogFilterSidebar({
         <header>
           <h3>فیلترها</h3>
           {activeFilterCount ? (
-            <b>{formatCatalogNumber(activeFilterCount)}</b>
+            <b>{formatPersianNumber(activeFilterCount)}</b>
           ) : null}
         </header>
         <div className="filter-fields">

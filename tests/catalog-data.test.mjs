@@ -3,11 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   calculateRebarWeight,
-  getCategoryPricingState,
   getTrendPresentation,
 } from "../app/catalog-behavior.mjs";
 import {
   categoryPricedRows,
+  categoryPricingState,
   hasDisplayablePriceRange,
   priceRangesByUnit,
 } from "../app/catalog-pricing.mjs";
@@ -171,7 +171,7 @@ test("known source ambiguities are represented honestly", async () => {
     "گروه",
   );
 
-  const beamPricing = getCategoryPricingState(
+  const beamPricing = categoryPricingState(
     beam.categories.find((category) => category.id === "beam"),
   );
   assert.deepEqual(new Set(beamPricing.units), new Set(["شاخه", "کیلوگرم"]));
@@ -187,7 +187,7 @@ test("known source ambiguities are represented honestly", async () => {
   assert.ok(unpriced.length > 0);
   assert.ok(
     unpriced.every((category) => {
-      const state = getCategoryPricingState(category);
+      const state = categoryPricingState(category);
       return (
         !state.hasPrices &&
         category.summary.min === 0 &&
@@ -349,13 +349,13 @@ test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md
     { price: 20, unit: "کیلوگرم" },
     { price: null, unit: "کیلوگرم" },
   ]);
-  assert.deepEqual(getCategoryPricingState(singleUnit), {
+  assert.deepEqual(categoryPricingState(singleUnit), {
     hasPrices: true,
     units: ["کیلوگرم"],
   });
   assert.equal(
     hasDisplayablePriceRange(
-      getCategoryPricingState(singleUnit),
+      categoryPricingState(singleUnit),
       { min: 10, max: 20 },
     ),
     true,
@@ -365,25 +365,25 @@ test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md
     { price: 10, unit: "کیلوگرم" },
     { price: 30, unit: "شاخه" },
   ]);
-  assert.deepEqual(getCategoryPricingState(mixedUnits), {
+  assert.deepEqual(categoryPricingState(mixedUnits), {
     hasPrices: true,
     units: ["کیلوگرم", "شاخه"],
   });
   assert.equal(
     hasDisplayablePriceRange(
-      getCategoryPricingState(mixedUnits),
+      categoryPricingState(mixedUnits),
       { min: 10, max: 30 },
     ),
     false,
   );
 
   const unpriced = makeCategory([{ price: null, unit: "کیلوگرم" }]);
-  assert.deepEqual(getCategoryPricingState(unpriced), {
+  assert.deepEqual(categoryPricingState(unpriced), {
     hasPrices: false,
     units: [],
   });
   assert.equal(
-    hasDisplayablePriceRange(getCategoryPricingState(unpriced), {
+    hasDisplayablePriceRange(categoryPricingState(unpriced), {
       min: 0,
       max: 0,
     }),

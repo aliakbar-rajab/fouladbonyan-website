@@ -4,14 +4,14 @@ import {
   loadOverviewSummaries,
   type CategoryPriceOverview,
 } from "./catalog-reader";
-import { formatCatalogNumber } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import { getThumbnailSources } from "./image-utils";
 
 function formatStatusText(status: string, percent: number): string {
   const trend = getTrendPresentation(status, percent);
   if (!trend.amount) return trend.direction;
-  return `${trend.direction} (${formatCatalogNumber(trend.amount, 1)}٪)`;
+  return `${trend.direction} (${formatPersianNumber(trend.amount, 1)}٪)`;
 }
 
 export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
@@ -109,8 +109,8 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                             dir="rtl"
                             key={range.unit}
                           >
-                            {formatCatalogNumber(range.min)} تا{" "}
-                            {formatCatalogNumber(range.max)}{" "}
+                            {formatPersianNumber(range.min)} تا{" "}
+                            {formatPersianNumber(range.max)}{" "}
                             <small>تومان / {range.unit}</small>
                           </span>
                         ))}
@@ -182,8 +182,8 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                   {item.priceRanges.length ? (
                     item.priceRanges.map((range) => (
                       <strong key={range.unit}>
-                        {formatCatalogNumber(range.min)} تا{" "}
-                        {formatCatalogNumber(range.max)} تومان
+                        {formatPersianNumber(range.min)} تا{" "}
+                        {formatPersianNumber(range.max)} تومان
                         <span> ({range.unit})</span>
                       </strong>
                     ))

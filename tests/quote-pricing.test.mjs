@@ -26,7 +26,6 @@ import {
   quoteUnits,
 } from "../app/quote-types.ts";
 import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
-import { createQuoteRequestEstimate } from "../app/quote-request-estimate.ts";
 
 const contact = {
   fullName: "کاربر آزمایشی",
@@ -40,7 +39,7 @@ test("React consumes the quote estimate flow without coordinating evaluator inte
     new URL("../app/QuoteRequestForm.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(source, /estimate\.estimateItems\(items\)/);
+  assert.match(source, /evaluator\.estimateItems\(items\)/);
   assert.match(source, /evaluator\.evaluateRequest\(/);
   assert.match(source, /validateQuoteField\(/);
   assert.doesNotMatch(source, /createQuoteEvaluator|loadQuoteEvaluator|QuoteEvaluator/);
@@ -463,15 +462,11 @@ test("evaluator evaluateItems aggregates multi-item totals and item counts", () 
 });
 
 test("quote request estimate exposes one presentation-ready flow to React", () => {
-  const estimate = createQuoteRequestEstimate(
-    createQuoteEvaluator(allEstimates),
-  );
-  assert.deepEqual(Object.keys(estimate).sort(), [
-    "applyItemChange",
-    "estimateItems",
-  ]);
+  const evaluator = createQuoteEvaluator(allEstimates);
+  assert.equal(typeof evaluator.estimateItems, "function");
+  assert.equal(typeof evaluator.applyItemChange, "function");
 
-  const result = estimate.estimateItems([
+  const result = evaluator.estimateItems([
     {
       id: 1,
       product: "تیرآهن",
@@ -508,9 +503,7 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
 });
 
 test("changing to a product that is not sold by the piece takes the piece unit with it", () => {
-  const estimate = createQuoteRequestEstimate(
-    createQuoteEvaluator(allEstimates),
-  );
+  const evaluator = createQuoteEvaluator(allEstimates);
   const beamByBranch = {
     id: 1,
     product: "تیرآهن",
@@ -525,12 +518,12 @@ test("changing to a product that is not sold by the piece takes the piece unit w
   // priced and validated by the piece while its <select> -- which no longer
   // listed شاخه -- displayed تن, so a decimal quantity was refused for a unit
   // the form never showed and could not be selected back.
-  const switched = estimate.applyItemChange(beamByBranch, {
+  const switched = evaluator.applyItemChange(beamByBranch, {
     product: "ورق فولادی",
   });
   assert.equal(switched.unit, "تن");
 
-  const [priced] = estimate.estimateItems([switched]).items;
+  const [priced] = evaluator.estimateItems([switched]).items;
   assert.ok(priced.availableUnits.includes(priced.unit));
   assert.equal(
     validateQuoteField("quantity", priced.quantity, { unit: priced.unit }),
@@ -539,18 +532,18 @@ test("changing to a product that is not sold by the piece takes the piece unit w
 
   // A piece unit survives a change between two products that both sell by it.
   assert.equal(
-    estimate.applyItemChange(beamByBranch, { product: "میلگرد" }).unit,
+    evaluator.applyItemChange(beamByBranch, { product: "میلگرد" }).unit,
     "شاخه",
   );
   // Edits that are not product changes never touch the unit.
   assert.equal(
-    estimate.applyItemChange(beamByBranch, { quantity: "9" }).unit,
+    evaluator.applyItemChange(beamByBranch, { quantity: "9" }).unit,
     "شاخه",
   );
 });
 
 test("product unit capability is stable before and after the asynchronous price load", () => {
-  const emptyEstimate = createQuoteRequestEstimate(createQuoteEvaluator());
+  const emptyEvaluator = createQuoteEvaluator();
   const rawSheetByBranch = {
     id: 1,
     product: "ورق فولادی",
@@ -562,13 +555,13 @@ test("product unit capability is stable before and after the asynchronous price 
   };
 
   assert.deepEqual(
-    emptyEstimate.estimateItems([rawSheetByBranch]).items[0].availableUnits,
+    emptyEvaluator.estimateItems([rawSheetByBranch]).items[0].availableUnits,
     ["تن", "کیلوگرم"],
   );
 
-  const narrowed = createQuoteRequestEstimate(
-    createQuoteEvaluator(allEstimates),
-  ).estimateItems([rawSheetByBranch]);
+  const narrowed = createQuoteEvaluator(allEstimates).estimateItems([
+    rawSheetByBranch,
+  ]);
 
   assert.deepEqual(narrowed.items[0].availableUnits, ["تن", "کیلوگرم"]);
 

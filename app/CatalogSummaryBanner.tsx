@@ -1,7 +1,8 @@
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import { hasDisplayablePriceRange } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
-import { displayPrice, formatCatalogNumber } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
+import { displayPrice } from "./catalog-utils";
 import { toPersianDigits } from "./persian-numbers.mjs";
 
 function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
@@ -83,7 +84,7 @@ export function CatalogSummaryBanner({
             <strong>
               {trend.direction}
               {trend.amount
-                ? ` ${formatCatalogNumber(trend.amount, 2)}٪`
+                ? ` ${formatPersianNumber(trend.amount, 2)}٪`
                 : ""}
             </strong>
             <small>نسبت به روز قبل</small>

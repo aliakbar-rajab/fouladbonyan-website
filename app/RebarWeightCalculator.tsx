@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
-import { formatCatalogNumber } from "./catalog-utils";
+import { formatPersianNumber } from "./persian-numbers.mjs";
 import { parsePersianNumber } from "./persian-numbers.mjs";
 
 /**
@@ -121,7 +121,7 @@ export function RebarWeightCalculator() {
           <p>
             وزن تقریبی:
             <strong>
-              {weight === null ? " — " : ` ${formatCatalogNumber(weight, 2)} `}
+              {weight === null ? " — " : ` ${formatPersianNumber(weight, 2)} `}
               کیلوگرم
             </strong>
           </p>

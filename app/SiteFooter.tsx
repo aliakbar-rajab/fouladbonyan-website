@@ -15,21 +15,11 @@ import { Brand } from "./site-ui";
 const phoneDisplayOrder = [3, 2, 0, 1, 4] as const;
 
 /*
- * Two tunings of the same material — the refraction half. Large panes bend a
- * light pillar visibly around their rim; small objects use a shallower scale so
+ * Small panes use a shallower refraction scale than the component defaults so
  * a 2.6rem pill does not read as a lens. The pane's box and its frost/saturation
  * are rules in `globals/footer.css`, not props: a style attribute would be
  * blocked by the site's `style-src 'self'`.
  */
-const largeGlass = {
-  distortionScale: -48,
-  redOffset: 0,
-  greenOffset: 0.6,
-  blueOffset: 1.2,
-  borderWidth: 0.07,
-  blur: 6,
-} satisfies Partial<GlassSurfaceProps>;
-
 const smallGlass = {
   distortionScale: -15,
   redOffset: 0,
@@ -54,7 +44,6 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
         <div className="footer-primary">
           <GlassSurface
             className="fg-glass fg-glass--brand"
-            {...largeGlass}
           >
             <section className="footer-card footer-card--brand">
               {/* The raster logo carries dark lettering, which is unreadable on
@@ -80,7 +69,6 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
 
           <GlassSurface
             className="fg-glass fg-glass--nav"
-            {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-quick">
               <p className="footer-card-title" id="footer-nav-quick">
@@ -98,7 +86,6 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
 
           <GlassSurface
             className="fg-glass fg-glass--nav"
-            {...largeGlass}
           >
             <nav className="footer-card footer-card--nav" aria-labelledby="footer-nav-mgmt">
               <p className="footer-card-title" id="footer-nav-mgmt">
@@ -121,7 +108,6 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
 
           <GlassSurface
             className="fg-glass fg-glass--cta"
-            {...largeGlass}
           >
             <section className="footer-card footer-card--cta">
               <span className="footer-cta-tag">مشاوره و خرید</span>

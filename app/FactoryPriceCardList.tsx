@@ -7,13 +7,12 @@ import {
   type CatalogRow,
 } from "./catalog-types";
 import type { ProductGroupId } from "./category-meta";
+import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
 import {
   displayPrice,
-  formatCatalogNumber,
   localizeCatalogValue,
   unixSecondsToIso,
 } from "./catalog-utils";
-import { toPersianDigits } from "./persian-numbers.mjs";
 import {
   QUOTE_FORM_HREF,
   writeQuoteHandoff,
@@ -188,12 +187,12 @@ export function FactoryPriceCardList({
     <>
       <p className="rebar-result-status" role="status" aria-live="polite">
         {filteredFactories.length
-          ? `${formatCatalogNumber(
+          ? `${formatPersianNumber(
               filteredFactories.reduce(
                 (total, factory) => total + factory.rows.length,
                 0,
               ),
-            )} ردیف قیمت از ${formatCatalogNumber(
+            )} ردیف قیمت از ${formatPersianNumber(
               filteredFactories.length,
             )} ${category.groupingLabel}`
           : "برای این فیلتر قیمتی پیدا نشد."}
@@ -307,7 +306,7 @@ export function FactoryPriceCardList({
                           >
                             {trend.direction}{" "}
                             {trend.amount
-                              ? `${formatCatalogNumber(trend.amount, 2)}٪`
+                              ? `${formatPersianNumber(trend.amount, 2)}٪`
                               : ""}
                           </td>
                           <td data-label="استعلام" className="row-quote-cell">
@@ -380,7 +379,7 @@ export function FactoryPriceCardList({
         >
           {showAllFactories
             ? "نمایش کمتر"
-            : `نمایش ${formatCatalogNumber(collapsedFactories)} ${category.groupingLabel} دیگر`}
+            : `نمایش ${formatPersianNumber(collapsedFactories)} ${category.groupingLabel} دیگر`}
           <ChevronDownIcon
             className={showAllFactories ? "is-expanded" : undefined}
           />

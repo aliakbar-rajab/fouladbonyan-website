@@ -30,5 +30,5 @@ pnpm-debug.log*
 Thumbs.db
 *.pem
 
-# Claude Code local (personal) settings
-.claude/settings.local.json
+# Claude Code: local junction to the canonical tracked .agents/ tree
+.claude/

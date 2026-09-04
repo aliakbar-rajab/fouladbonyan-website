@@ -39,5 +39,3 @@ export function getTrendPresentation(status, percent) {
   }
   return { direction: "بدون تغییر", symbol: "—", amount: 0 };
 }
-
-export { categoryPricingState as getCategoryPricingState } from "./catalog-pricing.mjs";

@@ -8,10 +8,6 @@ import {
   type QuoteEvaluator,
 } from "./quote/evaluator";
 import { extractQuotePricingBaselines } from "./quote/pricing-source";
-import {
-  createQuoteRequestEstimate,
-  type QuoteRequestEstimate,
-} from "./quote-request-estimate";
 
 const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
   async () =>
@@ -21,24 +17,17 @@ const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
 );
 
 const emptyEvaluator = createQuoteEvaluator();
-const emptyEstimate = createQuoteRequestEstimate(emptyEvaluator);
 
 export function useQuoteRequestEstimate() {
-  const [loaded, setLoaded] = useState<{
-    estimate: QuoteRequestEstimate;
-    evaluator: QuoteEvaluator;
-  } | null>(null);
+  const [evaluator, setEvaluator] = useState<QuoteEvaluator | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
     loadQuoteEvaluator()
-      .then((evaluator) => {
+      .then((loaded) => {
         if (!active) return;
-        setLoaded({
-          estimate: createQuoteRequestEstimate(evaluator),
-          evaluator,
-        });
+        setEvaluator(loaded);
         setLoadError(false);
       })
       .catch(() => {
@@ -53,11 +42,10 @@ export function useQuoteRequestEstimate() {
 
   return useMemo(
     () => ({
-      estimate: loaded?.estimate ?? emptyEstimate,
-      evaluator: loaded?.evaluator ?? emptyEvaluator,
-      isLoading: !loaded && !loadError,
+      evaluator: evaluator ?? emptyEvaluator,
+      isLoading: !evaluator && !loadError,
       loadError,
     }),
-    [loaded, loadError],
+    [evaluator, loadError],
   );
 }
