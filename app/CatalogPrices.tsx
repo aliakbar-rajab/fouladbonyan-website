@@ -1,7 +1,5 @@
 import {
   useId,
-  useRef,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import type { CatalogViewRequest } from "./catalog-types";
@@ -9,7 +7,6 @@ import { getCategoryById, type ProductGroupId } from "./category-meta";
 import { loadGroupCatalog, type GroupCatalog } from "./catalog-reader";
 import { RebarWeightCalculator } from "./RebarWeightCalculator";
 import { CatalogLoadMessage } from "./site-ui";
-import { nextRovingIndex } from "./catalog-utils";
 import { useCatalogData } from "./use-catalog-data";
 import { useCatalogFilterState } from "./use-catalog-filter-state";
 import { CatalogSummaryBanner } from "./CatalogSummaryBanner";
@@ -48,8 +45,6 @@ export function PriceCatalog({
   const factorySelectId = `${baseId}-factory-select`;
   const sizeSelectId = `${baseId}-size-select`;
   const factoryListId = `${baseId}-factory-list`;
-  const tabsId = `${baseId}-tabs`;
-  const categoryTabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
 
   const {
     category,
@@ -76,64 +71,24 @@ export function PriceCatalog({
     timeZone: "Asia/Tehran",
   }).format(new Date(catalog.fetchedAt));
 
-  /*
-   * Roving-tabindex focus only, the same contract as the home product tabs in
-   * App.tsx: these tabs are real links, so arrow keys move focus like
-   * Tab/Shift+Tab and the browser's own Enter/click activation of the
-   * now-focused link commits the category by navigating to it. Switching the
-   * category in place instead -- which this did until it was caught -- leaves
-   * the URL, <title>, canonical, hero, <h1> and breadcrumb of the page you
-   * arrived on describing a catalog the table below no longer shows. Every
-   * category has its own prerendered page, so following the href is what keeps
-   * all of them agreeing.
-   */
-  const moveCategoryTabFocus = (
-    event: ReactKeyboardEvent<HTMLElement>,
-    currentIndex: number,
-  ) => {
-    const targetIndex = nextRovingIndex(
-      event.key,
-      currentIndex,
-      catalog.categories.length,
-    );
-    if (targetIndex === null) return;
-
-    event.preventDefault();
-    categoryTabRefs.current[targetIndex]?.focus();
-  };
-
   return (
     <div className="rebar-prices">
-      <div
+      <nav
         className={`rebar-kind-tabs ${tabClassNames[catalog.id] ?? ""}`.trim()}
-        role="tablist"
         aria-label={`نوع ${catalog.label}`}
       >
-        {catalog.categories.map((item, index) => (
+        {catalog.categories.map((item) => (
           <a
             href={`/${catalog.id}/${item.id}/`}
-            role="tab"
-            id={`${tabsId}-tab-${item.id}`}
-            aria-selected={item.id === category.id}
-            aria-controls={`${tabsId}-panel-${item.id}`}
-            tabIndex={item.id === category.id ? 0 : -1}
+            aria-current={item.id === category.id ? "page" : undefined}
             key={item.id}
-            ref={(node) => {
-              categoryTabRefs.current[index] = node;
-            }}
-            onKeyDown={(event) => moveCategoryTabFocus(event, index)}
           >
             {`قیمت ${item.label}`}
           </a>
         ))}
-      </div>
+      </nav>
 
-      <div
-        role="tabpanel"
-        id={`${tabsId}-panel-${category.id}`}
-        aria-labelledby={`${tabsId}-tab-${category.id}`}
-        tabIndex={0}
-      >
+      <div>
         <div className="rebar-layout">
           <div className="rebar-main">
             <CatalogSummaryBanner
@@ -191,9 +146,25 @@ export function PriceCatalog({
   );
 }
 
+function BeamGuideSidebar() {
+  return (
+    <section className="calculator-card beam-guide-card" aria-label="راهنماهای فنی تیرآهن">
+      <div className="beam-guide-card-header">
+        <span aria-hidden="true">📊</span>
+        <strong>راهنماهای فنی تیرآهن</strong>
+      </div>
+      <div className="beam-guide-card-links">
+        <a href="/guide/beam-weight-chart/">جدول وزن تیرآهن IPE به تفکیک کارخانه</a>
+        <a href="/guide/ipe-vs-hash-beam/">راهنمای تفاوت تیرآهن IPE و هاش</a>
+      </div>
+    </section>
+  );
+}
+
 /** Product-specific sidebar tools, by group. */
 const sidebarExtras: Partial<Record<ProductGroupId, ReactNode>> = {
   rebar: <RebarWeightCalculator />,
+  beam: <BeamGuideSidebar />,
 };
 
 export default function CatalogPrices({
@@ -225,4 +196,3 @@ export default function CatalogPrices({
     />
   );
 }
-

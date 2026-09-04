@@ -19,6 +19,10 @@ import {
   validateCatalogSnapshot,
 } from "../app/catalog-validation.mjs";
 import { filterProductGroups } from "../app/site-logic.mjs";
+import {
+  summarizeCatalogDates,
+  summarizeCatalogTrends,
+} from "../app/catalog-trend.mjs";
 
 const readJson = async (path) =>
   JSON.parse(await readFile(new URL(path, import.meta.url), "utf8"));
@@ -258,9 +262,64 @@ test("trend and calculator helpers preserve business meaning", () => {
     symbol: "—",
     amount: 0,
   });
+  assert.deepEqual(getTrendPresentation("up", 155), {
+    direction: "نیازمند بررسی",
+    symbol: "!",
+    amount: 0,
+  });
+  assert.deepEqual(getTrendPresentation("mixed", 0), {
+    direction: "نوسان ترکیبی",
+    symbol: "↕",
+    amount: 0,
+  });
   assert.equal(calculateRebarWeight(16, 12, 2), (16 ** 2 / 162) * 12 * 2);
   assert.equal(calculateRebarWeight(16, 12, 1.5), null);
   assert.equal(calculateRebarWeight(16, 12, 0), null);
+});
+
+test("implausible trend percentages must be quarantined before publication", async () => {
+  const snapshot = await readJson("../app/data/catalog-prices.json");
+  const suspicious = structuredClone(snapshot);
+  const row = suspicious.catalogs[0].categories[0].factories[0].rows[0];
+  row.status = "up";
+  row.percent = 155;
+
+  assert.throws(
+    () => validateCatalogSnapshot(suspicious),
+    /unverified|بررسی/,
+  );
+
+  row.status = "unverified";
+  assert.equal(validateCatalogSnapshot(suspicious), suspicious);
+});
+
+test("group overview trends and dates are derived from every category", () => {
+  assert.deepEqual(
+    summarizeCatalogTrends([
+      { status: "up", percent: 2 },
+      { status: "down", percent: -1 },
+    ]),
+    { status: "mixed", percent: 0 },
+  );
+  assert.deepEqual(
+    summarizeCatalogTrends([
+      { status: "up", percent: 2 },
+      { status: "up", percent: 4 },
+      { status: "same", percent: 0 },
+    ]),
+    { status: "up", percent: 3 },
+  );
+  assert.deepEqual(
+    summarizeCatalogTrends([
+      { status: "up", percent: 155 },
+      { status: "same", percent: 0 },
+    ]),
+    { status: "unverified", percent: 0 },
+  );
+  assert.equal(
+    summarizeCatalogDates([{ date: "۱۴۰۵/۰۶/۰۸" }, { date: "۱۴۰۵/۰۶/۰۷" }]),
+    "به‌روزرسانی‌های متفاوت",
+  );
 });
 
 test("catalog-pricing: priced-row extraction ignores null, zero, and non-finite prices", () => {

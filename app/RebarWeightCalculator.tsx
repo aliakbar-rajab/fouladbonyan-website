@@ -125,6 +125,9 @@ export function RebarWeightCalculator() {
               کیلوگرم
             </strong>
           </p>
+          <a href="/guide/rebar-weight-chart/" className="calculator-guide-link">
+            مشاهده جدول کامل وزن میلگرد و فرمول محاسباتی ←
+          </a>
         </div>
       ) : null}
     </section>

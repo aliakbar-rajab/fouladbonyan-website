@@ -5,17 +5,13 @@ import {
   type CategoryPriceOverview,
 } from "./catalog-reader";
 import { formatCatalogNumber } from "./catalog-utils";
+import { getTrendPresentation } from "./catalog-behavior.mjs";
 import { getThumbnailSources } from "./image-utils";
 
 function formatStatusText(status: string, percent: number): string {
-  const absPercent = Math.abs(percent);
-  if (status === "up" && absPercent > 0) {
-    return `افزایشی (${formatCatalogNumber(absPercent, 1)}٪)`;
-  }
-  if (status === "down" && absPercent > 0) {
-    return `کاهشی (${formatCatalogNumber(absPercent, 1)}٪)`;
-  }
-  return "ثابت / بدون تغییر";
+  const trend = getTrendPresentation(status, percent);
+  if (!trend.amount) return trend.direction;
+  return `${trend.direction} (${formatCatalogNumber(trend.amount, 1)}٪)`;
 }
 
 export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {

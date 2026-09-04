@@ -40,11 +40,13 @@
 }
 
 .market-status-rail h2,
+.market-status-rail .market-status-title,
 .market-status-rail p {
   margin: 0;
 }
 
-.market-status-rail h2 {
+.market-status-rail h2,
+.market-status-rail .market-status-title {
   color: #f5f6f7;
   font-size: 1rem;
   font-weight: 850;

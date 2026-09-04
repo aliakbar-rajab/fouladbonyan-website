@@ -147,6 +147,36 @@ test("POST /ingest with a valid payload stores it and calls the deploy hook", as
   assert.equal(calledUrls.includes("https://deploy.example/hook"), true);
 });
 
+test("POST /ingest reports a failed deploy hook instead of claiming the refresh succeeded", async (t) => {
+  const { snapshot, diagnostics } = buildValidPayload();
+  t.mock.method(globalThis, "fetch", async () =>
+    new Response("deploy rejected", { status: 500 }),
+  );
+  const env = {
+    PRICE_DATA: fakeKv(),
+    INGEST_TOKEN: "secret",
+    DEPLOY_HOOK_URL: "https://deploy.example/hook",
+  };
+
+  const response = await worker.fetch(
+    new Request("https://price.example/ingest", {
+      method: "POST",
+      headers: { authorization: "Bearer secret" },
+      body: JSON.stringify({ snapshot, diagnostics }),
+    }),
+    env,
+  );
+
+  const body = await response.json();
+  const storedStatus = JSON.parse(env.PRICE_DATA.store.get(STATUS_KEY));
+  assert.equal(response.status, 502);
+  assert.equal(body.ok, false);
+  assert.equal(body.stage, "deploy-hook");
+  assert.equal(body.stored, true);
+  assert.equal(storedStatus.ok, false);
+  assert.equal(storedStatus.stage, "deploy-hook");
+});
+
 test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and-publish.mjs sends", async () => {
   const { snapshot, diagnostics } = buildValidPayload();
   const producerPayload = { snapshot, diagnostics };

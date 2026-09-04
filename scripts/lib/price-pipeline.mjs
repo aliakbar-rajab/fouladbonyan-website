@@ -9,6 +9,7 @@ import {
   deriveSummaryFromRows,
   validateCatalogSnapshot,
 } from "../../app/catalog-validation.mjs";
+import { normalizeCatalogTrend } from "../../app/catalog-trend.mjs";
 import {
   allCatalogConfigs,
   productDetailKeys,
@@ -115,7 +116,9 @@ function parseCatalogPage(html, source) {
 
   const factories = shopData.products
     .map((factoryGroup) => {
-      const rows = (factoryGroup.productsitem ?? []).map((item) => ({
+      const rows = (factoryGroup.productsitem ?? []).map((item) => {
+        const trend = normalizeCatalogTrend(item.status, item.percent);
+        return {
         id: Number(item.id),
         title: String(item.title ?? ""),
         size: source.deriveSize?.(item) ?? metaValue(item, "سایز"),
@@ -140,11 +143,12 @@ function parseCatalogPage(html, source) {
             }
           : {}),
         price: Number(item.price) > 0 ? Number(item.price) : null,
-        percent: Number(item.percent) || 0,
-        status: String(item.status ?? "same"),
+        percent: trend.percent,
+        status: trend.status,
         updatedAt: Number(item.updated_at) || 0,
         updatedDate: formatPersianDate(item.updated_at),
-      }));
+        };
+      });
 
       const latestUpdate = Math.max(0, ...rows.map((row) => row.updatedAt));
       return {
@@ -164,6 +168,7 @@ function parseCatalogPage(html, source) {
   }
 
   const compare = shopData.price_compare;
+  const summaryTrend = normalizeCatalogTrend(compare.status, compare.percent);
   return {
     id: source.id,
     label: source.label,
@@ -175,8 +180,8 @@ function parseCatalogPage(html, source) {
     summary: {
       date: toPersianDigits(String(compare.date ?? "")),
       ...deriveSummaryFromRows(rows),
-      percent: Number(compare.percent) || 0,
-      status: String(compare.status ?? "same"),
+      percent: summaryTrend.percent,
+      status: summaryTrend.status,
     },
     filters: {
       sizes: [...new Set(rows.map((row) => row.size).filter(Boolean))].sort(
@@ -315,7 +320,23 @@ async function fetchCategoriesWithDiagnostics(sources, options = {}) {
     results.push(...batchResults);
   }
 
-  const categories = results.map((item) => item.category);
+  const categories = results.map((item) => ({
+    ...item.category,
+    summary: {
+      ...item.category.summary,
+      ...normalizeCatalogTrend(
+        item.category.summary?.status,
+        item.category.summary?.percent,
+      ),
+    },
+    factories: item.category.factories.map((factory) => ({
+      ...factory,
+      rows: factory.rows.map((row) => ({
+        ...row,
+        ...normalizeCatalogTrend(row.status, row.percent),
+      })),
+    })),
+  }));
 
   const diagnostics = {
     total: sources.length,
@@ -475,7 +496,7 @@ export async function pullPriceSnapshot({
         categoryIds: catalog.sources.map((source) => source.id),
       })),
     });
-    await writeFile(outputPath, `${JSON.stringify(data)}\n`);
+    await writeFile(outputPath, `${JSON.stringify(data, null, 2)}\n`);
     return { ok: true, fetchedAt: data.fetchedAt };
   } catch (error) {
     return { ok: false, error: String(error?.message ?? error) };
@@ -502,7 +523,7 @@ export async function updateLocalPriceSnapshot({
 
   await mkdir(dirname(outputPath), { recursive: true });
   const temporaryPath = `${outputPath}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(snapshot)}\n`);
+  await writeFile(temporaryPath, `${JSON.stringify(snapshot, null, 2)}\n`);
   await rename(temporaryPath, outputPath);
 
   return { snapshot, diagnostics };

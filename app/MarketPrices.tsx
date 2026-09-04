@@ -106,13 +106,17 @@ export function MarketPrices() {
               ) : null}
             </p>
           </>
-        ) : null}
+        ) : (
+          <h2 id="market-prices-title" className="sr-only">
+            زمینه بازار، کنار قیمت فولاد
+          </h2>
+        )}
 
         {state.status === "loading" ? (
           <div className="market-status-rail" role="status" aria-live="polite">
             <span className="market-status-dot is-loading" aria-hidden="true" />
             <div>
-              <h2 id="market-prices-title">در حال دریافت زمینه بازار</h2>
+              <p className="market-status-title">در حال دریافت زمینه بازار</p>
               <p>جدول قیمت فولاد آماده است و پایین‌تر در دسترس شماست.</p>
             </div>
             <a href="#price-workspace">مشاهده قیمت فولاد</a>
@@ -123,7 +127,7 @@ export function MarketPrices() {
           <div className="market-status-rail" role="alert">
             <span className="market-status-dot is-unavailable" aria-hidden="true" />
             <div>
-              <h2 id="market-prices-title">نرخ‌های مکمل بازار دریافت نشد</h2>
+              <p className="market-status-title">نرخ‌های مکمل بازار دریافت نشد</p>
               <p>قیمت مقاطع فولادی مستقل از این سرویس و همچنان در دسترس است.</p>
             </div>
             <div className="market-status-actions">

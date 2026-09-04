@@ -48,8 +48,7 @@
   border-color: #aaaab4;
 }
 
-.rebar-kind-tabs button[aria-selected="true"],
-.rebar-kind-tabs a[aria-selected="true"] {
+.rebar-kind-tabs a[aria-current="page"] {
   border-color: var(--brand-dark);
   background: var(--brand-dark);
   color: var(--white);
@@ -457,6 +456,11 @@
   color: #10a966 !important;
 }
 
+.row-change.is-unverified,
+.row-change.is-mixed {
+  color: #9f6d00 !important;
+}
+
 .rebar-price-table tbody tr.is-dark-row .row-change,
 .rebar-price-table
   tbody
@@ -479,6 +483,19 @@
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   .row-change.is-down {
   color: #63e6a3 !important;
+}
+
+.rebar-price-table tbody tr.is-dark-row .row-change.is-unverified,
+.rebar-price-table
+  tbody
+  tr.rebar-row-group:nth-child(even of .rebar-row-group)
+  .row-change.is-unverified,
+.rebar-price-table tbody tr.is-dark-row .row-change.is-mixed,
+.rebar-price-table
+  tbody
+  tr.rebar-row-group:nth-child(even of .rebar-row-group)
+  .row-change.is-mixed {
+  color: #ffd45d !important;
 }
 
 .catalog-load-state {
@@ -1178,4 +1195,101 @@
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+.overview-guide-links {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e0e1e6;
+  border-radius: 10px;
+  background: var(--white);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.overview-guide-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3b3d45;
+}
+
+.overview-guide-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.overview-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: #f4f5f7;
+  color: #1a1b1e;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.overview-guide-link:hover {
+  background: #e8eaed;
+  color: #0b57d0;
+}
+
+.calculator-guide-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.84rem;
+  color: #b57a1e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.calculator-guide-link:hover {
+  color: #8c5d12;
+}
+
+.beam-guide-card {
+  padding: 1rem;
+}
+
+.beam-guide-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #1f2024;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e8e9ec;
+}
+
+.beam-guide-card-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.beam-guide-card-links a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #f6f7f9;
+  color: #2b2d33;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.beam-guide-card-links a:hover {
+  background: #ebecef;
+  color: #0b57d0;
 }

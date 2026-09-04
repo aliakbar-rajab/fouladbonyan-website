@@ -56,9 +56,9 @@ function CategoryOverviewRow({
       </td>
       <td className="overview-cell-status">
         <span className={`overview-status-badge is-${category.summary.status}`}>
-          {trend.direction === "بدون تغییر"
-            ? "بدون تغییر"
-            : `${trend.direction} (${formatCatalogNumber(trend.amount, 2)}٪)`}
+          {trend.amount
+            ? `${trend.direction} (${formatCatalogNumber(trend.amount, 2)}٪)`
+            : trend.direction}
         </span>
       </td>
       <td className="overview-cell-action">
@@ -162,9 +162,36 @@ function CategoryOverviewContent({
           <CategoryOverviewCard key={category.id} groupId={groupId} category={category} />
         ))}
       </div>
+
+      {categoryGuideLinks[groupId] ? (
+        <aside className="overview-guide-links" aria-label={`راهنماهای تخصصی ${catalog.label}`}>
+          <span className="overview-guide-title">راهنماهای فنی و جداول وزن مرتبط:</span>
+          <div className="overview-guide-items">
+            {categoryGuideLinks[groupId]?.map((guide) => (
+              <a key={guide.href} href={guide.href} className="overview-guide-link">
+                <span aria-hidden="true">📖</span>
+                <span>{guide.label}</span>
+              </a>
+            ))}
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }
+
+const categoryGuideLinks: Partial<
+  Record<ProductGroupId, { href: string; label: string }[]>
+> = {
+  rebar: [
+    { href: "/guide/rebar-weight-chart/", label: "جدول وزن میلگرد" },
+    { href: "/guide/ribbed-vs-plain-rebar/", label: "تفاوت میلگرد آجدار و ساده" },
+  ],
+  beam: [
+    { href: "/guide/beam-weight-chart/", label: "جدول وزن تیرآهن IPE" },
+    { href: "/guide/ipe-vs-hash-beam/", label: "راهنمای انواع تیرآهن و هاش" },
+  ],
+};
 
 export function CategoryOverview({
   groupId,

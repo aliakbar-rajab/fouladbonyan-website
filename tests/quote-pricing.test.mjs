@@ -187,8 +187,8 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
                 updatedAt: 0,
                 updatedDate: "۱۴۰۵/۰۶/۰۷",
                 rows: [
-                  { unit: "کیلوگرم", price: 30000, size: "14", title: "میلگرد ۱۴" },
-                  { unit: "کیلوگرم", price: 32000, size: "16", title: "میلگرد ۱۶" },
+                  { id: 1, unit: "کیلوگرم", price: 30000, size: "14", title: "میلگرد ۱۴" },
+                  { id: 2, unit: "کیلوگرم", price: 32000, size: "16", title: "میلگرد ۱۶" },
                 ],
               },
             ],
@@ -226,8 +226,9 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
                 updatedAt: 0,
                 updatedDate: "۱۴۰۵/۰۶/۰۷",
                 rows: [
-                  { unit: "کیلوگرم", price: 40000, size: "14", title: "تیرآهن ۱۴ کیلو" },
-                  { unit: "شاخه", price: 6_000_000, size: "14", title: "تیرآهن ۱۴ شاخه" },
+                  { id: 10, unit: "کیلوگرم", price: 40000, size: "14", title: "تیرآهن ۱۴ کیلو" },
+                  { id: 11, unit: "شاخه", price: 6_000_000, size: "14", title: "تیرآهن ۱۴ شاخه سبک" },
+                  { id: 12, unit: "شاخه", price: 8_000_000, size: "14", title: "تیرآهن ۱۴ شاخه سنگین" },
                 ],
               },
             ],
@@ -245,9 +246,17 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
   assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
 
   const beamPieceOptions = evaluator.getPieceOptions("تیرآهن");
-  assert.equal(beamPieceOptions.length, 1);
+  assert.equal(beamPieceOptions.length, 2);
   assert.equal(beamPieceOptions[0].unit, "شاخه");
   assert.equal(beamPieceOptions[0].priceToman, 6_000_000);
+  assert.equal(beamPieceOptions[1].priceToman, 8_000_000);
+  assert.notEqual(
+    beamPieceOptions[0].priceToman,
+    7_000_000,
+    "an exact option must never be a made-up average of distinct rows",
+  );
+  assert.match(beamPieceOptions[0].label, /سبک/);
+  assert.match(beamPieceOptions[1].label, /سنگین/);
 
   // Evaluate rebar branch with diameter 14
   const rebarItem = evaluator.evaluateItem({
@@ -486,7 +495,7 @@ test("quote request estimate exposes one presentation-ready flow to React", () =
   assert.equal(result.items[0].pieceOptions.length, 1);
   assert.deepEqual(result.items[0].availableUnits, quoteUnits);
   assert.equal(result.items[0].isPieceUnit, true);
-  assert.deepEqual(result.items[1].availableUnits, ["تن", "کیلوگرم"]);
+  assert.deepEqual(result.items[1].availableUnits, quoteUnits);
   assert.equal(result.items[1].unitPriceTomanPerKg, 45_000);
   assert.equal(result.totals.pricedItemCount, 2);
   assert.equal(
@@ -512,12 +521,12 @@ test("changing to a product that is not sold by the piece takes the piece unit w
     pieceOptionKey: "",
   };
 
-  // لوله فولادی is priced by weight only. Left on شاخه, the item was still
+  // ورق فولادی is priced by weight only. Left on شاخه, the item was still
   // priced and validated by the piece while its <select> -- which no longer
   // listed شاخه -- displayed تن, so a decimal quantity was refused for a unit
   // the form never showed and could not be selected back.
   const switched = estimate.applyItemChange(beamByBranch, {
-    product: "لوله فولادی",
+    product: "ورق فولادی",
   });
   assert.equal(switched.unit, "تن");
 
@@ -540,30 +549,36 @@ test("changing to a product that is not sold by the piece takes the piece unit w
   );
 });
 
-test("a unit already chosen stays listed when a late price load narrows the options", () => {
-  // The evaluator starts empty while catalog prices load, so every product
-  // offers every unit; the narrowing arrives later. Whatever the item already
-  // carries has to stay in its own <select>, or the control would display a
-  // different unit from the one being priced.
+test("product unit capability is stable before and after the asynchronous price load", () => {
+  const emptyEstimate = createQuoteRequestEstimate(createQuoteEvaluator());
+  const rawSheetByBranch = {
+    id: 1,
+    product: "ورق فولادی",
+    quantity: "3",
+    unit: "شاخه",
+    dimensions: "",
+    rebarDiameterMm: "",
+    pieceOptionKey: "",
+  };
+
+  assert.deepEqual(
+    emptyEstimate.estimateItems([rawSheetByBranch]).items[0].availableUnits,
+    ["تن", "کیلوگرم"],
+  );
+
   const narrowed = createQuoteRequestEstimate(
     createQuoteEvaluator(allEstimates),
-  ).estimateItems([
-    {
-      id: 1,
-      product: "لوله فولادی",
-      quantity: "3",
-      unit: "شاخه",
-      dimensions: "",
-      rebarDiameterMm: "",
-      pieceOptionKey: "",
-    },
-  ]);
+  ).estimateItems([rawSheetByBranch]);
 
-  assert.deepEqual(narrowed.items[0].availableUnits, [
-    "تن",
-    "کیلوگرم",
-    "شاخه",
-  ]);
+  assert.deepEqual(narrowed.items[0].availableUnits, ["تن", "کیلوگرم"]);
+
+  const invalid = validateQuoteRequestInput({
+    contact,
+    items: [rawSheetByBranch],
+    acceptDisclaimer: true,
+  });
+  assert.equal(invalid.isValid, false);
+  assert.match(invalid.errors["itemQuantity-1"], /واحد شاخه/);
 });
 
 test("buildQuoteMessage creates a human-readable Persian quote summary with disclaimer", () => {

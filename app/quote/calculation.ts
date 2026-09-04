@@ -8,6 +8,7 @@ import type {
   QuoteTotals,
   RawQuoteItem,
 } from "../quote-types";
+import { quoteProductSupportsPieceUnits } from "../quote-types";
 import type {
   ProductPricingBaseline,
   QuotePricingBaselines,
@@ -177,7 +178,7 @@ export function evaluateItemPricing(
     unitPriceRial,
     weightInKg,
     priceExplanation,
-    supportsPieceUnits: baseline?.supportsPieceUnits ?? true,
+    supportsPieceUnits: quoteProductSupportsPieceUnits(product),
     requiresRebarDiameter: Boolean(baseline?.branchWeight),
   };
 }

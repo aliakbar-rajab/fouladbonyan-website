@@ -166,13 +166,13 @@ export function priceSectionHeading(
 ): { title: string; description: string } {
   if (subcategoryLabel) {
     return {
-      title: `قیمت روز ${subcategoryLabel}`,
+      title: `جدول قیمت و مشخصات فنی ${subcategoryLabel}`,
       description: `قیمت روز و مشخصات فنی ${subcategoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
     };
   }
   if (categoryLabel) {
     return {
-      title: `قیمت روز ${categoryLabel}`,
+      title: `جدول و مقایسه قیمت انواع ${categoryLabel}`,
       description: `قیمت روز و مشخصات فنی انواع ${categoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
     };
   }

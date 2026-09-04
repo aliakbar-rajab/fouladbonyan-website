@@ -25,6 +25,10 @@ export function CatalogSummaryBanner({
 }) {
   const summaryPrice = (price: number) =>
     displayPrice(price, taxIncluded, taxRate);
+  const trend = getTrendPresentation(
+    category.summary.status,
+    category.summary.percent,
+  );
 
   return (
     <section
@@ -77,13 +81,10 @@ export function CatalogSummaryBanner({
             <StatMarker type="change" />
             <span>میزان نوسان روزانه</span>
             <strong>
-              {
-                getTrendPresentation(
-                  category.summary.status,
-                  category.summary.percent,
-                ).direction
-              }{" "}
-              {formatCatalogNumber(Math.abs(category.summary.percent), 2)}٪
+              {trend.direction}
+              {trend.amount
+                ? ` ${formatCatalogNumber(trend.amount, 2)}٪`
+                : ""}
             </strong>
             <small>نسبت به روز قبل</small>
           </article>

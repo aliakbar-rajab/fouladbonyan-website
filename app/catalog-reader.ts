@@ -12,6 +12,10 @@ import type {
   CatalogSnapshot,
   GroupCatalog,
 } from "./catalog-types";
+import {
+  summarizeCatalogDates,
+  summarizeCatalogTrends,
+} from "./catalog-trend.mjs";
 
 export type { GroupCatalog };
 
@@ -65,11 +69,60 @@ export function createRetryableLoader<T>(
 // 1. SNAPSHOT & GROUP CATALOG INTAKE
 // ---------------------------------------------------------------------------
 
-export const loadCatalogSnapshot = createRetryableLoader(
-  () =>
-    import("./data/catalog-prices.json").then(
-      (module) => module.default,
-    ) as Promise<CatalogSnapshot>,
+let cachedSnapshot: CatalogSnapshot | undefined;
+let pendingFullSnapshot: Promise<CatalogSnapshot> | undefined;
+
+export const loadCatalogSnapshot = Object.assign(
+  async (): Promise<CatalogSnapshot> => {
+    if (
+      cachedSnapshot !== undefined &&
+      cachedSnapshot.catalogs.length >= productGroups.length
+    ) {
+      return cachedSnapshot;
+    }
+    pendingFullSnapshot ??= import("./data/catalog-prices.json")
+      .then((module) => module.default as CatalogSnapshot)
+      .then((full) => {
+        if (cachedSnapshot) {
+          const existingIds = new Set(cachedSnapshot.catalogs.map((c) => c.id));
+          const missing = full.catalogs.filter(
+            (c) => !existingIds.has(c.id as ProductGroupId),
+          );
+          cachedSnapshot = {
+            ...full,
+            ...cachedSnapshot,
+            catalogs: [...cachedSnapshot.catalogs, ...missing],
+          };
+        } else {
+          cachedSnapshot = full;
+        }
+        pendingFullSnapshot = undefined;
+        return cachedSnapshot;
+      })
+      .catch((error: unknown) => {
+        pendingFullSnapshot = undefined;
+        throw error;
+      });
+    return pendingFullSnapshot;
+  },
+  {
+    getCached: () => cachedSnapshot,
+    setCached: (val: CatalogSnapshot) => {
+      if (cachedSnapshot) {
+        const newIds = new Set(val.catalogs.map((c) => c.id));
+        const kept = cachedSnapshot.catalogs.filter(
+          (c) => !newIds.has(c.id as ProductGroupId),
+        );
+        cachedSnapshot = {
+          ...cachedSnapshot,
+          ...val,
+          catalogs: [...val.catalogs, ...kept],
+        };
+      } else {
+        cachedSnapshot = val;
+      }
+    },
+  },
 );
 
 const defaultInitialCategories: Record<ProductGroupId, string> = {
@@ -106,6 +159,8 @@ export function initialCategoryIdOf(groupId: ProductGroupId): string {
 export async function loadGroupCatalog(
   groupId: ProductGroupId,
 ): Promise<GroupCatalog> {
+  const cached = loadGroupCatalog.getCached(groupId);
+  if (cached) return cached;
   const snapshot = await loadCatalogSnapshot();
   const catalog = snapshot.catalogs.find((item) => item.id === groupId);
   if (!catalog) {
@@ -259,7 +314,7 @@ export function buildFallbackOverviews(): CategoryPriceOverview[] {
     ...groupFields(group),
     priceRanges: [],
     date: "امروز",
-    status: "steady",
+    status: "same",
     percent: 0,
   }));
 }
@@ -268,14 +323,15 @@ function summariseGroup(
   group: ProductGroup,
   categories: CatalogCategory[],
 ): CategoryPriceOverview {
-  const firstSummary = categories[0]?.summary;
+  const summaries = categories.map((category) => category.summary);
+  const trend = summarizeCatalogTrends(summaries);
 
   return {
     ...groupFields(group),
     priceRanges: priceRangesByUnit(categoriesPricedRows(categories)),
-    date: firstSummary?.date || "امروز",
-    status: firstSummary?.status || "steady",
-    percent: firstSummary?.percent || 0,
+    date: summarizeCatalogDates(summaries),
+    status: trend.status,
+    percent: trend.percent,
   };
 }
 

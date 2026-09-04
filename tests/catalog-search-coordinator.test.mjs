@@ -169,10 +169,10 @@ test("evaluateCatalogSearch handles queries with no matching products cleanly", 
 
 test("priceSectionHeading formats headings for category, subcategory, and home routes", () => {
   const subcatHeading = priceSectionHeading("میلگرد ساده", "میلگرد");
-  assert.equal(subcatHeading.title, "قیمت روز میلگرد ساده");
+  assert.equal(subcatHeading.title, "جدول قیمت و مشخصات فنی میلگرد ساده");
 
   const catHeading = priceSectionHeading(undefined, "تیرآهن");
-  assert.equal(catHeading.title, "قیمت روز تیرآهن");
+  assert.equal(catHeading.title, "جدول و مقایسه قیمت انواع تیرآهن");
 
   const defaultHeading = priceSectionHeading(undefined, undefined);
   assert.equal(defaultHeading.title, "قیمت روز آهن‌آلات و مقاطع فولادی");

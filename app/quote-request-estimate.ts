@@ -39,20 +39,6 @@ export type QuoteRequestEstimate = {
 };
 
 /**
- * The unit list the form offers, with the unit the item actually carries kept
- * in it. The list narrows once prices load and the product turns out not to be
- * sellable by the piece; without this the narrowing could strand an already
- * chosen شاخه outside its own <select>, which would then display some other
- * unit than the one being priced and validated.
- */
-function withSelectedUnit(
-  units: QuoteUnit[],
-  selected: QuoteUnit,
-): QuoteUnit[] {
-  return units.includes(selected) ? units : [...units, selected];
-}
-
-/**
  * Presentation-ready item estimates consumed by the quote form. Pricing
  * baselines stay inside QuoteEvaluator; validation and request evaluation are
  * used directly from the quote modules.
@@ -73,12 +59,9 @@ export function createQuoteRequestEstimate(
             item.weightInKg && item.approximateTotalToman !== null
               ? Math.round(item.approximateTotalToman / item.weightInKg)
               : null,
-          availableUnits: withSelectedUnit(
-            evaluator.supportsPieceUnits(item.product)
-              ? [...quoteUnits]
-              : quoteUnits.filter((unit) => unit !== "شاخه" && unit !== "عدد"),
-            item.unit,
-          ),
+          availableUnits: evaluator.supportsPieceUnits(item.product)
+            ? [...quoteUnits]
+            : quoteUnits.filter((unit) => unit !== "شاخه" && unit !== "عدد"),
         })),
       };
     },

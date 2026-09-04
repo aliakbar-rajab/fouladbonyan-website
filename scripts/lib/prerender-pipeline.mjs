@@ -133,19 +133,82 @@ export function buildBreadcrumbJsonLd(items) {
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
+export function buildWebSiteJsonLd({ siteUrl }) {
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    url: `${siteUrl}/`,
+    name: siteConfig.brand.name,
+    alternateName: siteConfig.brand.alternateName,
+    description: siteConfig.brand.tagline,
+    publisher: {
+      "@id": `${siteUrl}/#organization`,
+    },
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
+export function buildTechArticleJsonLd({
+  headline,
+  description,
+  pageUrl,
+  lastmod,
+  siteUrl,
+}) {
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": pageUrl,
+    },
+    headline,
+    description,
+    inLanguage: "fa",
+    dateModified: lastmod,
+    author: {
+      "@type": "Organization",
+      name: siteConfig.brand.name,
+      url: `${siteUrl}/`,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.brand.name,
+      url: `${siteUrl}/`,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
+      },
+    },
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
 const replaceMetaContent = (html, attrMatcher, value) =>
   html.replace(
     new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
     (match, prefix, suffix) => `${prefix}${escapeHtmlAttribute(value)}${suffix}`,
   );
 
-export function replaceSocialMeta(html, { title, description, pageUrl }) {
+export function replaceSocialMeta(
+  html,
+  { title, description, pageUrl, ogImage, ogImageAlt },
+) {
   let next = replaceMetaContent(html, 'name="description"', description);
   next = replaceMetaContent(next, 'property="og:title"', title);
   next = replaceMetaContent(next, 'property="og:description"', description);
   next = replaceMetaContent(next, 'property="og:url"', pageUrl);
   next = replaceMetaContent(next, 'name="twitter:title"', title);
-  return replaceMetaContent(next, 'name="twitter:description"', description);
+  next = replaceMetaContent(next, 'name="twitter:description"', description);
+  if (ogImage) {
+    next = replaceMetaContent(next, 'property="og:image"', ogImage);
+    next = replaceMetaContent(next, 'name="twitter:image"', ogImage);
+    if (ogImageAlt) {
+      next = replaceMetaContent(next, 'property="og:image:alt"', ogImageAlt);
+    }
+  }
+  return next;
 }
 
 /**
@@ -157,6 +220,9 @@ export function renderStaticDocument(
     title,
     description,
     pageUrl,
+    ogImage,
+    ogImageAlt,
+    extraHeadHtml = "",
     rootElement,
     rootAttributes = "",
     heroPreload,
@@ -198,7 +264,13 @@ export function renderStaticDocument(
     );
   }
 
-  html = replaceSocialMeta(html, { title, description, pageUrl });
+  html = replaceSocialMeta(html, {
+    title,
+    description,
+    pageUrl,
+    ogImage,
+    ogImageAlt,
+  });
 
   // Render React markup inside #root
   const rootHtml = renderToString(rootElement);
@@ -224,6 +296,11 @@ export function renderStaticDocument(
       "</head>",
       insert(`${buildBreadcrumbJsonLd(breadcrumb)}\n  </head>`),
     );
+  }
+
+  // Inject extra head elements (e.g. WebSite or TechArticle JSON-LD) before </head>
+  if (extraHeadHtml) {
+    html = html.replace("</head>", insert(`${extraHeadHtml}\n  </head>`));
   }
 
   return html;
@@ -279,6 +356,7 @@ export async function collectSitePageDescriptors({
       { id: "initial-overview-data", data: overviewSummaries },
     ],
     organizationData,
+    extraHeadHtml: buildWebSiteJsonLd({ siteUrl }),
     breadcrumb: [],
   });
 
@@ -291,10 +369,22 @@ export async function collectSitePageDescriptors({
     const groupLocation = routeLocation(groupRoute, siteUrl);
     const groupUrl = groupLocation.pageUrl;
     const groupCrumb = { name: group.label, url: groupUrl };
+
+    // Scoped hydration payload: contains only the current group's catalog
+    // instead of injecting the entire multi-category snapshot
+    const groupSnapshot = {
+      fetchedAt: snapshot.fetchedAt,
+      sourceName: snapshot.sourceName,
+      sourceHome: snapshot.sourceHome,
+      taxRate: snapshot.taxRate,
+      catalogs: [catalog],
+    };
     const catalogPayloads = [
       menuPayload,
-      { id: "initial-page-data", data: snapshot },
+      { id: "initial-page-data", data: groupSnapshot },
     ];
+    const groupOgImage = `${siteUrl}/categories/hero-${group.id}-1280.jpg`;
+    const groupOgImageAlt = `قیمت ${group.label} | بنیان فولاد داریا`;
 
     // Category landing page
     pages.push({
@@ -302,6 +392,8 @@ export async function collectSitePageDescriptors({
       lastmod,
       title: group.seoTitle,
       description: group.seoDescription,
+      ogImage: groupOgImage,
+      ogImageAlt: groupOgImageAlt,
       rootElement: React.createElement(App, { initialCategory: group.id }),
       heroPreload,
       payloads: catalogPayloads,
@@ -324,6 +416,8 @@ export async function collectSitePageDescriptors({
         lastmod,
         title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
         description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
+        ogImage: groupOgImage,
+        ogImageAlt: `قیمت روز ${sub.label} | بنیان فولاد داریا`,
         rootElement: React.createElement(App, {
           initialCategory: group.id,
           initialSubcategory: sub.id,
@@ -404,6 +498,13 @@ export async function collectSitePageDescriptors({
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,
+      extraHeadHtml: buildTechArticleJsonLd({
+        headline: definition.title,
+        description: definition.seoDescription,
+        pageUrl,
+        lastmod: definition.lastmod,
+        siteUrl,
+      }),
       breadcrumb: [
         homeCrumb,
         guideIndexCrumb,

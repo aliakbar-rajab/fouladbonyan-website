@@ -4,6 +4,7 @@ import type {
   RawQuoteContact,
   RawQuoteRequest,
 } from "../quote-types";
+import { quoteProductSupportsPieceUnits } from "../quote-types";
 import {
   normalizePhone,
   validateFullName,
@@ -114,6 +115,13 @@ export function validateQuoteRequestInput(
     );
     if (quantityError) {
       errors[`itemQuantity-${item.id}`] = quantityError;
+    } else if (
+      item.product &&
+      isPieceUnit(item.unit) &&
+      !quoteProductSupportsPieceUnits(item.product)
+    ) {
+      errors[`itemQuantity-${item.id}`] =
+        `واحد ${item.unit} برای ${item.product} پشتیبانی نمی‌شود؛ واحد وزنی را انتخاب کنید.`;
     }
   }
 

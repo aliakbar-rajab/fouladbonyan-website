@@ -168,8 +168,7 @@ test("F14: the show-more control toggles visibility, it does not create rows", a
   assert.equal(collapsedCount(), 3);
 });
 
-test("catalog tabs use roving focus and connected tabpanels", async () => {
-  const user = userEvent.setup({ document });
+test("catalog category pages use truthful navigation-link semantics", () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
@@ -178,54 +177,21 @@ test("catalog tabs use roving focus and connected tabpanels", async () => {
     }),
   );
 
-  const tabs = screen.getAllByRole("tab");
-  assert.equal(tabs[0].tabIndex, 0);
-  assert.equal(tabs[1].tabIndex, -1);
-  assert.equal(tabs[0].getAttribute("aria-selected"), "true");
-  const firstPanel = screen.getByRole("tabpanel");
-  assert.equal(firstPanel.id, tabs[0].getAttribute("aria-controls"));
-  assert.equal(firstPanel.getAttribute("aria-labelledby"), tabs[0].id);
+  const navigation = screen.getByRole("navigation", { name: `نوع ${catalog.label}` });
+  const links = within(navigation).getAllByRole("link");
+  assert.equal(links[0].getAttribute("aria-current"), "page");
+  assert.equal(links[1].getAttribute("aria-current"), null);
+  assert.ok(links.every((link) => link.tabIndex === 0));
+  assert.equal(navigation.querySelector('[role="tab"]'), null);
+  assert.equal(navigation.querySelector("[aria-controls]"), null);
+  assert.equal(screen.queryByRole("tabpanel"), null);
 
-  // Arrow keys move focus only, exactly like the home product tabs: the
-  // selection must not commit until the focused link is activated.
-  tabs[0].focus();
-  await user.keyboard("{ArrowLeft}");
-  assert.equal(document.activeElement, tabs[1]);
-  assert.equal(tabs[0].getAttribute("aria-selected"), "true");
-  assert.equal(tabs[1].getAttribute("aria-selected"), "false");
-
-  // Committing is a navigation to the category's own prerendered page, not an
-  // in-place swap: every tab keeps a real href and nothing cancels it. Doing
-  // it in place left the URL, <title>, hero, <h1> and breadcrumb describing
-  // the category the visitor arrived on while the table showed another.
-  for (const [index, tab] of tabs.entries()) {
+  for (const [index, link] of links.entries()) {
     assert.equal(
-      tab.getAttribute("href"),
+      link.getAttribute("href"),
       `/${catalog.id}/${catalog.categories[index].id}/`,
     );
   }
-
-  // The listener runs after React's own (React 19 delegates at the render
-  // container, which this bubbles past), so it reads the app's decision --
-  // then cancels the event itself, since jsdom cannot navigate.
-  let cancelledByTheApp = null;
-  const observeClick = (event) => {
-    cancelledByTheApp = event.defaultPrevented;
-    event.preventDefault();
-  };
-  document.addEventListener("click", observeClick);
-  try {
-    await user.keyboard("{Enter}");
-  } finally {
-    document.removeEventListener("click", observeClick);
-  }
-
-  assert.equal(
-    cancelledByTheApp,
-    false,
-    "a category tab must be left to the browser so the URL follows the table",
-  );
-  assert.equal(tabs[0].getAttribute("aria-selected"), "true");
 });
 
 test("trend direction is textual and no fake chart is exposed", () => {

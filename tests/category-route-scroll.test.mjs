@@ -22,7 +22,7 @@ dom.window.matchMedia = (query) => ({
   dispatchEvent: () => false,
 });
 
-const { act, cleanup, fireEvent, render, screen, waitFor } = await import(
+const { act, cleanup, render, screen, waitFor, within } = await import(
   "@testing-library/react"
 );
 const App = (await import("../app/App.tsx")).default;
@@ -57,8 +57,10 @@ test("a direct category route activates its tab and scrolls to prices", async ()
   await settle();
 
   assert.equal(
-    screen.getByRole("tab", { name: "تیرآهن" }).getAttribute("aria-selected"),
-    "true",
+    within(screen.getByRole("navigation", { name: "گروه محصولات" }))
+      .getByRole("link", { name: "تیرآهن" })
+      .getAttribute("aria-current"),
+    "page",
   );
   // Verify category H1, intro, and breadcrumb
   assert.equal(
@@ -85,6 +87,18 @@ test("a direct category route activates its tab and scrolls to prices", async ()
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
 });
 
+test("product page links use navigation semantics without broken tab relationships", async () => {
+  addRoot("beam");
+  render(React.createElement(App));
+  await settle();
+
+  const navigation = screen.getByRole("navigation", { name: "گروه محصولات" });
+  const activeLink = within(navigation).getByRole("link", { name: "تیرآهن" });
+  assert.equal(activeLink.getAttribute("aria-current"), "page");
+  assert.equal(navigation.querySelector('[role="tab"]'), null);
+  assert.equal(navigation.querySelector("[aria-controls]"), null);
+});
+
 test("the development shell resolves a category directly from the pathname", async () => {
   window.history.replaceState({}, "", "/channel/");
   addRoot();
@@ -92,8 +106,10 @@ test("the development shell resolves a category directly from the pathname", asy
   await settle();
 
   assert.equal(
-    screen.getByRole("tab", { name: "ناودانی" }).getAttribute("aria-selected"),
-    "true",
+    within(screen.getByRole("navigation", { name: "گروه محصولات" }))
+      .getByRole("link", { name: "ناودانی" })
+      .getAttribute("aria-current"),
+    "page",
   );
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
@@ -101,15 +117,15 @@ test("the development shell resolves a category directly from the pathname", asy
   );
 });
 
-test("the homepage keeps its default tab and does not auto-scroll", async () => {
+test("the homepage product navigation does not claim a category page is current", async () => {
   addRoot();
   render(React.createElement(App));
   await settle();
 
-  assert.equal(
-    screen.getByRole("tab", { name: "میلگرد" }).getAttribute("aria-selected"),
-    "true",
-  );
+  const productNavigation = screen.getByRole("navigation", {
+    name: "گروه محصولات",
+  });
+  assert.equal(productNavigation.querySelector("[aria-current]"), null);
   assert.deepEqual(scrollCalls, []);
 
   // Verify homepage H1 targets general steel price intent
@@ -209,10 +225,11 @@ test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and
   render(React.createElement(App));
   await settle();
 
-  // Verify subcategory tab is active
   assert.equal(
-    screen.getByRole("tab", { name: /میلگرد ساده/ }).getAttribute("aria-selected"),
-    "true",
+    within(screen.getByRole("navigation", { name: "نوع میلگرد" }))
+      .getByRole("link", { name: /میلگرد ساده/ })
+      .getAttribute("aria-current"),
+    "page",
   );
   // Verify subcategory H1
   assert.equal(
@@ -254,43 +271,27 @@ test("a subcategory route resolved from pathname or without explicit label resol
   assert.match(breadcrumb.textContent, /میلگرد آجدار/);
 });
 
-test("arrow-key roving through the product tabs moves focus only, leaving the URL, selection and heading unchanged until activated", async () => {
+test("every product page link stays in the browser's normal keyboard tab order", async () => {
   addRoot();
   render(React.createElement(App));
   await settle();
 
-  const tabs = screen.getAllByRole("tab");
-  const initiallySelected = tabs.find(
-    (tab) => tab.getAttribute("aria-selected") === "true",
+  const links = within(
+    screen.getByRole("navigation", { name: "گروه محصولات" }),
+  ).getAllByRole("link");
+  assert.equal(links.length, 8);
+  assert.ok(links.every((link) => link.tabIndex === 0));
+  assert.deepEqual(
+    links.map((link) => link.getAttribute("href")),
+    [
+      "/rebar/",
+      "/beam/",
+      "/sheet/",
+      "/profile/",
+      "/pipe/",
+      "/angle/",
+      "/channel/",
+      "/wire/",
+    ],
   );
-  assert.ok(initiallySelected);
-  const initialHeading = screen.getByRole("heading", { level: 1 }).textContent;
-
-  tabs[0].focus();
-  fireEvent.keyDown(tabs[0], { key: "ArrowLeft" });
-
-  // Mirrors a mouse click's own behaviour (App.tsx's onClick only intercepts
-  // navigation while a search is active): roving focus alone must not select
-  // a different tab, change the URL, or change the heading -- only actually
-  // activating the focused link (Enter/click) may do that.
-  assert.equal(document.activeElement, tabs[1]);
-  assert.equal(
-    tabs.find((tab) => tab.getAttribute("aria-selected") === "true"),
-    initiallySelected,
-  );
-  assert.equal(window.location.pathname, "/");
-  assert.equal(
-    screen.getByRole("heading", { level: 1 }).textContent,
-    initialHeading,
-  );
-
-  // The now-focused tab is a real link to its own page; activating it (the
-  // same click Enter performs on a focused <a>) must be allowed to navigate,
-  // not intercepted the way the eager arrow-key handler used to.
-  const clickEvent = new window.MouseEvent("click", {
-    bubbles: true,
-    cancelable: true,
-  });
-  tabs[1].dispatchEvent(clickEvent);
-  assert.equal(clickEvent.defaultPrevented, false);
 });

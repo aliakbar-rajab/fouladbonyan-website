@@ -1,4 +1,5 @@
 import { parsePersianNumber } from "./persian-numbers.mjs";
+import { normalizeCatalogTrend } from "./catalog-trend.mjs";
 
 export function calculateRebarWeight(diameter, length, quantity) {
   const parsedDiameter = parsePersianNumber(diameter);
@@ -19,14 +20,21 @@ export function calculateRebarWeight(diameter, length, quantity) {
 }
 
 export function getTrendPresentation(status, percent) {
-  const amount = Math.abs(Number(percent) || 0);
+  const trend = normalizeCatalogTrend(status, percent);
+  if (trend.status === "unverified") {
+    return { direction: "نیازمند بررسی", symbol: "!", amount: 0 };
+  }
+  if (trend.status === "mixed") {
+    return { direction: "نوسان ترکیبی", symbol: "↕", amount: 0 };
+  }
+  const amount = Math.abs(trend.percent);
   if (amount === 0) {
     return { direction: "بدون تغییر", symbol: "—", amount: 0 };
   }
-  if (status === "up") {
+  if (trend.status === "up") {
     return { direction: "افزایش", symbol: "↑", amount };
   }
-  if (status === "down") {
+  if (trend.status === "down") {
     return { direction: "کاهش", symbol: "↓", amount };
   }
   return { direction: "بدون تغییر", symbol: "—", amount: 0 };

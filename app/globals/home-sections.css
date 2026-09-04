@@ -287,7 +287,7 @@
   color: var(--brand-yellow);
 }
 
-.product-tabs [aria-selected="true"] {
+.product-tabs [aria-current="page"] {
   background: linear-gradient(135deg, var(--brand-yellow) 0%, #e29e00 100%) !important;
   color: var(--ink) !important;
   box-shadow: 0 4px 14px rgba(246, 181, 0, 0.35);
@@ -503,6 +503,12 @@
 .overview-status-badge.is-down {
   background: rgba(231, 76, 60, 0.15);
   color: #e74c3c;
+}
+
+.overview-status-badge.is-unverified,
+.overview-status-badge.is-mixed {
+  background: rgba(246, 181, 0, 0.16);
+  color: #ffd45d;
 }
 
 .overview-action-link {

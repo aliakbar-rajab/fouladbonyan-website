@@ -392,3 +392,127 @@ test("category landing pages render a distinct overview and link to every subcat
     }
   }
 });
+
+test("homepage emits WebSite structured data and Organization schema with factual GeoCoordinates", async () => {
+  const homeHtml = await readDist("index.html");
+
+  // WebSite JSON-LD
+  assert.match(
+    homeHtml,
+    /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"WebSite"/,
+    "Homepage must contain WebSite JSON-LD",
+  );
+  assert.match(
+    homeHtml,
+    /"name":"بنیان فولاد داریا"/,
+    "WebSite JSON-LD must contain brand name",
+  );
+
+  // Organization JSON-LD with location Place, geo and hasMap
+  assert.match(
+    homeHtml,
+    /"location":\{"@type":"Place"/,
+    "Organization schema must represent office location as a Place entity",
+  );
+  assert.match(
+    homeHtml,
+    /"@type":"GeoCoordinates","latitude":35\.817127,"longitude":51\.4809619/,
+    "Organization schema location must contain factual GeoCoordinates",
+  );
+  assert.match(
+    homeHtml,
+    /"hasMap":"https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=35\.817127,51\.4809619"/,
+    "Organization schema location must contain factual Google Maps URL",
+  );
+
+  // Apple touch icon
+  assert.match(
+    homeHtml,
+    /<link rel="apple-touch-icon" href="\/favicon\.png" sizes="256x256" \/>/,
+    "Homepage must include apple-touch-icon link",
+  );
+
+  // MarketPrices stable heading
+  assert.match(
+    homeHtml,
+    /<h2 id="market-prices-title"[^>]*>زمینه بازار، کنار قیمت فولاد<\/h2>/,
+    "Homepage MarketPrices must render stable meaningful H2 during SSR",
+  );
+});
+
+test("guide pages emit TechArticle structured data with factual dateModified and publisher", async () => {
+  const guidePages = [
+    "guide/rebar-weight-chart/index.html",
+    "guide/beam-weight-chart/index.html",
+    "guide/ribbed-vs-plain-rebar/index.html",
+    "guide/ipe-vs-hash-beam/index.html",
+    "guide/units-and-quote-specs/index.html",
+  ];
+
+  for (const pagePath of guidePages) {
+    const html = await readDist(pagePath);
+    assert.match(
+      html,
+      /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"TechArticle"/,
+      `${pagePath} must contain TechArticle JSON-LD`,
+    );
+    assert.match(
+      html,
+      /"dateModified":"2026-08-17"/,
+      `${pagePath} must contain factual lastmod as dateModified`,
+    );
+    assert.match(
+      html,
+      /"inLanguage":"fa"/,
+      `${pagePath} must specify Persian language`,
+    );
+    assert.match(
+      html,
+      /"name":"بنیان فولاد داریا"/,
+      `${pagePath} must credit Bonyan Foulad Daria as author/publisher`,
+    );
+  }
+});
+
+test("category and subcategory pages use category-specific og:image and distinct H2", async () => {
+  const rebarHtml = await readDist("rebar/index.html");
+  assert.match(
+    rebarHtml,
+    /<meta\s+property="og:image"\s+content="https:\/\/fouladbonyan\.com\/categories\/hero-rebar-1280\.jpg"/,
+    "rebar landing page must use hero-rebar-1280.jpg as og:image",
+  );
+  assert.match(
+    rebarHtml,
+    /<meta\s+name="twitter:image"\s+content="https:\/\/fouladbonyan\.com\/categories\/hero-rebar-1280\.jpg"/,
+    "rebar landing page must use hero-rebar-1280.jpg as twitter:image",
+  );
+
+  const ribbedHtml = await readDist("rebar/ribbed/index.html");
+  assert.match(
+    ribbedHtml,
+    /<meta\s+property="og:image"\s+content="https:\/\/fouladbonyan\.com\/categories\/hero-rebar-1280\.jpg"/,
+    "rebar/ribbed page must use hero-rebar-1280.jpg as og:image",
+  );
+
+  // H1 and H2 distinctness on subcategory page
+  const h1Match = ribbedHtml.match(/<h1><span>([^<]+)<\/span><\/h1>/)?.[1];
+  assert.equal(h1Match, "قیمت روز میلگرد آجدار");
+  assert.match(
+    ribbedHtml,
+    /<h2>جدول قیمت و مشخصات فنی میلگرد آجدار<\/h2>/,
+    "rebar/ribbed must use descriptive table-specific H2 distinct from H1",
+  );
+
+  // Guide cross-links on rebar and beam
+  assert.match(
+    rebarHtml,
+    /href="\/guide\/rebar-weight-chart\/"/,
+    "rebar overview must link to rebar weight chart guide",
+  );
+  const beamHtml = await readDist("beam/index.html");
+  assert.match(
+    beamHtml,
+    /href="\/guide\/beam-weight-chart\/"/,
+    "beam overview must link to beam weight chart guide",
+  );
+});

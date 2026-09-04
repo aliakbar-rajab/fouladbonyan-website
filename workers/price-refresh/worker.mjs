@@ -63,7 +63,25 @@ export default {
       }
       const status = await ingestAll(env.PRICE_DATA, payloads);
       if (status.ok && env.DEPLOY_HOOK_URL) {
-        await fetch(env.DEPLOY_HOOK_URL, { method: "POST" });
+        try {
+          const deployResponse = await fetch(env.DEPLOY_HOOK_URL, {
+            method: "POST",
+          });
+          if (!deployResponse.ok) {
+            throw new Error(`Deploy hook returned HTTP ${deployResponse.status}`);
+          }
+        } catch (error) {
+          const failedStatus = {
+            ...status,
+            ok: false,
+            stored: true,
+            stage: "deploy-hook",
+            finishedAt: new Date().toISOString(),
+            error: String(error?.message ?? error),
+          };
+          await env.PRICE_DATA.put(STATUS_KEY, JSON.stringify(failedStatus));
+          return json(failedStatus, { status: 502 });
+        }
       }
       return json(status, { status: status.ok ? 200 : 422 });
     }

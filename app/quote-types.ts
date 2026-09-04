@@ -18,6 +18,21 @@ export const quoteProductNames = [
 ] as const;
 export type QuoteProductName = (typeof quoteProductNames)[number];
 
+const quoteWeightOnlyProducts = new Set<QuoteProductName>([
+  "هاش",
+  "ورق فولادی",
+  "پروفیل و قوطی",
+  "نبشی",
+  "ناودانی",
+]);
+
+/** Product capability is a domain rule, not a side effect of price loading. */
+export function quoteProductSupportsPieceUnits(
+  product: QuoteProductName | "",
+): boolean {
+  return !product || !quoteWeightOnlyProducts.has(product);
+}
+
 export function isQuoteUnit(value: unknown): value is QuoteUnit {
   return (
     typeof value === "string" &&

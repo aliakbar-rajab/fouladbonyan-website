@@ -1,6 +1,8 @@
 import { summarisePricedRows } from "./catalog-pricing.mjs";
 
-const VALID_STATUSES = new Set(["up", "down", "same"]);
+import { MAX_RELIABLE_TREND_PERCENT } from "./catalog-trend.mjs";
+
+const VALID_STATUSES = new Set(["up", "down", "same", "unverified"]);
 
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -8,6 +10,15 @@ function isRecord(value) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(`داده قیمت نامعتبر است: ${message}`);
+}
+
+function validateTrend(status, percent, location) {
+  assert(Number.isFinite(percent), `${location}.percent عدد معتبر نیست`);
+  assert(VALID_STATUSES.has(status), `${location}.status معتبر نیست`);
+  assert(
+    Math.abs(percent) <= MAX_RELIABLE_TREND_PERCENT || status === "unverified",
+    `${location} با نوسان غیرعادی باید برای بررسی علامت‌گذاری شود (unverified)`,
+  );
 }
 
 /**
@@ -29,10 +40,7 @@ function validateSummary(summary, location, rows) {
       `${location}.summary.${field} عدد معتبر نیست`,
     );
   }
-  assert(
-    VALID_STATUSES.has(summary.status),
-    `${location}.summary.status معتبر نیست`,
-  );
+  validateTrend(summary.status, summary.percent, `${location}.summary`);
 
   const pricedRows = rows.filter((row) => row.price !== null);
   if (!pricedRows.length) {
@@ -135,14 +143,7 @@ function validateCategory(category, location) {
           (Number.isFinite(row.price) && Number(row.price) > 0),
         `${rowLocation}.price معتبر نیست`,
       );
-      assert(
-        Number.isFinite(row.percent),
-        `${rowLocation}.percent معتبر نیست`,
-      );
-      assert(
-        VALID_STATUSES.has(row.status),
-        `${rowLocation}.status معتبر نیست`,
-      );
+      validateTrend(row.status, row.percent, rowLocation);
       assert(
         Number.isFinite(row.updatedAt) && row.updatedAt >= 0,
         `${rowLocation}.updatedAt معتبر نیست`,
@@ -311,4 +312,3 @@ export function validateMarketPriceData(payload) {
   });
   return payload;
 }
-

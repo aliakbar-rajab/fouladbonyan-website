@@ -1,6 +1,5 @@
 import {
   FormEvent,
-  KeyboardEvent as ReactKeyboardEvent,
   useEffect,
   useRef,
   useState,
@@ -8,7 +7,6 @@ import {
 import CatalogPrices from "./CatalogPrices";
 import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
-import { nextRovingIndex } from "./catalog-utils";
 import { productGroups, type ProductGroupId } from "./category-meta";
 import { siteConfig } from "./site-config";
 import { SiteFooter } from "./SiteFooter";
@@ -55,7 +53,6 @@ export default function App({
   const contactHref = isDirectCallDevice
     ? siteConfig.contact.phones[0].href
     : "#phone-numbers";
-  const tabRefs = useRef<Array<HTMLAnchorElement | HTMLButtonElement | null>>([]);
   const didAutoScrollCategoryRoute = useRef(false);
 
   useEffect(() => {
@@ -77,27 +74,6 @@ export default function App({
     setSearchInput("");
     workspace.clearSearch();
     scrollToPriceWorkspace();
-  };
-
-  // Roving-tabindex focus only: this tablist is a set of real links (see the
-  // render below), so arrow keys must behave like Tab/Shift+Tab and merely
-  // move focus. Committing to a tab is left to the browser's own Enter/click
-  // activation of the now-focused <a>, the same path a mouse click uses --
-  // otherwise the visible catalog could switch without the URL, <title>, or
-  // metadata following it.
-  const moveTabFocus = (
-    event: ReactKeyboardEvent<HTMLElement>,
-    currentIndex: number,
-  ) => {
-    const target = nextRovingIndex(
-      event.key,
-      currentIndex,
-      productGroups.length,
-    );
-    if (target === null) return;
-
-    event.preventDefault();
-    tabRefs.current[target]?.focus();
   };
 
   return (
@@ -189,30 +165,21 @@ export default function App({
                 </div>
 
                 <div className="product-tabs-viewport">
-                  <div
+                  <nav
                     className="product-tabs"
-                    role="tablist"
                     aria-label="گروه محصولات"
                   >
-                    {productGroups.map((group, index) => {
+                    {productGroups.map((group) => {
                       const selected = group.id === workspace.selectedTabId;
-                      const focusable =
-                        selected ||
-                        (!workspace.visibleGroup && index === 0) ||
-                        (!workspace.isCategoryRoute && index === 0);
                       return (
                         <a
                           href={`/${group.id}/`}
-                          role="tab"
-                          id={`tab-${group.id}`}
-                          aria-selected={selected}
-                          aria-controls={`panel-${group.id}`}
-                          tabIndex={focusable ? 0 : -1}
+                          aria-current={
+                            selected && workspace.isCategoryRoute
+                              ? "page"
+                              : undefined
+                          }
                           key={group.id}
-                          ref={(node) => {
-                            tabRefs.current[index] = node;
-                          }}
-                          onKeyDown={(event) => moveTabFocus(event, index)}
                           onClick={(event) => {
                             workspace.selectTab(group.id, event);
                             if (workspace.search.isActive) {
@@ -225,7 +192,7 @@ export default function App({
                         </a>
                       );
                     })}
-                  </div>
+                  </nav>
                 </div>
               </div>
 
@@ -234,25 +201,13 @@ export default function App({
               )}
 
               {workspace.viewMode === "category-overview" && workspace.visibleGroup && (
-                <div
-                  className="product-panel"
-                  role="tabpanel"
-                  id={`panel-${workspace.visibleGroup.id}`}
-                  aria-labelledby={`tab-${workspace.visibleGroup.id}`}
-                  tabIndex={0}
-                >
+                <div className="product-panel">
                   <CategoryOverview groupId={workspace.visibleGroup.id} />
                 </div>
               )}
 
               {workspace.viewMode === "catalog" && workspace.visibleGroup && (
-                <div
-                  className="product-panel"
-                  role="tabpanel"
-                  id={`panel-${workspace.visibleGroup.id}`}
-                  aria-labelledby={`tab-${workspace.visibleGroup.id}`}
-                  tabIndex={0}
-                >
+                <div className="product-panel">
                   <CatalogPrices
                     key={`${workspace.visibleGroup.id}-${workspace.activeViewRequest.requestId}`}
                     groupId={workspace.visibleGroup.id}

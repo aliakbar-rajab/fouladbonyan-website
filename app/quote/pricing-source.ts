@@ -1,6 +1,7 @@
 import { categoryPricedRows } from "../catalog-pricing.mjs";
 import type {
   CatalogCategory,
+  CatalogRow,
   CatalogSnapshot,
   GroupCatalog,
 } from "../catalog-types";
@@ -63,39 +64,21 @@ function extractPieceOptions(
 ): QuotePieceOptionChoice[] {
   if (!category) return [];
 
-  const bySizeSpec = new Map<
-    string,
-    { size: string; specification?: string; prices: number[] }
-  >();
-
-  for (const row of categoryPricedRows(category)) {
-    if (row.unit !== unit || !row.size) {
-      continue;
-    }
-    const groupKey = `${row.size}|${row.specification ?? ""}`;
-    const entry = bySizeSpec.get(groupKey) ?? {
-      size: row.size,
-      specification: row.specification,
-      prices: [],
-    };
-    entry.prices.push(row.price);
-    bySizeSpec.set(groupKey, entry);
-  }
-
-  return [...bySizeSpec].map(([groupKey, { size, specification, prices }]) => {
-    const localizedSize = localizeCatalogValue(size);
-    const localizedSpec = specification
-      ? localizeCatalogValue(specification)
-      : "";
-    return {
-      key: `${category.id}:${groupKey}`,
-      label: localizedSpec
-        ? `${category.label} — ${localizedSize} (${category.specificationLabel}: ${localizedSpec})`
-        : `${category.label} — ${localizedSize}`,
+  return category.factories
+    .flatMap((factory) => factory.rows)
+    .filter(
+      (row): row is CatalogRow & { price: number } =>
+        row.unit === unit &&
+        typeof row.price === "number" &&
+        Number.isFinite(row.price) &&
+        row.price > 0,
+    )
+    .map((row) => ({
+      key: `${category.id}:${row.id}`,
+      label: localizeCatalogValue(row.title),
       unit,
-      priceToman: averageToman(prices),
-    };
-  });
+      priceToman: row.price,
+    }));
 }
 
 function normalizeToGroupCatalogs(

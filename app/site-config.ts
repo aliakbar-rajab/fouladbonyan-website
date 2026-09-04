@@ -110,6 +110,15 @@ export function buildOrganizationStructuredData() {
       postalCode: siteConfig.business.postalCode,
       addressCountry: siteConfig.business.countryCode,
     },
+    location: {
+      "@type": "Place",
+      geo: {
+        "@type": "GeoCoordinates",
+        latitude: siteConfig.officeCoordinates.lat,
+        longitude: siteConfig.officeCoordinates.lng,
+      },
+      hasMap: buildGoogleMapsUrl(siteConfig.officeCoordinates),
+    },
     ...(siteConfig.business.legalName
       ? { legalName: siteConfig.business.legalName }
       : {}),

@@ -20,6 +20,7 @@ import type {
   RawQuoteItem,
   RawQuoteRequest,
 } from "../quote-types";
+import { quoteProductSupportsPieceUnits } from "../quote-types";
 
 export type QuoteEvaluator = {
   /** Evaluate a single line item against market pricing baselines. */
@@ -102,8 +103,7 @@ export function createQuoteEvaluator(
   };
 
   const supportsPieceUnits = (product: QuoteProductName | ""): boolean => {
-    if (!product || !baselines[product]) return true;
-    return baselines[product]?.supportsPieceUnits ?? true;
+    return quoteProductSupportsPieceUnits(product);
   };
 
   const requiresRebarDiameter = (product: QuoteProductName | ""): boolean => {
