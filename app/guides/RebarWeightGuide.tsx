@@ -62,7 +62,9 @@ export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
               <tbody>
                 {table.rows.map((row) => (
                   <tr key={row.size}>
-                    <th scope="row">{toPersianDigits(row.size)}</th>
+                    <th scope="row">
+                      {toPersianDigits(row.size)} <bdi dir="ltr">({row.diameterMm})</bdi>
+                    </th>
                     <td>{faFixed(row.kgPerMeter, 3)}</td>
                     {table.branchLengthM === null ? null : (
                       <>
