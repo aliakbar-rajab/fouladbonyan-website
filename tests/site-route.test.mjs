@@ -84,7 +84,8 @@ test("hero and organization policy derives from the canonical route kind", () =>
   assert.equal(isHeroRoute({ kind: "home" }), true);
   assert.equal(isHeroRoute({ kind: "catalog", category: "sheet" }), true);
   assert.equal(isHeroRoute({ kind: "contact" }), false);
-  assert.equal(isOrganizationRoute({ kind: "home" }), true);
-  assert.equal(isOrganizationRoute({ kind: "info", page: "about" }), true);
+  assert.equal(isOrganizationRoute({ kind: "home" }), false);
+  assert.equal(isOrganizationRoute({ kind: "contact" }), true);
+  assert.equal(isOrganizationRoute({ kind: "info", page: "about" }), false);
   assert.equal(isOrganizationRoute({ kind: "info", page: "terms" }), false);
 });

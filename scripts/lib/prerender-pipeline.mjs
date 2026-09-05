@@ -419,7 +419,7 @@ export async function collectSitePageDescriptors({
       menuPayload,
       { id: "initial-overview-data", data: overviewSummaries },
     ],
-    organizationData,
+    organizationData: null,
     extraHeadHtml: buildWebSiteJsonLd({ siteUrl }),
     breadcrumb: [],
   });
@@ -519,7 +519,7 @@ export async function collectSitePageDescriptors({
     rootElement: React.createElement(ContactPage),
     heroPreload: null,
     payloads: [],
-    organizationData: null,
+    organizationData,
     breadcrumb: [homeCrumb, { name: "تماس با ما", url: contactUrl }],
   });
 
@@ -535,7 +535,7 @@ export async function collectSitePageDescriptors({
       rootElement: React.createElement(InfoPage, { page: slug }),
       heroPreload: null,
       payloads: [],
-      organizationData: slug === "about" ? organizationData : null,
+      organizationData: null,
       breadcrumb: [homeCrumb, { name: definition.title, url: pageUrl }],
     });
   }

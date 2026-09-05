@@ -86,31 +86,35 @@ test("built HTML uses root-safe assets and production metadata", async () => {
   assert.match(html, /\/preloader\/fb-preloader\.js/);
   assert.doesNotMatch(html, /localhost|pages-dist|_next/);
 
-  // Organization JSON-LD is emitted on the homepage and /about/ only
-  const homeOrgMatch = html.match(
+  // Organization JSON-LD is emitted only where the full address is visible.
+  assert.doesNotMatch(
+    html,
+    /<script id="organization-structured-data"/,
+    "Homepage must not emit Organization JSON-LD",
+  );
+
+  const contactHtml = await readDist("contact/index.html");
+  const contactOrgMatch = contactHtml.match(
     /<script id="organization-structured-data" type="application\/ld\+json">([\s\S]*?)<\/script>/,
   )?.[1];
-  assert.ok(homeOrgMatch, "Homepage is missing Organization JSON-LD");
-  const homeOrg = JSON.parse(homeOrgMatch);
-  assert.equal(homeOrg["@type"], "Organization");
-  assert.equal(homeOrg["@id"], "https://fouladbonyan.com/#organization");
-  assert.equal(homeOrg.url, "https://fouladbonyan.com/");
+  assert.ok(contactOrgMatch, "/contact/ is missing Organization JSON-LD");
+  const contactOrg = JSON.parse(contactOrgMatch);
+  assert.equal(contactOrg["@type"], "Organization");
+  assert.equal(contactOrg["@id"], "https://fouladbonyan.com/#organization");
+  assert.equal(contactOrg.url, "https://fouladbonyan.com/");
   assert.equal(
-    homeOrg.logo,
+    contactOrg.logo,
     "https://fouladbonyan.com/brand/bonyan-foulad-daria-logo.webp",
   );
 
-  const aboutHtml = await readDist("about/index.html");
-  const aboutOrgMatch = aboutHtml.match(
-    /<script id="organization-structured-data" type="application\/ld\+json">([\s\S]*?)<\/script>/,
-  )?.[1];
-  assert.ok(aboutOrgMatch, "/about/ is missing Organization JSON-LD");
-  const aboutOrg = JSON.parse(aboutOrgMatch);
-  assert.equal(aboutOrg["@id"], "https://fouladbonyan.com/#organization");
-  assert.equal(aboutOrg.url, "https://fouladbonyan.com/");
+  const contactBc = parseBreadcrumbLd(
+    contactHtml,
+    "contact must emit BreadcrumbList JSON-LD",
+  );
+  assert.equal(contactBc.itemListElement[0]?.name, "صفحه اصلی");
 
   // Non-organization pages must NOT emit the block, but must emit BreadcrumbList with صفحه اصلی
-  for (const page of ["contact", "terms", "privacy", "quote-process"]) {
+  for (const page of ["about", "terms", "privacy", "quote-process"]) {
     const pageHtml = await readDist(`${page}/index.html`);
     assert.doesNotMatch(
       pageHtml,

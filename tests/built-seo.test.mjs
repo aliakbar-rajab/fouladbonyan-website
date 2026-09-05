@@ -7,6 +7,7 @@ import {
   singleSubcategoryGroupIds,
   subcategoryHref,
 } from "../app/category-meta.ts";
+import { siteConfig } from "../app/site-config.ts";
 import {
   loadGroupCatalogs,
   parseBreadcrumbLd,
@@ -483,36 +484,53 @@ test("category landing pages render a distinct overview and link to every subcat
   }
 });
 
-test("homepage emits WebSite structured data and Organization schema with factual GeoCoordinates", async () => {
+test("homepage WebSite references the Organization emitted beside its visible address on contact", async () => {
   const homeHtml = await readDist("index.html");
+  const contactHtml = await readDist("contact/index.html");
+  const aboutHtml = await readDist("about/index.html");
+  const parseJsonLd = (html) =>
+    [...html.matchAll(/<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+      ([, body]) => JSON.parse(body),
+    );
+  const homeJsonLd = parseJsonLd(homeHtml);
+  const contactJsonLd = parseJsonLd(contactHtml);
+  const aboutJsonLd = parseJsonLd(aboutHtml);
 
-  // WebSite JSON-LD
-  assert.match(
-    homeHtml,
-    /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"WebSite"/,
-    "Homepage must contain WebSite JSON-LD",
+  const website = homeJsonLd.find((item) => item["@type"] === "WebSite");
+  assert.ok(website, "Homepage must contain WebSite JSON-LD");
+  assert.equal(website.name, siteConfig.brand.name);
+  assert.equal(
+    homeJsonLd.filter((item) => item["@type"] === "Organization").length,
+    0,
+    "Homepage must not duplicate the Organization object",
   );
-  assert.match(
-    homeHtml,
-    /"name":"بنیان فولاد داریا"/,
-    "WebSite JSON-LD must contain brand name",
+  assert.equal(
+    aboutJsonLd.filter((item) => item["@type"] === "Organization").length,
+    0,
+    "/about/ must not emit Organization JSON-LD without the full address",
   );
 
-  // Organization JSON-LD with location Place, geo and hasMap
-  assert.match(
-    homeHtml,
-    /"location":\{"@type":"Place"/,
-    "Organization schema must represent office location as a Place entity",
+  const contactOrganizations = contactJsonLd.filter(
+    (item) => item["@type"] === "Organization",
   );
-  assert.match(
-    homeHtml,
-    /"@type":"GeoCoordinates","latitude":35\.817127,"longitude":51\.4809619/,
-    "Organization schema location must contain factual GeoCoordinates",
+  assert.equal(contactOrganizations.length, 1, "/contact/ must emit one Organization object");
+  const organization = contactOrganizations[0];
+  assert.equal(website.publisher?.["@id"], organization["@id"]);
+  assert.equal(organization.address?.streetAddress, siteConfig.business.address);
+  assert.equal(organization.location?.["@type"], "Place");
+  assert.deepEqual(organization.location?.geo, {
+    "@type": "GeoCoordinates",
+    latitude: siteConfig.officeCoordinates.lat,
+    longitude: siteConfig.officeCoordinates.lng,
+  });
+
+  const contactWithoutJsonLd = contactHtml.replace(
+    /<script\b[^>]*\btype="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
+    "",
   );
-  assert.match(
-    homeHtml,
-    /"hasMap":"https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=35\.817127,51\.4809619"/,
-    "Organization schema location must contain factual Google Maps URL",
+  assert.ok(
+    contactWithoutJsonLd.includes(siteConfig.business.address),
+    "Organization streetAddress must match visible /contact/ text from siteConfig",
   );
 
   // Apple touch icon
