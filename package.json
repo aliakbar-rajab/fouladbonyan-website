@@ -18,7 +18,7 @@
         "lint": "eslint .",
         "typecheck": "tsc --noEmit --incremental false",
         "test": "node --import tsx --test tests/persian-numbers.test.mjs tests/site-route.test.mjs tests/catalog-search-coordinator.test.mjs tests/site-logic.test.mjs tests/catalog-data.test.mjs tests/catalog-ui.test.mjs tests/category-route-scroll.test.mjs tests/mega-menu-navigation.test.mjs tests/use-catalog-data.test.mjs tests/quote-pricing.test.mjs tests/palette-contrast.test.mjs tests/enamad-pages.test.mjs tests/market-prices-stale.test.mjs tests/steel-reference.test.mjs tests/guide-page-ui.test.mjs tests/pull-price-data.test.mjs tests/publish-price-payloads.test.mjs tests/price-refresh-resilience.test.mjs tests/prerender-pipeline.test.mjs workers/price-refresh/ingest.test.mjs workers/price-refresh/worker.test.mjs",
-        "test:build": "node --test tests/built-assets.test.mjs tests/built-seo.test.mjs tests/built-prerender.test.mjs tests/built-guide.test.mjs tests/built-csp.test.mjs tests/built-links.test.mjs tests/hydration.test.mjs",
+        "test:build": "node --test tests/built-assets.test.mjs tests/built-seo.test.mjs tests/built-prerender.test.mjs tests/built-guide.test.mjs tests/built-csp.test.mjs tests/built-links.test.mjs tests/hydration.test.mjs tests/built-market-height.test.mjs",
         "verify": "npm run lint && npm run typecheck && npm test && npm run build && npm run test:build"
     },
     "dependencies": {
@@ -27,6 +27,7 @@
     },
     "devDependencies": {
         "@eslint/js": "10.0.1",
+        "@playwright/test": "^1.63.0",
         "@testing-library/react": "16.3.0",
         "@testing-library/user-event": "14.6.1",
         "@types/node": "26.1.1",
