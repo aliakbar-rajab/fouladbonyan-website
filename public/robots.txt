@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /*?factory=
+Disallow: /*?size=
 
 Sitemap: https://fouladbonyan.com/sitemap.xml
