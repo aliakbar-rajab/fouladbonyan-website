@@ -530,7 +530,7 @@ test("homepage emits WebSite structured data and Organization schema with factua
   );
 });
 
-test("guide pages emit Article structured data with factual dateModified, publisher, and image", async () => {
+test("guide pages emit Article structured data with factual publication and modification dates, publisher, and image", async () => {
   const guidePages = [
     "guide/rebar-weight-chart/index.html",
     "guide/beam-weight-chart/index.html",
@@ -545,6 +545,11 @@ test("guide pages emit Article structured data with factual dateModified, publis
       html,
       /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"Article"/,
       `${pagePath} must contain Article JSON-LD`,
+    );
+    assert.match(
+      html,
+      /"datePublished":"2026-08-17"/,
+      `${pagePath} must contain the Git-sourced first-publication date`,
     );
     assert.match(
       html,
