@@ -43,7 +43,6 @@ export function CategoryGrid() {
                 <strong>{group.label}</strong>
                 <small>{group.description}</small>
               </span>
-              <b aria-hidden="true">←</b>
             </a>
           );
         })}
