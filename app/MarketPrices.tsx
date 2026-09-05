@@ -9,6 +9,11 @@ const ASSET_ICONS: Record<string, (props: IconProps) => ReturnType<typeof GoldIc
   eur: EurIcon,
 };
 
+// The same-origin endpoint has a fixed four-instrument contract. Keeping that
+// ceiling here makes the measured reserved footprint durable if an upstream or
+// malformed response ever carries additional items.
+const MAX_MARKET_PRICE_CARDS = 4;
+
 const updatedAtFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   dateStyle: "short",
   timeStyle: "short",
@@ -68,6 +73,9 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
 export function MarketPrices() {
   const state = useMarketPrices();
   const isStatusOnly = state.status !== "ready";
+  const visibleItems = state.status === "ready"
+    ? state.data.items.slice(0, MAX_MARKET_PRICE_CARDS)
+    : [];
 
   return (
     <section
@@ -86,7 +94,7 @@ export function MarketPrices() {
               </p>
             </div>
             <div className="market-prices-grid">
-              {state.data.items.map((item) => (
+              {visibleItems.map((item) => (
                 <MarketPriceCard item={item} key={item.id} />
               ))}
             </div>

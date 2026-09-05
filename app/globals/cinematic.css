@@ -859,7 +859,9 @@ body {
 }
 
 .market-context.is-status-only .shell {
-  display: block;
+  min-block-size: calc(var(--market-ready-min-height) - 1.6rem);
+  display: grid;
+  align-items: center;
 }
 
 .market-context.is-status-only {

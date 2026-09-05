@@ -4,8 +4,16 @@
  * .prices seamless.
  */
 .market-prices {
+  /*
+   * Rounded up from the rendered four-card ready state in Chrome at the
+   * audited 1440px viewport (650.359px). Loading/error must occupy the same
+   * outer footprint so an async response above #price-workspace cannot move
+   * the auto-scrolled viewport.
+   */
+  --market-ready-min-height: 651px;
   position: relative;
   z-index: 2;
+  min-block-size: var(--market-ready-min-height);
   background-color: #3b3b3e;
   padding-block: clamp(2.5rem, 5vw, 4rem);
 }
@@ -250,8 +258,20 @@
 }
 
 @media (max-width: 900px) {
+  .market-prices {
+    /* Four cards render as two rows: measured 702.609px at 768px. */
+    --market-ready-min-height: 703px;
+  }
+
   .market-prices-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .market-prices {
+    /* Four single-column cards: measured 1120.797px at 390px. */
+    --market-ready-min-height: 1121px;
   }
 }
 
