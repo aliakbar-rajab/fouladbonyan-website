@@ -99,9 +99,9 @@ export function QuoteDocument({
             </header>
 
             <section className="quote-parties">
-              <div className="quote-card" aria-label="مشخصات فروشنده">
-                <header className="quote-card-head">مشخصات فروشنده</header>
-                <div className="quote-card-grid">
+              <div className="quote-party-card" aria-label="مشخصات فروشنده">
+                <header className="quote-party-card-head">مشخصات فروشنده</header>
+                <div className="quote-party-card-grid">
                   <div className="quote-field quote-field-wide">
                     <span className="quote-field-label">نام</span>
                     <span className="quote-field-value">{siteConfig.brand.name}</span>
@@ -121,9 +121,9 @@ export function QuoteDocument({
                 </div>
               </div>
 
-              <div className="quote-card" aria-label="مشخصات خریدار">
-                <header className="quote-card-head">مشخصات خریدار</header>
-                <div className="quote-card-grid">
+              <div className="quote-party-card" aria-label="مشخصات خریدار">
+                <header className="quote-party-card-head">مشخصات خریدار</header>
+                <div className="quote-party-card-grid">
                   <div className="quote-field quote-field-wide">
                     <span className="quote-field-label">نام</span>
                     <span className="quote-field-value">{quote.fullName}</span>

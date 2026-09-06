@@ -166,21 +166,27 @@
   break-inside: avoid;
 }
 
-.quote-card {
+/*
+ * The seller/buyer blocks of the pre-invoice. Named for the party they
+ * describe, not "quote-card": the homepage conversion panel in cinematic.css
+ * already owns that class, loads after this file, and was turning these into
+ * dark 26px-radius flex rows.
+ */
+.quote-party-card {
   border: 1px solid var(--line);
   border-radius: 0.75mm;
   overflow: hidden;
   background: #fff;
 }
 
-.quote-card-head {
+.quote-party-card-head {
   padding: 1mm 3mm;
   border-bottom: 0.3mm solid #000;
   font-size: 8.6pt;
   font-weight: 800;
 }
 
-.quote-card-grid {
+.quote-party-card-grid {
   display: grid;
   gap: 1mm;
   padding: 1.6mm 3mm 1.8mm;
@@ -395,12 +401,20 @@
 }
 
 @media print {
-  body {
+  /*
+   * The `html` prefix buys one point of specificity over cinematic.css, which
+   * paints the dark theme onto `body` and `#fb-site` unconditionally. That
+   * sheet is the last one loaded, so at equal specificity it wins inside this
+   * block too, and the pre-invoice prints onto a black page wherever the
+   * browser is set to print background graphics.
+   */
+  html body {
     background: #fff;
   }
 
-  #fb-site {
+  html #fb-site {
     display: block;
+    background: #fff;
   }
 
   #fb-site:has(.quote-document) * {
