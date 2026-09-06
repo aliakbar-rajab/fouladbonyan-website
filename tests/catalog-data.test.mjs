@@ -17,10 +17,7 @@ import {
 import { buildCatalogSearchGroups } from "../app/catalog-search-coordinator.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-reader.ts";
-import {
-  deriveSummaryFromRows,
-  validateCatalogSnapshot,
-} from "../app/catalog-validation.mjs";
+import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
 import { filterProductGroups } from "../app/site-logic.mjs";
 import {
   summarizeCatalogDates,
@@ -51,7 +48,7 @@ test("F1: every published summary equals the rows it summarises", async () => {
   // Relational, not absolute: the numbers change every refresh, the invariant
   // does not. A summary value the table cannot produce is the F1 defect.
   for (const [group, category] of allCategories(snapshot)) {
-    const expected = deriveSummaryFromRows(pricedRowsOf(category));
+    const expected = summarisePricedRows(pricedRowsOf(category));
     const where = `${group}/${category.id}`;
     assert.equal(category.summary.min, expected.min, `${where} summary.min`);
     assert.equal(category.summary.max, expected.max, `${where} summary.max`);

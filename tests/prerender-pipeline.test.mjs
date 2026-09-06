@@ -291,7 +291,6 @@ test("writePrerenderArtifacts creates expected files and directory hierarchy ato
     });
 
     assert.equal(result.pageCount, 3);
-    assert.equal(result.sitemapCount, 3);
 
     const homeHtml = await readFile(join(tempDir, "index.html"), "utf8");
     assert.match(homeHtml, /<title>Home<\/title>/);

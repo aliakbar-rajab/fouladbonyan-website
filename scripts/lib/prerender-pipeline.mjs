@@ -206,8 +206,6 @@ export function buildArticleJsonLd({
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
-export const buildTechArticleJsonLd = buildArticleJsonLd;
-
 const replaceMetaContent = (html, attrMatcher, value) =>
   html.replace(
     new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
@@ -362,7 +360,7 @@ export function renderStaticDocument(
     );
   }
 
-  // Inject extra head elements (e.g. WebSite or TechArticle JSON-LD) before </head>
+  // Inject extra head elements (e.g. WebSite or Article JSON-LD) before </head>
   if (extraHeadHtml) {
     html = html.replace("</head>", insert(`${extraHeadHtml}\n  </head>`));
   }
@@ -569,15 +567,9 @@ export async function collectSitePageDescriptors({
     "units-and-quote-specs": `${siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
   };
 
-  // All five articles first entered Git in 5cf2282 on 2026-08-17. The
-  // component files added on 2026-08-22 only extracted that existing content.
-  const guidePublicationDates = {
-    "rebar-weight-chart": "2026-08-17",
-    "beam-weight-chart": "2026-08-17",
-    "ribbed-vs-plain-rebar": "2026-08-17",
-    "ipe-vs-hash-beam": "2026-08-17",
-    "units-and-quote-specs": "2026-08-17",
-  };
+  // All five articles first entered Git in 5cf2282 on this date. The component
+  // files added on 2026-08-22 only extracted that existing content.
+  const guidePublishedOn = "2026-08-17";
 
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
@@ -599,7 +591,7 @@ export async function collectSitePageDescriptors({
         headline: definition.title,
         description: definition.seoDescription,
         pageUrl,
-        datePublished: guidePublicationDates[key],
+        datePublished: guidePublishedOn,
         lastmod: definition.lastmod,
         siteUrl,
         image: guideImages[key],
@@ -687,10 +679,8 @@ export async function writePrerenderArtifacts({
     );
   }
 
-  return {
-    pageCount: pages.length,
-    sitemapCount: pages.length,
-  };
+  // Every page written also gets a sitemap entry, so one count describes both.
+  return { pageCount: pages.length };
 }
 
 /**

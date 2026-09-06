@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import worker from "./worker.mjs";
-import { KV_KEYS, STATUS_KEY } from "./ingest.mjs";
+import { CATALOG_KEY, STATUS_KEY } from "./ingest.mjs";
 
 function fakeKv(seed = {}) {
   const store = new Map(Object.entries(seed));
@@ -43,7 +43,7 @@ function buildValidPayload() {
 
 test("GET /catalog-prices.json serves the stored canonical snapshot", async () => {
   const env = {
-    PRICE_DATA: fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"now","catalogs":[]}' }),
+    PRICE_DATA: fakeKv({ [CATALOG_KEY]: '{"fetchedAt":"now","catalogs":[]}' }),
   };
   const response = await worker.fetch(
     new Request("https://price.example/catalog-prices.json"),
@@ -57,7 +57,7 @@ test("GET /catalog-prices.json serves the stored canonical snapshot", async () =
 });
 
 test("GET /catalog-snapshot.json serves the stored snapshot", async () => {
-  const env = { PRICE_DATA: fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"now","catalogs":[]}' }) };
+  const env = { PRICE_DATA: fakeKv({ [CATALOG_KEY]: '{"fetchedAt":"now","catalogs":[]}' }) };
   const response = await worker.fetch(new Request("https://price.example/catalog-snapshot.json"), env);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { fetchedAt: "now", catalogs: [] });
@@ -143,7 +143,7 @@ test("POST /ingest with a valid payload stores it and calls the deploy hook", as
   );
 
   assert.equal(response.status, 200);
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.catalog));
+  assert.ok(env.PRICE_DATA.store.has(CATALOG_KEY));
   assert.equal(calledUrls.includes("https://deploy.example/hook"), true);
 });
 
@@ -194,7 +194,7 @@ test("POST /ingest accepts the exact { snapshot, diagnostics } shape refresh-and
   const body = await response.json();
   assert.equal(response.status, 200, JSON.stringify(body));
   assert.equal(body.ok, true);
-  assert.ok(env.PRICE_DATA.store.has(KV_KEYS.catalog));
+  assert.ok(env.PRICE_DATA.store.has(CATALOG_KEY));
 });
 
 test("POST /ingest with an invalid payload does not call the deploy hook", async (t) => {
@@ -220,6 +220,6 @@ test("POST /ingest with an invalid payload does not call the deploy hook", async
   );
 
   assert.equal(response.status, 422);
-  assert.equal(env.PRICE_DATA.store.has(KV_KEYS.catalog), false);
+  assert.equal(env.PRICE_DATA.store.has(CATALOG_KEY), false);
   assert.equal(calledUrls.includes("https://deploy.example/hook"), false);
 });

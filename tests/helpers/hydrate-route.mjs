@@ -36,6 +36,7 @@ Object.defineProperty(globalThis, "navigator", {
   configurable: true,
 });
 globalThis.HTMLElement = dom.window.HTMLElement;
+globalThis.CustomEvent = dom.window.CustomEvent;
 globalThis.Node = dom.window.Node;
 globalThis.MutationObserver = dom.window.MutationObserver;
 globalThis.getComputedStyle = dom.window.getComputedStyle;

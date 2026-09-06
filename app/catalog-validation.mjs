@@ -4,7 +4,7 @@ import { MAX_RELIABLE_TREND_PERCENT } from "./catalog-trend.mjs";
 
 const VALID_STATUSES = new Set(["up", "down", "same", "unverified"]);
 
-function isRecord(value) {
+export function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
@@ -19,17 +19,6 @@ function validateTrend(status, percent, location) {
     Math.abs(percent) <= MAX_RELIABLE_TREND_PERCENT || status === "unverified",
     `${location} با نوسان غیرعادی باید برای بررسی علامت‌گذاری شود (unverified)`,
   );
-}
-
-/**
- * The single definition of what a category summary means: it describes the
- * priced rows of that category and nothing else. Both the fetch scripts and
- * the validator use this, so a summary can never drift from its rows. The
- * definition itself lives in catalog-pricing.mjs, shared with every UI
- * consumer.
- */
-export function deriveSummaryFromRows(rows) {
-  return summarisePricedRows(rows);
 }
 
 function validateSummary(summary, location, rows) {
@@ -64,7 +53,7 @@ function validateSummary(summary, location, rows) {
   // The summary must agree with the rows it summarises. Without this, a scraper
   // that rounds or rescales the numbers publishes prices that appear nowhere in
   // the table, and every check above still passes.
-  const expected = deriveSummaryFromRows(pricedRows);
+  const expected = summarisePricedRows(pricedRows);
   assert(
     summary.min === expected.min,
     `${location}.summary.min با ارزان‌ترین ردیف (${expected.min}) برابر نیست: ${summary.min}`,

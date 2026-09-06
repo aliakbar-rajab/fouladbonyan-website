@@ -5,10 +5,8 @@ import {
   parsePersianNumber,
   toPersianDigits,
 } from "../../app/persian-numbers.mjs";
-import {
-  deriveSummaryFromRows,
-  validateCatalogSnapshot,
-} from "../../app/catalog-validation.mjs";
+import { validateCatalogSnapshot } from "../../app/catalog-validation.mjs";
+import { summarisePricedRows } from "../../app/catalog-pricing.mjs";
 import { normalizeCatalogTrend } from "../../app/catalog-trend.mjs";
 import {
   allCatalogConfigs,
@@ -179,7 +177,7 @@ function parseCatalogPage(html, source) {
     sourceUrl: source.url,
     summary: {
       date: toPersianDigits(String(compare.date ?? "")),
-      ...deriveSummaryFromRows(rows),
+      ...summarisePricedRows(rows),
       percent: summaryTrend.percent,
       status: summaryTrend.status,
     },
@@ -199,17 +197,26 @@ function parseCatalogPage(html, source) {
  * ===========================================================================
  */
 
-async function fetchCategoryOnce(
-  source,
-  { timeoutMs = 25_000, fetchImpl = fetch } = {},
-) {
+/*
+ * Retry and concurrency shape of an upstream refresh. These are properties of
+ * fooladiranian.com's tolerance, not of any caller, so they are constants
+ * rather than options -- nothing has ever needed to run this fetch on a
+ * different schedule.
+ */
+const REQUEST_TIMEOUT_MS = 25_000;
+const FETCH_ATTEMPTS = 4;
+const RETRY_BASE_DELAY_MS = 800;
+const RETRY_MAX_DELAY_MS = 8_000;
+const CONCURRENT_CATEGORIES = 4;
+
+async function fetchCategoryOnce(source, fetchImpl) {
   const response = await fetchImpl(source.url, {
     headers: {
       accept: "text/html,application/xhtml+xml",
       "accept-language": "fa-IR,fa;q=0.9",
       "user-agent": "Bonyan-Foulad-Daria/1.0 (+https://fouladbonyan.com/)",
     },
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -229,38 +236,29 @@ async function fetchCategoryOnce(
   return parseCatalogPage(html, source);
 }
 
-async function fetchCategory(
-  source,
-  {
-    attempts = 4,
-    baseDelayMs = 800,
-    maxDelayMs = 8_000,
-    timeoutMs = 25_000,
-    fetchImpl = fetch,
-    onRetry = null,
-  } = {},
-) {
+async function fetchCategory(source, fetchImpl = fetch) {
   let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     try {
-      return await fetchCategoryOnce(source, { timeoutMs, fetchImpl });
+      return await fetchCategoryOnce(source, fetchImpl);
     } catch (error) {
       lastError = error;
-      if (attempt < attempts) {
+      if (attempt < FETCH_ATTEMPTS) {
         let delayMs = Math.min(
-          maxDelayMs,
-          baseDelayMs * 2 ** (attempt - 1) + Math.floor(Math.random() * 300),
+          RETRY_MAX_DELAY_MS,
+          RETRY_BASE_DELAY_MS * 2 ** (attempt - 1) +
+            Math.floor(Math.random() * 300),
         );
         if (error.retryAfterMs && error.retryAfterMs > 0) {
-          delayMs = Math.min(maxDelayMs, Math.max(delayMs, error.retryAfterMs));
+          delayMs = Math.min(
+            RETRY_MAX_DELAY_MS,
+            Math.max(delayMs, error.retryAfterMs),
+          );
         }
 
-        const logMsg = `[تلاش مجدد ${attempt}/${attempts}] دریافت «${source.label}» با خطا مواجه شد (${error.message}). تلاش بعدی پس از ${delayMs}ms...`;
-        if (onRetry) {
-          onRetry({ source, attempt, attempts, delayMs, error, message: logMsg });
-        } else {
-          console.warn(logMsg);
-        }
+        console.warn(
+          `[تلاش مجدد ${attempt}/${FETCH_ATTEMPTS}] دریافت «${source.label}» با خطا مواجه شد (${error.message}). تلاش بعدی پس از ${delayMs}ms...`,
+        );
         await sleep(delayMs);
       }
     }
@@ -270,10 +268,8 @@ async function fetchCategory(
 
 async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   const {
-    limit = 4,
     fallbackCategories = [],
     fetchImpl = fetch,
-    attempts = 4,
     onWarning = null,
   } = options;
 
@@ -284,17 +280,21 @@ async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   const results = [];
   const warnings = [];
 
-  for (let index = 0; index < sources.length; index += limit) {
-    const batch = sources.slice(index, index + limit);
+  for (
+    let index = 0;
+    index < sources.length;
+    index += CONCURRENT_CATEGORIES
+  ) {
+    const batch = sources.slice(index, index + CONCURRENT_CATEGORIES);
     const batchResults = await Promise.all(
       batch.map(async (source) => {
         try {
-          const category = await fetchCategory(source, { attempts, fetchImpl });
+          const category = await fetchCategory(source, fetchImpl);
           return { category, fresh: true };
         } catch (error) {
           const fallback = fallbackMap.get(source.id);
           if (fallback) {
-            const warningMsg = `[ایزوله‌سازی خطا] دریافت دسته «${source.label}» (${source.id}) پس از ${attempts} تلاش ناموفق بود (${error.message}). از داده‌های معتبر قبلی استفاده شد.`;
+            const warningMsg = `[ایزوله‌سازی خطا] دریافت دسته «${source.label}» (${source.id}) پس از ${FETCH_ATTEMPTS} تلاش ناموفق بود (${error.message}). از داده‌های معتبر قبلی استفاده شد.`;
             warnings.push({
               sourceId: source.id,
               sourceLabel: source.label,
@@ -361,8 +361,6 @@ async function buildCatalogSnapshot(options = {}) {
       (catalog) => catalog.categories ?? [],
     ) ?? [],
     fetchImpl,
-    attempts,
-    limit,
     onWarning,
   } = options;
 
@@ -378,8 +376,6 @@ async function buildCatalogSnapshot(options = {}) {
     await fetchCategoriesWithDiagnostics(allSources, {
       fallbackCategories,
       fetchImpl,
-      attempts,
-      limit,
       onWarning,
     });
 

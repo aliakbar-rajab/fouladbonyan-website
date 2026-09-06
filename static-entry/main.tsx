@@ -28,9 +28,6 @@ function readJsonScript(id: string) {
   }
 }
 
-document.documentElement.lang = "fa";
-document.documentElement.dir = "rtl";
-
 const root = document.getElementById("root");
 
 if (!root) {
@@ -90,19 +87,18 @@ async function resolveContent() {
   return <App />;
 }
 
+/*
+ * Hold hydration until the brand intro says it is safe to start work behind
+ * it. `fb:preloader-warmup` is the only signal to wait for: the preloader
+ * raises it on every path it can take -- including the ones where it skips the
+ * video entirely -- and always before it tears the overlay down, which is what
+ * it is waiting on us for in turn.
+ */
 function waitForWarmup(): Promise<void> {
-  if (typeof window === "undefined" || window.location.pathname !== "/") {
-    return Promise.resolve();
-  }
+  if (window.location.pathname !== "/") return Promise.resolve();
 
-  const globalScope = window as unknown as {
-    __fbPreloaderDone?: boolean;
-    __fbPreloaderWarmup?: boolean;
-  };
-
-  if (globalScope.__fbPreloaderDone || globalScope.__fbPreloaderWarmup) {
-    return Promise.resolve();
-  }
+  const globalScope = window as unknown as { __fbPreloaderWarmup?: boolean };
+  if (globalScope.__fbPreloaderWarmup) return Promise.resolve();
 
   try {
     if (
@@ -116,60 +112,37 @@ function waitForWarmup(): Promise<void> {
   }
 
   return new Promise<void>((resolve) => {
-    let settled = false;
-    const done = () => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener("fb:preloader-warmup", done);
-      window.removeEventListener("fb:preloader-done", done);
-      resolve();
-    };
-
-    window.addEventListener("fb:preloader-warmup", done, { once: true });
-    window.addEventListener("fb:preloader-done", done, { once: true });
-    window.setTimeout(done, 5000);
+    window.addEventListener("fb:preloader-warmup", () => resolve(), {
+      once: true,
+    });
+    // The preloader script can fail to load or run at all; nothing may ever
+    // raise the signal, and the site still has to appear.
+    window.setTimeout(resolve, 5000);
   });
 }
 
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  fallbackValue?: T,
-): Promise<T | undefined> {
+/** Settle when `promise` does, or when its budget runs out -- whichever first. */
+function withTimeout(promise: Promise<unknown>, timeoutMs: number) {
   return Promise.race([
     promise,
-    new Promise<T | undefined>((resolve) => {
-      window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+    new Promise((resolve) => {
+      window.setTimeout(resolve, timeoutMs);
     }),
   ]);
 }
 
 async function whenFirstViewportReady(): Promise<void> {
-  if (typeof window === "undefined") return;
-
   const checks: Promise<unknown>[] = [];
 
   // 1. Font loading check (Critical Tier 1 — 200ms budget to prevent FOIT/FOUT)
-  if ("fonts" in document && typeof document.fonts.ready?.then === "function") {
-    checks.push(withTimeout(document.fonts.ready.catch(() => {}), 200));
-  }
+  checks.push(withTimeout(document.fonts.ready.catch(() => {}), 200));
 
   // 2. Hero image decode check (Critical Tier 1 — 800ms budget for primary canvas)
   const heroImg = document.querySelector<HTMLImageElement>(
     ".hero-image img, .hero-image picture img",
   );
-  if (heroImg) {
-    if (heroImg.complete && heroImg.naturalWidth > 0) {
-      // Already decoded
-    } else if (typeof heroImg.decode === "function") {
-      checks.push(withTimeout(heroImg.decode().catch(() => {}), 800));
-    } else {
-      const imgPromise = new Promise<void>((resolve) => {
-        heroImg.addEventListener("load", () => resolve(), { once: true });
-        heroImg.addEventListener("error", () => resolve(), { once: true });
-      });
-      checks.push(withTimeout(imgPromise, 800));
-    }
+  if (heroImg && !(heroImg.complete && heroImg.naturalWidth > 0)) {
+    checks.push(withTimeout(heroImg.decode().catch(() => {}), 800));
   }
 
   // 3. Header WebGL LightPillar (Atmospheric Enhancement Tier 2 — 250ms opportunistic budget)
@@ -190,13 +163,8 @@ async function whenFirstViewportReady(): Promise<void> {
 }
 
 function signalSiteReady() {
-  if (typeof window === "undefined") return;
   (window as unknown as { __fbSiteReady?: boolean }).__fbSiteReady = true;
-  try {
-    window.dispatchEvent(new CustomEvent("fb:site-ready"));
-  } catch {
-    // fallback
-  }
+  window.dispatchEvent(new CustomEvent("fb:site-ready"));
 }
 
 async function mount() {

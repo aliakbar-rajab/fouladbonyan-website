@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   getCategoryById,
   getSubcategoryLabel,
+  isSingleSubcategoryGroup,
   productGroups,
   type ProductGroup,
   type ProductGroupId,
@@ -99,64 +100,53 @@ export const loadCatalogSearchGroups = createRetryableLoader<CatalogSearchGroup[
 
 export type SearchExecutionResult = {
   matchedGroups: ProductGroup[];
-  totalResultCount: number;
   selectedGroupId: ProductGroupId;
   suggestedViewRequest?: Omit<CatalogViewRequest, "requestId">;
   statusMessage: string;
 };
 
 /**
- * Pure function evaluating a search query against indexed product groups.
+ * Pure evaluation of a search query against indexed product groups.
+ *
+ * `query` is always non-empty: submitSearch answers an empty one by returning
+ * the workspace to the view its route describes, which is a different answer
+ * from "everything matched" and is not this function's to give.
  */
 export function evaluateCatalogSearch(
   query: string,
   groups: CatalogSearchGroup[],
 ): SearchExecutionResult {
   const trimmed = query.trim();
-  if (!trimmed) {
-    return {
-      matchedGroups: groups,
-      totalResultCount: 0,
-      selectedGroupId: productGroups[0].id,
-      suggestedViewRequest: {
-        categoryId: initialCategoryIdOf(productGroups[0].id),
-      },
-      statusMessage: "همه محصولات نمایش داده می‌شوند.",
-    };
-  }
-
   const results = filterProductGroups(groups, trimmed);
-  const totalCount = results.reduce((sum, group) => sum + group.rows.length, 0);
 
-  if (results.length > 0) {
-    const firstGroup = results[0];
-    const selectedGroupId = isProductGroupId(firstGroup.id)
-      ? firstGroup.id
-      : productGroups[0].id;
-    const firstRow = firstGroup.rows[0];
-
+  if (!results.length) {
     return {
-      matchedGroups: results,
-      totalResultCount: totalCount,
-      selectedGroupId,
-      suggestedViewRequest: firstRow
-        ? {
-            categoryId: firstRow.categoryId,
-            factory: firstRow.factory,
-            size: firstRow.size,
-          }
-        : {
-            categoryId: initialCategoryIdOf(selectedGroupId),
-          },
-      statusMessage: `${totalCount.toLocaleString("fa-IR")} نتیجه برای «${trimmed}» پیدا شد.`,
+      matchedGroups: [],
+      selectedGroupId: productGroups[0].id,
+      statusMessage: `نتیجه‌ای برای «${trimmed}» پیدا نشد.`,
     };
   }
+
+  const totalCount = results.reduce((sum, group) => sum + group.rows.length, 0);
+  const firstGroup = results[0];
+  const selectedGroupId = isProductGroupId(firstGroup.id)
+    ? firstGroup.id
+    : productGroups[0].id;
+  const firstRow = firstGroup.rows[0];
 
   return {
-    matchedGroups: [],
-    totalResultCount: 0,
-    selectedGroupId: productGroups[0].id,
-    statusMessage: `نتیجه‌ای برای «${trimmed}» پیدا نشد.`,
+    matchedGroups: results,
+    selectedGroupId,
+    suggestedViewRequest: firstRow
+      ? {
+          categoryId: firstRow.categoryId,
+          factory: firstRow.factory,
+          size: firstRow.size,
+        }
+      : {
+          categoryId: initialCategoryIdOf(selectedGroupId),
+        },
+    statusMessage: `${totalCount.toLocaleString("fa-IR")} نتیجه برای «${trimmed}» پیدا شد.`,
   };
 }
 
@@ -280,8 +270,9 @@ export function useCatalogWorkspace({
   );
 
   const isCategoryRoute = Boolean(route.category);
-  const isSingleCategoryGroup =
-    route.category === "angle" || route.category === "channel";
+  const isSingleCategoryGroup = Boolean(
+    route.category && isSingleSubcategoryGroup(route.category),
+  );
   const isCategoryOverviewRoute =
     isCategoryRoute && !route.subcategory && !isSingleCategoryGroup;
 

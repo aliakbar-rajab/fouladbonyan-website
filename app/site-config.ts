@@ -47,7 +47,6 @@ export const siteConfig = {
     province: "تهران",
     postalCode: "1978977198",
     countryCode: "IR",
-    countryName: "ایران",
   },
   officeCoordinates: {
     lat: 35.817127,

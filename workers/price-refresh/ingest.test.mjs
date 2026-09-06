@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { ingestAll, KV_KEYS, STATUS_KEY } from "./ingest.mjs";
+import { ingestAll, CATALOG_KEY, STATUS_KEY } from "./ingest.mjs";
 
 const committedSnapshot = JSON.parse(
   await readFile(
@@ -47,31 +47,31 @@ test("ingestAll stores the canonical catalog dataset and a success status for a 
   const status = await ingestAll(kv, { snapshot, diagnostics });
 
   assert.equal(status.ok, true);
-  assert.deepEqual(JSON.parse(kv.store.get(KV_KEYS.catalog)), snapshot);
+  assert.deepEqual(JSON.parse(kv.store.get(CATALOG_KEY)), snapshot);
   assert.equal(JSON.parse(kv.store.get(STATUS_KEY)).ok, true);
 });
 
 test("ingestAll rejects a payload missing price data and leaves KV untouched", async () => {
-  const kv = fakeKv({ [KV_KEYS.catalog]: '{"fetchedAt":"old"}' });
+  const kv = fakeKv({ [CATALOG_KEY]: '{"fetchedAt":"old"}' });
 
   const status = await ingestAll(kv, { invalid: true });
 
   assert.equal(status.ok, false);
   assert.match(status.error, /داده‌های قیمت/);
-  assert.equal(kv.store.get(KV_KEYS.catalog), '{"fetchedAt":"old"}');
+  assert.equal(kv.store.get(CATALOG_KEY), '{"fetchedAt":"old"}');
 });
 
 test("ingestAll rejects a structurally invalid dataset and leaves KV untouched", async () => {
   const { snapshot, diagnostics } = buildValidPayload();
   snapshot.catalogs[0].categories[0].summary.min = -1; // structurally invalid
   const kv = fakeKv({
-    [KV_KEYS.catalog]: '{"fetchedAt":"old-catalog"}',
+    [CATALOG_KEY]: '{"fetchedAt":"old-catalog"}',
   });
 
   const status = await ingestAll(kv, { snapshot, diagnostics });
 
   assert.equal(status.ok, false);
-  assert.equal(kv.store.get(KV_KEYS.catalog), '{"fetchedAt":"old-catalog"}');
+  assert.equal(kv.store.get(CATALOG_KEY), '{"fetchedAt":"old-catalog"}');
 });
 
 test("ingestAll rejects a non-object body", async () => {

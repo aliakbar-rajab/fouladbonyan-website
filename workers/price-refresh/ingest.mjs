@@ -1,15 +1,11 @@
 import { allCatalogConfigs } from "../../scripts/price-catalog-config.mjs";
-import { validateCatalogSnapshot } from "../../app/catalog-validation.mjs";
+import {
+  isRecord,
+  validateCatalogSnapshot,
+} from "../../app/catalog-validation.mjs";
 
-export const KV_KEYS = {
-  catalog: "catalog-prices",
-};
-
+export const CATALOG_KEY = "catalog-prices";
 export const STATUS_KEY = "refresh-status";
-
-function isRecord(value) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 function normalizeToSnapshot(payloads) {
   if (!isRecord(payloads)) {
@@ -42,7 +38,7 @@ export async function ingestAll(kv, payloads) {
     const snapshot = validateAll(payloads);
     const snapshotJson = JSON.stringify(snapshot);
 
-    await kv.put(KV_KEYS.catalog, snapshotJson);
+    await kv.put(CATALOG_KEY, snapshotJson);
 
     const status = {
       ok: true,

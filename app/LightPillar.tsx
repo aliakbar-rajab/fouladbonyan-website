@@ -13,18 +13,15 @@ const QUALITY_TIERS = {
   high: { iterations: 80, waveIterations: 4, pixelRatio: 0, precision: "highp", stepMultiplier: "1.0", fps: 60 },
 } as const;
 
+/*
+ * Touch-primary devices get the cheap tier. Asked as a media query rather than
+ * matched against navigator.userAgent: the platform answers "is this a coarse
+ * pointer" directly, an iPad reporting a desktop UA still answers it honestly,
+ * and it is the same question App.tsx already asks to decide its call button.
+ */
 function pickQuality() {
-  const isMobile =
-    typeof navigator !== "undefined" &&
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent,
-    );
-  if (isMobile) return QUALITY_TIERS.low;
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.hardwareConcurrency &&
-    navigator.hardwareConcurrency <= 4
-  ) {
+  if (window.matchMedia("(pointer: coarse)").matches) return QUALITY_TIERS.low;
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
     return QUALITY_TIERS.medium;
   }
   return QUALITY_TIERS.high;
@@ -211,14 +208,10 @@ export function LightPillar() {
     const signalPillarReady = () => {
       if (hasRenderedFirstFrame) return;
       hasRenderedFirstFrame = true;
-      if (typeof window !== "undefined") {
-        (window as unknown as { __fbHeaderPillarReady?: boolean }).__fbHeaderPillarReady = true;
-        try {
-          window.dispatchEvent(new CustomEvent("fb:header-pillar-ready"));
-        } catch {
-          // CustomEvent fallback in non-standard environments
-        }
-      }
+      (
+        window as unknown as { __fbHeaderPillarReady?: boolean }
+      ).__fbHeaderPillarReady = true;
+      window.dispatchEvent(new CustomEvent("fb:header-pillar-ready"));
     };
 
     const render = (time: number) => {

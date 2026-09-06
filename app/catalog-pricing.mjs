@@ -50,15 +50,6 @@ export function categoryPricedRows(category) {
 }
 
 /**
- * All priced rows of several categories (e.g. every category of a group).
- * @param {Parameters<typeof categoryPricedRows>[0][]} categories
- * @returns {PricedCatalogRow[]}
- */
-export function categoriesPricedRows(categories) {
-  return categories.flatMap((category) => categoryPricedRows(category));
-}
-
-/**
  * The Catalog price summary of a set of rows: min, max and rounded average of
  * the priced rows. A set with no priced rows has the literal-zero summary — a
  * known contradiction with `Price unavailable` recorded under Open questions
@@ -127,13 +118,8 @@ function median(values) {
 export function crediblePricedRows(rows) {
   const priced = rows.filter(isPricedRow);
   const medianByUnit = new Map();
-  for (const row of priced) {
-    const prices = medianByUnit.get(row.unit) ?? [];
-    prices.push(row.price);
-    medianByUnit.set(row.unit, prices);
-  }
-  for (const [unit, prices] of medianByUnit) {
-    medianByUnit.set(unit, median(prices));
+  for (const [unit, unitRows] of Map.groupBy(priced, (row) => row.unit)) {
+    medianByUnit.set(unit, median(unitRows.map((row) => row.price)));
   }
   return priced.filter((row) => {
     const unitMedian = medianByUnit.get(row.unit);
@@ -191,18 +177,11 @@ export function categoryCredibleSummary(category) {
  * @returns {Array<{ unit: string, min: number, max: number }>}
  */
 export function priceRangesByUnit(rows) {
-  const pricesByUnit = new Map();
-  for (const row of rows) {
-    if (!isPricedRow(row)) continue;
-    const prices = pricesByUnit.get(row.unit) ?? [];
-    prices.push(row.price);
-    pricesByUnit.set(row.unit, prices);
-  }
-  return Array.from(pricesByUnit, ([unit, prices]) => ({
-    unit,
-    min: Math.min(...prices),
-    max: Math.max(...prices),
-  }));
+  const rowsByUnit = Map.groupBy(rows.filter(isPricedRow), (row) => row.unit);
+  return Array.from(rowsByUnit, ([unit, unitRows]) => {
+    const prices = unitRows.map((row) => row.price);
+    return { unit, min: Math.min(...prices), max: Math.max(...prices) };
+  });
 }
 
 /**

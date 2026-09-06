@@ -28,6 +28,10 @@ export function setupDomEnv({ url, pretendToBeVisual = false } = {}) {
   // different realms, so `new FormData(formEl)` throws unless FormData
   // itself comes from the same jsdom realm as the form it reads.
   globalThis.FormData = dom.window.FormData;
+  // Same realm rule for events: a CustomEvent built from Node's own global is
+  // not an Event as far as jsdom's dispatchEvent is concerned, so components
+  // announcing themselves on `window` need jsdom's constructor.
+  globalThis.CustomEvent = dom.window.CustomEvent;
   globalThis.Node = dom.window.Node;
   globalThis.MutationObserver = dom.window.MutationObserver;
   globalThis.getComputedStyle = dom.window.getComputedStyle;

@@ -78,5 +78,5 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
  * section's body. Matches isGuidePageKey.
  */
 export function isInfoPageKey(value: string): value is InfoPageKey {
-  return Object.prototype.hasOwnProperty.call(infoPageDefinitions, value);
+  return Object.hasOwn(infoPageDefinitions, value);
 }

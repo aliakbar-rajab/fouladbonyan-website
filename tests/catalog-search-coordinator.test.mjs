@@ -121,23 +121,12 @@ test("buildCatalogSearchGroups indexes all rows, category IDs, and search text a
   assert.match(firstRow.searchText, /2mm/);
 });
 
-test("evaluateCatalogSearch returns all groups on empty or whitespace query", () => {
-  const searchGroups = buildCatalogSearchGroups(productGroups, mockCatalogs);
-  const result = evaluateCatalogSearch("   ", searchGroups);
-
-  assert.equal(result.matchedGroups.length, searchGroups.length);
-  assert.equal(result.totalResultCount, 0);
-  assert.equal(result.selectedGroupId, "rebar");
-  assert.equal(result.statusMessage, "همه محصولات نمایش داده می‌شوند.");
-});
-
 test("evaluateCatalogSearch matches Persian text and derives the first result's view parameters", () => {
   const searchGroups = buildCatalogSearchGroups(productGroups, mockCatalogs);
   const result = evaluateCatalogSearch("نیشابور", searchGroups);
 
   assert.equal(result.matchedGroups.length, 1);
   assert.equal(result.matchedGroups[0].id, "rebar");
-  assert.equal(result.totalResultCount, 1);
   assert.equal(result.selectedGroupId, "rebar");
   assert.deepEqual(result.suggestedViewRequest, {
     categoryId: "ribbed",
@@ -163,7 +152,6 @@ test("evaluateCatalogSearch handles queries with no matching products cleanly", 
   const result = evaluateCatalogSearch("محصول_ناموجود_xyz", searchGroups);
 
   assert.equal(result.matchedGroups.length, 0);
-  assert.equal(result.totalResultCount, 0);
   assert.match(result.statusMessage, /نتیجه‌ای برای «محصول_ناموجود_xyz» پیدا نشد/);
 });
 

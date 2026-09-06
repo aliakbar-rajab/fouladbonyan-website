@@ -1,4 +1,4 @@
-import { ingestAll, KV_KEYS, STATUS_KEY } from "./ingest.mjs";
+import { ingestAll, CATALOG_KEY, STATUS_KEY } from "./ingest.mjs";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 
@@ -19,11 +19,9 @@ async function serveDataset(kv, kvKey) {
   });
 }
 
-const DATASET_ROUTES = new Map([
-  [`/${KV_KEYS.catalog}.json`, KV_KEYS.catalog],
-  ["/catalog-snapshot.json", KV_KEYS.catalog],
-]);
-
+// Both paths serve the one stored snapshot; /catalog-snapshot.json is the
+// older name, still linked from elsewhere.
+const CATALOG_PATHS = [`/${CATALOG_KEY}.json`, "/catalog-snapshot.json"];
 
 function isAuthorized(request, env) {
   const expected = env.INGEST_TOKEN ? `Bearer ${env.INGEST_TOKEN}` : null;
@@ -46,9 +44,8 @@ export default {
       return new Response(status, { headers: JSON_HEADERS });
     }
 
-    const kvKey = DATASET_ROUTES.get(url.pathname);
-    if (request.method === "GET" && kvKey) {
-      return serveDataset(env.PRICE_DATA, kvKey);
+    if (request.method === "GET" && CATALOG_PATHS.includes(url.pathname)) {
+      return serveDataset(env.PRICE_DATA, CATALOG_KEY);
     }
 
     if (request.method === "POST" && url.pathname === "/ingest") {

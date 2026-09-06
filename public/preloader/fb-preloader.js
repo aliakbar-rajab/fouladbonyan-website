@@ -4,7 +4,6 @@
   const SESSION_KEY = "bonyan-foulad-daria-preloader-seen-v9";
   let finished = false;
   let watchdog = 0;
-  let warmupTimer = 0;
   let overlay = null;
   let site = null;
   let video = null;
@@ -26,23 +25,16 @@
     },
   };
 
+  /*
+   * "Start hydrating behind me." Raised on every path this script can take,
+   * always before the overlay comes down -- main.tsx blocks on it, and this
+   * script then blocks on main.tsx's fb:site-ready, so raising it late would
+   * deadlock the two until their timeouts fired.
+   */
   function signalWarmup() {
     if (window.__fbPreloaderWarmup) return;
     window.__fbPreloaderWarmup = true;
-    try {
-      window.dispatchEvent(new CustomEvent("fb:preloader-warmup"));
-    } catch {
-      // CustomEvent support fallback
-    }
-  }
-
-  function signalDone() {
-    window.__fbPreloaderDone = true;
-    try {
-      window.dispatchEvent(new CustomEvent("fb:preloader-done"));
-    } catch {
-      // CustomEvent support fallback
-    }
+    window.dispatchEvent(new CustomEvent("fb:preloader-warmup"));
   }
 
   function restoreSite() {
@@ -56,9 +48,7 @@
   function teardown() {
     storage.set();
     window.clearTimeout(watchdog);
-    window.clearTimeout(warmupTimer);
     restoreSite();
-    signalDone();
 
     if (!overlay) return;
     overlay.classList.add("is-leaving");
@@ -71,7 +61,7 @@
     signalWarmup();
 
     // If the homepage first viewport is already hydrated and confirmed ready, exit immediately.
-    if (window.__fbSiteReady || typeof window === "undefined") {
+    if (window.__fbSiteReady) {
       teardown();
       return;
     }
@@ -105,7 +95,6 @@
     // downloading the video, and without marking the session as seen so
     // a later visit to "/" itself still shows it once.
     signalWarmup();
-    signalDone();
     return;
   }
 
@@ -115,7 +104,6 @@
   ) {
     storage.set();
     signalWarmup();
-    signalDone();
     return;
   }
 
@@ -176,13 +164,7 @@
       // Schedule background warmup once video playback has safely begun and settled
       video?.addEventListener(
         "playing",
-        () => {
-          if (typeof window.requestIdleCallback === "function") {
-            window.requestIdleCallback(() => signalWarmup(), { timeout: 800 });
-          } else {
-            warmupTimer = window.setTimeout(signalWarmup, 600);
-          }
-        },
+        () => window.requestIdleCallback(signalWarmup, { timeout: 800 }),
         { once: true },
       );
 
@@ -194,10 +176,7 @@
             return;
           }
 
-          const playPromise = video.play();
-          if (playPromise && typeof playPromise.catch === "function") {
-            playPromise.catch(finish);
-          }
+          video.play().catch(finish);
         },
         { once: true },
       );
@@ -208,10 +187,7 @@
         // Safari requires the muted property itself to be set before play().
         video.muted = true;
         video.playbackRate = 1.25;
-        const playPromise = video.play();
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch(showPlaybackPrompt);
-        }
+        video.play().catch(showPlaybackPrompt);
       } else {
         showPlaybackPrompt();
       }

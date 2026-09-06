@@ -105,5 +105,5 @@ export const guidePageUrl = (key: GuidePageKey) =>
   `${GUIDE_BASE_PATH}${key}/`;
 
 export function isGuidePageKey(value: string): value is GuidePageKey {
-  return Object.prototype.hasOwnProperty.call(guidePageDefinitions, value);
+  return Object.hasOwn(guidePageDefinitions, value);
 }
