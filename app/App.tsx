@@ -100,7 +100,7 @@ export default function App({
           subcategory={workspace.hero.subcategory}
         />
 
-        <MarketPrices />
+        {workspace.isCategoryRoute ? <MarketPrices /> : null}
 
         <section className="prices section" id="prices">
           <div className="shell">
@@ -144,7 +144,7 @@ export default function App({
                   <label htmlFor="product-family-select">گروه محصول</label>
                   <select
                     id="product-family-select"
-                    value={workspace.selectedTabId}
+                    value={workspace.isCategoryRoute || workspace.search.isActive ? workspace.selectedTabId : ""}
                     onChange={(event) => {
                       const groupId = event.target.value as ProductGroupId;
                       if (workspace.search.isActive) {
@@ -156,6 +156,7 @@ export default function App({
                       window.location.assign(`/${groupId}/`);
                     }}
                   >
+                    <option value="" disabled>انتخاب گروه محصول</option>
                     {productGroups.map((group) => (
                       <option value={group.id} key={group.id}>
                         {group.label}
@@ -231,6 +232,8 @@ export default function App({
             {workspace.viewMode === "home-overview" ? <CategoryGrid /> : null}
           </div>
         </section>
+
+        {!workspace.isCategoryRoute ? <MarketPrices compactStatus /> : null}
 
         <KnowledgeSection />
 

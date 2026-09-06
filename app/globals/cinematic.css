@@ -845,7 +845,15 @@ body {
 .market-context.is-status-only .shell {
   min-block-size: calc(var(--market-ready-min-height) - 1.6rem);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
+}
+
+/* Homepage context follows the price workspace, so it needs no reservation
+   to protect category-route auto-scrolling above the price tables. */
+.market-context-secondary.is-status-only,
+.market-context-secondary.is-status-only .shell {
+  min-block-size: 0;
 }
 
 .market-context.is-status-only {
@@ -1564,6 +1572,11 @@ body {
   .carousel-controls {
     bottom: 6.2rem;
     flex-wrap: nowrap;
+    gap: 0.25rem;
+  }
+
+  .carousel-dots {
+    gap: 0;
   }
 
   .carousel-controls > button {
@@ -1572,7 +1585,9 @@ body {
   }
 
   .carousel-controls .carousel-pause {
-    display: none;
+    display: inline-block;
+    width: 44px;
+    padding-inline: 0.25rem;
   }
 
   .price-family-heading {

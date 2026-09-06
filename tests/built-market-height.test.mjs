@@ -94,3 +94,72 @@ test("built market ready content matches its reserved footprint", { timeout: 120
     await new Promise(resolve => server.httpServer.close(resolve));
   }
 });
+
+test("homepage keeps steel prices ahead of compact market failures and usable mobile controls", { timeout: 120_000 }, async t => {
+  const fixture = await marketFixture();
+  const server = await preview({ preview: { host: "127.0.0.1", port: 0 } });
+  const browser = await chromium.launch({ channel: "chrome" });
+  try {
+    const base = `http://127.0.0.1:${server.httpServer.address().port}`;
+    for (const width of [320, 390, 820, 1440]) {
+      await t.test(`${width}px: recovery preserves the price workspace`, async () => {
+        const page = await browser.newPage({ viewport: { width, height: 900 } });
+        let recover = false;
+        await page.route("**/api/market-prices", route => route.fulfill(
+          recover ? { json: fixture } : { status: 503, json: { error: "unavailable" } },
+        ));
+        await page.goto(base);
+        const skip = page.locator(".fb-preloader__skip");
+        if (await skip.isVisible()) await skip.click();
+        await page.locator(".market-status-actions").waitFor();
+        await page.evaluate(() => document.fonts.ready);
+        const measure = () => page.evaluate(() => {
+          const market = document.querySelector("#market-prices").getBoundingClientRect();
+          const prices = document.querySelector("#price-workspace").getBoundingClientRect();
+          const rail = document.querySelector(".market-status-rail")?.getBoundingClientRect();
+          return { marketTop: market.top + scrollY, priceTop: prices.top + scrollY,
+            height: market.height, railWidth: rail?.width, width: innerWidth,
+            scrollWidth: document.documentElement.scrollWidth };
+        });
+        const before = await measure();
+        assert.ok(before.marketTop > before.priceTop, "Supplementary rates follow steel prices");
+        assert.ok(before.height < 250, "Failure must not reserve an empty card grid");
+        assert.ok(before.railWidth >= Math.min(width - 40, 1200), "Status uses the full shell");
+        assert.equal(before.scrollWidth, width);
+        if (width <= 900) {
+          assert.equal(await page.locator(".overview-table-wrapper").isVisible(), false);
+          assert.equal(await page.locator(".overview-mobile-cards").isVisible(), true);
+          const cardsFit = await page.locator(".overview-card").evaluateAll(cards =>
+            cards.every(card => card.scrollWidth <= card.clientWidth));
+          assert.ok(cardsFit, "Price cards keep values and actions within their bounds");
+        }
+        if (width <= 640) {
+          assert.equal(await page.locator("#product-family-select").inputValue(), "");
+          const pause = page.locator(".carousel-pause");
+          await pause.click();
+          assert.equal(await pause.getAttribute("aria-pressed"), "true");
+          const box = await pause.boundingBox();
+          assert.ok(box.x >= 0 && box.x + box.width <= width);
+        }
+        const retry = page.locator(".market-status-actions button");
+        await retry.scrollIntoViewIfNeeded();
+        // The mobile header intentionally compacts when leaving the hero.
+        // Compare recovery at the same scroll position and header state.
+        if (width <= 900) {
+          await page.waitForFunction(() => document.querySelector(".site-header.is-compact"));
+        }
+        await page.waitForTimeout(300);
+        const beforeRecovery = await measure();
+        recover = true;
+        await retry.click();
+        await page.locator(".market-price-card").first().waitFor();
+        assert.ok(Math.abs((await measure()).priceTop - beforeRecovery.priceTop) < 2,
+          "Recovering market rates must not move the price workspace");
+        await page.close();
+      });
+    }
+  } finally {
+    await browser.close();
+    await new Promise(resolve => server.httpServer.close(resolve));
+  }
+});
