@@ -106,7 +106,6 @@ html {
 body {
   min-width: 320px;
   margin: 0;
-  background: var(--white);
   color: var(--ink);
   font-size: 1rem;
   line-height: 1.8;

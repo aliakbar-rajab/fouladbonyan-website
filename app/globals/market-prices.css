@@ -43,7 +43,6 @@
   padding: 0.7rem 0.85rem;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 14px;
-  background: rgb(255 255 255 / 5%);
   color: #e7eaec;
 }
 
@@ -117,10 +116,8 @@
 }
 
 .market-prices-checked {
-  margin: 1.1rem 0 0;
   color: #b9b9be;
   font-size: 0.8rem;
-  text-align: center;
 }
 
 .market-prices-checked button {
@@ -141,29 +138,16 @@
 
 .market-prices-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
 }
 
 .market-price-card {
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 0.75rem;
-  padding: 1.35rem 1.35rem 1.45rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.65);
   border-top: 4px solid var(--brand-yellow);
-  box-shadow: 0 12px 36px rgba(10, 10, 14, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-}
-
-.market-price-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 48px rgba(10, 10, 14, 0.28);
 }
 
 .market-price-card > header {
@@ -176,12 +160,7 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 12px;
-  background: rgba(246, 181, 0, 0.12);
   border: 1px solid rgba(246, 181, 0, 0.25);
-  color: var(--brand-dark);
 }
 
 .market-price-icon svg {
@@ -206,7 +185,6 @@
 
 .market-price-value strong {
   color: #1c1c20;
-  font-size: 1.5rem;
   font-weight: 950;
   word-break: break-word;
   letter-spacing: -0.02em;
@@ -225,10 +203,7 @@
   align-items: center;
   gap: 0.35rem;
   margin: 0;
-  padding: 0.35rem 0.75rem;
-  border: 1px solid currentColor;
   border-radius: 999px;
-  background: color-mix(in srgb, currentColor 10%, transparent);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   color: #576079;
@@ -246,7 +221,6 @@
 
 .market-price-updated {
   margin: 0.3rem 0 0;
-  padding-top: 0.65rem;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.74rem;
@@ -261,10 +235,6 @@
   .market-prices {
     /* Four cards render as two rows: measured 702.609px at 768px. */
     --market-ready-min-height: 703px;
-  }
-
-  .market-prices-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -289,10 +259,6 @@
   .market-status-actions > *,
   .market-status-rail > a {
     flex: 1;
-  }
-
-  .market-prices-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

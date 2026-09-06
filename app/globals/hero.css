@@ -9,12 +9,10 @@
 .hero {
   position: relative;
   z-index: 1;
-  min-height: clamp(31rem, 62vw, 39rem);
   display: grid;
   align-items: center;
   isolation: isolate;
   overflow: hidden;
-  background: #242428;
   color: var(--white);
 }
 
@@ -51,44 +49,8 @@
 .hero::after {
   content: "";
   position: absolute;
-  z-index: 4;
   inset: 0;
   border-radius: inherit;
-  background:
-    linear-gradient(
-      180deg,
-      rgb(0 0 0 / 18%) 0,
-      rgb(0 0 0 / 6%) 36%,
-      transparent 100%
-    )
-      top / 100% var(--hero-bevel) no-repeat,
-    linear-gradient(
-        0deg,
-        rgb(0 0 0 / 48%) 0,
-        rgb(0 0 0 / 17%) 38%,
-        transparent 100%
-      )
-      bottom / 100% var(--hero-bevel) no-repeat,
-    linear-gradient(
-        90deg,
-        rgb(0 0 0 / 12%) 0,
-        rgb(0 0 0 / 4%) 38%,
-        transparent 100%
-      )
-      left / var(--hero-bevel) 100% no-repeat,
-    linear-gradient(
-        270deg,
-        rgb(0 0 0 / 38%) 0,
-        rgb(0 0 0 / 13%) 38%,
-        transparent 100%
-      )
-      right / var(--hero-bevel) 100% no-repeat;
-  box-shadow:
-    inset 0 1px 2px rgb(0 0 0 / 24%),
-    inset 0 -3px 4px rgb(0 0 0 / 34%),
-    inset 2px 0 2px rgb(0 0 0 / 16%),
-    inset -3px 0 4px rgb(0 0 0 / 25%),
-    inset 0 0 0 calc(var(--hero-bevel) - 1px) rgb(16 17 20 / 5%);
   pointer-events: none;
 }
 
@@ -104,16 +66,11 @@
 .hero-image {
   object-fit: cover;
   opacity: 0;
-  transform: scale(1.015);
-  transition:
-    opacity 650ms ease-in-out,
-    transform 1100ms ease;
   pointer-events: none;
 }
 
 .hero-image.is-active {
   opacity: 1;
-  transform: scale(1);
 }
 
 .hero-image img {
@@ -125,20 +82,10 @@
 
 .hero-overlay {
   z-index: -1;
-  background:
-    linear-gradient(90deg, rgb(17 17 20 / 25%), rgb(17 17 20 / 82%) 70%),
-    linear-gradient(0deg, rgb(17 17 20 / 44%), transparent 45%);
-}
-
-.hero-content {
-  padding-block: 5rem 8rem;
 }
 
 .hero h1 {
-  max-width: 1000px;
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 4.6rem);
-  line-height: 1.25;
   text-wrap: balance;
 }
 
@@ -146,36 +93,23 @@
   display: block;
 }
 
-.hero-content > p {
-  max-width: 650px;
-  margin: 1.2rem 0 0;
-  color: #ededee;
-  font-size: clamp(1rem, 2vw, 1.22rem);
-}
-
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.85rem;
-  margin-top: 2.25rem;
 }
 
 .hero-actions a,
 .hero-actions button {
-  min-height: 3.2rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding-inline: 1.45rem;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 10px;
   background: rgba(30, 30, 33, 0.55);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--white);
   font: inherit;
-  font-weight: 900;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
   transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 
@@ -200,39 +134,25 @@
 }
 
 .hero-actions .hero-price-jump {
-  border-color: rgba(246, 181, 0, 0.45);
-  background: rgba(20, 20, 23, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(255, 211, 56, 0.18), 0 6px 20px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-}
-
-.hero-actions .hero-price-jump:hover {
-  background: rgba(20, 20, 23, 0.92);
-  border-color: var(--brand-yellow);
-  box-shadow: inset 0 0 0 1px rgba(255, 211, 56, 0.35), 0 8px 26px rgba(0, 0, 0, 0.45);
 }
 
 .carousel-controls {
   position: absolute;
   inset-inline: 0;
-  bottom: 2rem;
   display: flex;
   align-items: center;
   gap: 0.65rem;
 }
 
 .carousel-controls > button {
-  min-width: 2.75rem;
-  height: 2.75rem;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 10px;
-  background: rgba(25, 25, 28, 0.65);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--white);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -251,8 +171,6 @@
 }
 
 .carousel-dots button {
-  width: 2.75rem;
-  height: 2.75rem;
   position: relative;
   border: 0;
   background: transparent;
@@ -262,18 +180,13 @@
 .carousel-dots button::after {
   content: "";
   position: absolute;
-  inset-inline: 0.5rem;
   top: 50%;
-  height: 0.32rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.4);
   transform: translateY(-50%);
   transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .carousel-dots button.is-active::after {
-  background: var(--brand-yellow);
-  box-shadow: 0 0 10px rgba(246, 181, 0, 0.6);
   transform: translateY(-50%) scaleY(1.15);
 }
 
@@ -281,42 +194,12 @@
   width: auto;
   padding-inline: 0.9rem;
   font-size: 0.78rem;
-  font-weight: 800;
-}
-
-/* Responsive overrides for this module's own rules. */
-
-@media (max-width: 900px) {
-  .hero {
-    min-height: 34rem;
-  }
-
-  .hero-content {
-    padding-block: 4rem 8rem;
-  }
-
-  .hero-overlay {
-    background:
-    linear-gradient(0deg, rgb(17 17 20 / 85%), rgb(17 17 20 / 32%)),
-    linear-gradient(90deg, transparent, rgb(17 17 20 / 55%));
-  }
 }
 
 @media (max-width: 640px) {
-  .hero {
-    min-height: 32rem;
-  }
 
   .hero-image {
     object-position: center;
-  }
-
-  .hero-content {
-    padding-block: 3rem 7.5rem;
-  }
-
-  .hero h1 {
-    font-size: clamp(1.8rem, 9.5vw, 2.6rem);
   }
 
   .hero-actions {
@@ -330,9 +213,8 @@
   }
 
   .carousel-controls {
-    bottom: 1rem;
     flex-wrap: wrap;
-  }
+}
 
   .carousel-controls > button,
   .carousel-dots button {
