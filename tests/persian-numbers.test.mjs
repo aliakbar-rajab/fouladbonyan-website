@@ -101,6 +101,8 @@ test("rialToWords converts Rial amounts to Persian words accurately", () => {
   assert.equal(rialToWords(25), "بیست و پنج ریال");
   assert.equal(rialToWords(350), "سیصد و پنجاه ریال");
   assert.equal(rialToWords(1000), "یک هزار ریال");
+  assert.equal(rialToWords(1_000_000), "یک میلیون ریال");
+  assert.equal(rialToWords(10_000_000), "ده میلیون ریال");
   assert.equal(rialToWords(1250), "یک هزار و دویست و پنجاه ریال");
   assert.equal(
     rialToWords(250000000),

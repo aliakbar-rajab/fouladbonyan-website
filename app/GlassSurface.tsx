@@ -34,16 +34,40 @@ const getSvgServerSnapshot = () => false;
  * per-instance, and it is set through CSSOM, which CSP does not police.
  */
 
+/*
+ * The two refraction settings this site uses.
+ *
+ * `borderWidth` is the rim width as a fraction of the pane's shorter side;
+ * `blur` feathers the displacement map's inner plate; `distortionScale` and
+ * the three channel offsets bend each colour channel by a slightly different
+ * amount, which is where the chromatic fringe at the rim comes from.
+ *
+ * A chip is not a small panel: at 2.6rem a panel's refraction reads as a lens
+ * rather than as glass, so the chip preset bends light about a third as far.
+ * These are looks, not knobs -- a caller picks one, it does not tune one.
+ */
+const VARIANTS = {
+  panel: {
+    borderWidth: 0.07,
+    blur: 6,
+    distortionScale: -48,
+    redOffset: 0,
+    greenOffset: 0.6,
+    blueOffset: 1.2,
+  },
+  chip: {
+    borderWidth: 0.08,
+    blur: 4,
+    distortionScale: -15,
+    redOffset: 0,
+    greenOffset: 0.2,
+    blueOffset: 0.4,
+  },
+} as const;
+
 export type GlassSurfaceProps = {
   children?: ReactNode;
-  /** Width of the refracting rim, as a fraction of the pane's shorter side. */
-  borderWidth?: number;
-  /** Softness of the displacement map's inner plate — feathers the rim. */
-  blur?: number;
-  distortionScale?: number;
-  redOffset?: number;
-  greenOffset?: number;
-  blueOffset?: number;
+  variant?: keyof typeof VARIANTS;
   className?: string;
 };
 
@@ -80,14 +104,11 @@ function supportsSVGFilters(): boolean {
 
 export default function GlassSurface({
   children,
-  borderWidth = 0.07,
-  blur = 6,
-  distortionScale = -48,
-  redOffset = 0,
-  greenOffset = 0.6,
-  blueOffset = 1.2,
+  variant = "panel",
   className = "",
 }: GlassSurfaceProps) {
+  const { borderWidth, blur, distortionScale, redOffset, greenOffset, blueOffset } =
+    VARIANTS[variant];
   const uniqueId = useId().replace(/:/g, "-");
   const filterId = `glass-filter-${uniqueId}`;
   const redGradId = `red-grad-${uniqueId}`;

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   createRetryableLoader,
   loadAllGroupCatalogs,
 } from "./catalog-reader";
+import { useCatalogData } from "./use-catalog-data";
 import {
   createQuoteEvaluator,
   type QuoteEvaluator,
@@ -16,36 +17,23 @@ const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
     ),
 );
 
+/*
+ * There is one evaluator for the whole site, so the key is a constant -- the
+ * loading, error and retry behaviour is otherwise exactly what every other
+ * catalog-backed panel needs, and lives in useCatalogData.
+ */
 const emptyEvaluator = createQuoteEvaluator();
 
 export function useQuoteRequestEstimate() {
-  const [evaluator, setEvaluator] = useState<QuoteEvaluator | null>(null);
-  const [loadError, setLoadError] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    loadQuoteEvaluator()
-      .then((loaded) => {
-        if (!active) return;
-        setEvaluator(loaded);
-        setLoadError(false);
-      })
-      .catch(() => {
-        if (!active) return;
-        setLoadError(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const state = useCatalogData(loadQuoteEvaluator, "quote");
+  const evaluator = state.status === "ready" ? state.data : emptyEvaluator;
 
   return useMemo(
     () => ({
-      evaluator: evaluator ?? emptyEvaluator,
-      isLoading: !evaluator && !loadError,
-      loadError,
+      evaluator,
+      isLoading: state.status === "loading",
+      loadError: state.status === "error",
     }),
-    [evaluator, loadError],
+    [evaluator, state.status],
   );
 }

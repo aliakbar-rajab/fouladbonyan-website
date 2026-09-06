@@ -1,4 +1,4 @@
-import GlassSurface, { type GlassSurfaceProps } from "./GlassSurface";
+import GlassSurface from "./GlassSurface";
 import { LightPillar } from "./LightPillar";
 import { WhatsAppIcon } from "./icons";
 import { footerQuickLinks, siteConfig } from "./site-config";
@@ -13,21 +13,6 @@ import { Brand } from "./site-ui";
  * pushed to the outer edges.
  */
 const phoneDisplayOrder = [3, 2, 0, 1, 4] as const;
-
-/*
- * Small panes use a shallower refraction scale than the component defaults so
- * a 2.6rem pill does not read as a lens. The pane's box and its frost/saturation
- * are rules in `globals/footer.css`, not props: a style attribute would be
- * blocked by the site's `style-src 'self'`.
- */
-const smallGlass = {
-  distortionScale: -15,
-  redOffset: 0,
-  greenOffset: 0.2,
-  blueOffset: 0.4,
-  borderWidth: 0.08,
-  blur: 4,
-} satisfies Partial<GlassSurfaceProps>;
 
 type SiteFooterProps = {
   topHref?: string;
@@ -148,7 +133,7 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
                     className={
                       phoneIndex === 0 ? "fg-pill fg-pill--primary" : "fg-pill"
                     }
-                    {...smallGlass}
+                    variant="chip"
                   >
                     <a className="fg-pill-link" href={phone.href} dir="ltr">
                       {phone.label}
@@ -165,7 +150,7 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             {siteConfig.contact.officialEmail ? (
               <GlassSurface
                 className="fg-chip fg-chip--link"
-                {...smallGlass}
+                variant="chip"
               >
                 <a
                   className="fg-chip-content"
@@ -179,7 +164,7 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             ) : null}
             <GlassSurface
               className="fg-chip"
-              {...smallGlass}
+              variant="chip"
             >
               <address className="fg-chip-content">
                 <span aria-hidden="true">⌖</span>

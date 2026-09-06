@@ -1,14 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import {
-  parsePersianNumber,
-  rialToWords,
-} from "../app/persian-numbers.mjs";
-import {
-  formatToman,
-} from "../app/quote/calculation.ts";
+import { parsePersianNumber } from "../app/persian-numbers.mjs";
+import { formatToman } from "../app/quote/calculation.ts";
 import { createQuoteEvaluator } from "../app/quote/evaluator.ts";
+import { quoteProductSupportsPieceUnits } from "../app/quote-types.ts";
 import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
 import {
   buildQuoteDocument,
@@ -240,7 +236,7 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
   const evaluator = createQuoteEvaluator(
     extractQuotePricingBaselines(mockSnapshot),
   );
-  assert.equal(evaluator.supportsPieceUnits("میلگرد"), true);
+  assert.equal(quoteProductSupportsPieceUnits("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("میلگرد"), true);
   assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
 
@@ -741,12 +737,6 @@ test("parsePersianNumber parses Persian/Arabic decimal and thousands separators"
   assert.equal(parsePersianNumber("نامعتبر"), null);
 });
 
-test("rialToWords handles zero, negative, and normal values safely", () => {
-  assert.equal(rialToWords(0), "صفر ریال");
-  assert.equal(rialToWords(-100), "صفر ریال");
-  assert.equal(rialToWords(1_000_000), "یک میلیون ریال");
-  assert.equal(rialToWords(10_000_000), "ده میلیون ریال");
-});
 
 test("quote evaluator evaluates against live catalog files", async () => {
   const evaluator = createQuoteEvaluator(

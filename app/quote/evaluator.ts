@@ -73,9 +73,6 @@ export type QuoteEvaluator = {
   /** Retrieve piece unit options for a product from catalog pricing. */
   getPieceOptions: (product: QuoteProductName | "") => QuotePieceOptionChoice[];
 
-  /** Whether the product supports piece units (branch/piece). */
-  supportsPieceUnits: (product: QuoteProductName | "") => boolean;
-
   /** Whether the product requires rebar diameter for piece weight calculations. */
   requiresRebarDiameter: (product: QuoteProductName | "") => boolean;
 };
@@ -115,7 +112,7 @@ export function createQuoteEvaluator(
           item.weightInKg && item.approximateTotalToman !== null
             ? Math.round(item.approximateTotalToman / item.weightInKg)
             : null,
-        availableUnits: supportsPieceUnits(item.product)
+        availableUnits: quoteProductSupportsPieceUnits(item.product)
           ? [...quoteUnits]
           : quoteUnits.filter((unit) => unit !== "شاخه" && unit !== "عدد"),
       })),
@@ -137,7 +134,7 @@ export function createQuoteEvaluator(
     if (
       "product" in patch &&
       isPieceUnit(patched.unit) &&
-      !supportsPieceUnits(patched.product)
+      !quoteProductSupportsPieceUnits(patched.product)
     ) {
       return { ...patched, unit: "تن" };
     }
@@ -178,10 +175,6 @@ export function createQuoteEvaluator(
     return baselines[product]?.pieceOptions ?? [];
   };
 
-  const supportsPieceUnits = (product: QuoteProductName | ""): boolean => {
-    return quoteProductSupportsPieceUnits(product);
-  };
-
   const requiresRebarDiameter = (product: QuoteProductName | ""): boolean => {
     if (!product || !baselines[product]) return false;
     return Boolean(baselines[product]?.branchWeight);
@@ -194,7 +187,6 @@ export function createQuoteEvaluator(
     applyItemChange,
     evaluateRequest,
     getPieceOptions,
-    supportsPieceUnits,
     requiresRebarDiameter,
   };
 }
