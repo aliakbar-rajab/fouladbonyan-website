@@ -312,9 +312,15 @@
 }
 
 /* Management contacts carry a name as well as a number, so they drop the
-   bullet and space the two ends of the line instead. */
+   bullet and space the two ends of the line instead.
+   They also wrap: this column is ~134px on a 375px phone, where the name and
+   an eleven-digit number together need ~180px. Held on one nowrap line, the
+   number ran off the start edge and `.inner-page`'s overflow clip ate its
+   leading digits -- ۰۹۱۲۳۳۰۰۸۱۵ was published as "۲۳۳۰۰۸۱۵". */
 .footer-link-list--contacts a {
   justify-content: space-between;
+  flex-wrap: wrap;
+  row-gap: 0.15rem;
 }
 
 .footer-link-list--contacts a::before {

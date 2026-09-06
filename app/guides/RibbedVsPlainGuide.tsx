@@ -41,6 +41,7 @@ export function RibbedVsPlainGuide({
       <section className="content-card">
         <h2>مقایسه در جدول قیمت امروز</h2>
         <ComparisonTable
+          captionLabel="جدول مقایسه میلگرد آجدار و ساده در کاتالوگ امروز"
           caption={
             <>
               برداشت‌شده از داده قیمت{" "}

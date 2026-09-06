@@ -64,7 +64,18 @@ export function QuoteDocument({
         </p>
       </div>
       <div className="quote-print-viewport">
-        <div className="quote-print-scroll">
+        {/*
+          Below 640px the sheet is 42rem wide and this box scrolls it
+          horizontally. Focusable for the same reason the guide tables are: a
+          bare overflow container takes no focus, so a keyboard-only reader
+          could never scroll the pre-invoice they had just generated.
+        */}
+        <div
+          className="quote-print-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="برگه برآورد قیمت غیرقطعی"
+        >
           <article className="quote-print-sheet" dir="rtl">
             <header className="quote-print-header">
               <p className="quote-print-doc-title">برآورد قیمت غیرقطعی</p>

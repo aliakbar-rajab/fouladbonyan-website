@@ -199,6 +199,25 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
                   className={`mega-group-link${shownProduct === group.id ? " is-active" : ""}`}
                   aria-current={shownProduct === group.id ? "true" : undefined}
                   onClick={(event) => {
+                    /*
+                     * These switch which group the open panel is showing, so a
+                     * plain click is intercepted. Everything else a link
+                     * promises still has to work: this used to preventDefault
+                     * unconditionally, which killed ctrl/cmd-click and
+                     * shift-click on a control that looks like a link, points
+                     * at a real page and shows that page in the status bar.
+                     * Middle-click never reached this handler and opened the
+                     * tab all along, so the two gestures disagreed.
+                     */
+                    if (
+                      event.metaKey ||
+                      event.ctrlKey ||
+                      event.shiftKey ||
+                      event.altKey ||
+                      event.button !== 0
+                    ) {
+                      return;
+                    }
                     event.preventDefault();
                     setMegaProduct(group.id);
                   }}

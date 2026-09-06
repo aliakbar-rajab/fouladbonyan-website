@@ -717,6 +717,151 @@ test("a fractional شاخه quantity is rejected instead of producing a printed 
   );
 });
 
+test("editing a still-invalid quantity does not clear its error, and the message names the right item", async () => {
+  /*
+   * The form-level onChange fires after the item's own handler for the same
+   * event, and it used to re-validate item fields with no idea which item it
+   * was looking at -- always index 0 and always تن. It therefore overwrote the
+   * correct message with one that named کالای ۱, and cleared the error on a
+   * fractional شاخه quantity (valid in tons) that submit went on rejecting.
+   */
+  const user = userEvent.setup({ document });
+  const { QuoteRequestForm } = await import("../app/QuoteRequestForm.tsx");
+  render(React.createElement(QuoteRequestForm));
+  await settle();
+
+  await user.click(screen.getByRole("button", { name: "+ افزودن کالای جدید" }));
+  await user.selectOptions(
+    document.querySelector('[name="itemProduct-2"]'),
+    "میلگرد",
+  );
+  await user.selectOptions(document.querySelector('[name="itemUnit-2"]'), "شاخه");
+  const quantity = document.querySelector('[name="itemQuantity-2"]');
+  await user.clear(quantity);
+  await user.type(quantity, "2.5");
+
+  await user.click(
+    screen.getByRole("button", { name: "بررسی و آماده‌سازی درخواست" }),
+  );
+  const message = "مقدار تقریبی کالای ۲ برای واحد شاخه باید عدد صحیح باشد.";
+  assert.ok(screen.getByText(message), "submit must reject a fractional شاخه");
+
+  // Editing it to another fractional value leaves it just as invalid.
+  await user.clear(quantity);
+  await user.type(quantity, "3.5");
+  assert.ok(
+    screen.getByText(message),
+    "the error must survive an edit that does not fix it",
+  );
+  assert.equal(quantity.getAttribute("aria-invalid"), "true");
+
+  // Emptying it names the item the reader is actually looking at.
+  await user.clear(quantity);
+  assert.ok(
+    screen.getByText("مقدار تقریبی کالای ۲ را وارد کنید."),
+    "the message must name کالای ۲, not کالای ۱",
+  );
+
+  // A whole number is accepted, so live validation still clears.
+  await user.type(quantity, "4");
+  assert.equal(screen.queryByText(message), null);
+  assert.equal(quantity.getAttribute("aria-invalid"), "false");
+});
+
+test("value added tax is one control for the whole category, not one per factory", async () => {
+  /*
+   * Every factory card used to render its own switch labelled "ارزش افزوده در
+   * قیمت‌های {factory}" while all of them drove a single shared state, so
+   * flipping one re-priced all of them and the label promised a scope the
+   * control never had.
+   */
+  renderWide();
+
+  const switches = screen.getAllByRole("switch");
+  assert.equal(switches.length, 1, "one VAT switch per category");
+  assert.match(
+    switches[0].getAttribute("aria-label"),
+    /^نمایش قیمت‌های .+ با ارزش افزوده$/,
+    "the label must not claim a single factory's scope",
+  );
+
+  const priceOf = () => document.querySelector(".row-price").textContent;
+  const before = priceOf();
+  await act(async () => {
+    fireEvent.click(switches[0]);
+  });
+  assert.equal(screen.getAllByRole("switch")[0].getAttribute("aria-checked"), "true");
+  assert.notEqual(priceOf(), before, "prices must move with the switch");
+});
+
+test("a filter this category does not offer is ignored rather than held invisibly", async () => {
+  /*
+   * `?factory=X` is a valid link for the category that sells X and meaningless
+   * on any other. Held as filter state anyway, it emptied the table and put ۱
+   * on the active-filter badge while the <select> beside it fell back to
+   * displaying "همه کارخانه‌ها" -- a page contradicting itself with no way to
+   * see which filter was to blame.
+   */
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+      requestedView: {
+        requestId: 1,
+        categoryId: "first",
+        factory: "کارخانه‌ای که اینجا نیست",
+        size: "۹۹۹",
+      },
+    }),
+  );
+  await settle();
+
+  assert.equal(
+    screen.getByRole("combobox", { name: "کارخانه" }).value,
+    "",
+    "an unmatched factory must not be held while the select shows همه",
+  );
+  assert.equal(screen.getByRole("combobox", { name: "سایز" }).value, "");
+  assert.equal(
+    screen.getByRole("button", { name: "حذف تمامی فیلترها" }).disabled,
+    true,
+    "no filter is active, so there is nothing to clear",
+  );
+  assert.equal(
+    screen.queryByText("قیمتی با این مشخصات پیدا نشد."),
+    null,
+    "the full catalog is what a stale link should land on",
+  );
+});
+
+test("a filter this category does offer is still applied from the link", async () => {
+  render(
+    React.createElement(PriceCatalog, {
+      catalog,
+      presentation,
+      phoneHref,
+      requestedView: {
+        requestId: 1,
+        categoryId: "first",
+        factory: "آزمایش",
+        size: "16",
+      },
+    }),
+  );
+  await settle();
+
+  assert.equal(
+    screen.getByRole("combobox", { name: "کارخانه" }).value,
+    "آزمایش",
+  );
+  assert.equal(screen.getByRole("combobox", { name: "سایز" }).value, "16");
+  assert.equal(
+    screen.getByRole("button", { name: "حذف تمامی فیلترها" }).disabled,
+    false,
+  );
+});
+
 test("a breadcrumb trail whose crumbs repeat a label still renders one item each", () => {
   /*
    * /beam/beam/, /angle/angle/, /channel/channel/ and /profile/box-profile/

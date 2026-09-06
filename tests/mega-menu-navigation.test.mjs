@@ -89,6 +89,55 @@ test("the homepage mega menu's subcategory, factory and size links are real navi
   assert.equal(dispatchClick(sizeLink).defaultPrevented, false);
 });
 
+test("a mega-menu group link switches the panel on a plain click and opens normally on a modifier click", async () => {
+  /*
+   * These switch which group the open panel is showing, so a plain click is
+   * intercepted -- but they are anchors pointing at a real page, and they used
+   * to preventDefault unconditionally. That killed ctrl/cmd/shift-click on a
+   * control that advertises a destination in the status bar, while
+   * middle-click (which never reaches an onClick handler) opened the tab all
+   * along, so the two gestures disagreed.
+   */
+  addRoot();
+  render(React.createElement(App));
+  await settle();
+
+  const user = userEvent.setup({ document });
+  await user.click(screen.getByRole("button", { name: "قیمت روز محصولات" }));
+
+  const beamLink = await waitFor(() =>
+    document
+      .querySelector(".mega-other-products")
+      .querySelector('a[href="/beam/"]'),
+  );
+  assert.ok(beamLink, "expected a group link for تیرآهن");
+
+  for (const modifier of ["ctrlKey", "metaKey", "shiftKey", "altKey"]) {
+    const event = new window.MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      [modifier]: true,
+    });
+    beamLink.dispatchEvent(event);
+    assert.equal(
+      event.defaultPrevented,
+      false,
+      `a ${modifier} click must be left to the browser`,
+    );
+  }
+
+  await act(async () => {
+    assert.equal(dispatchClick(beamLink).defaultPrevented, true);
+  });
+  await waitFor(() =>
+    assert.equal(beamLink.getAttribute("aria-current"), "true"),
+  );
+  assert.ok(
+    document.querySelector(".mega-rebar-types").textContent.includes("تیرآهن"),
+    "a plain click must switch the panel to that group",
+  );
+});
+
 test("landing on a subcategory page with a ?factory= query param applies it as the initial filter", async () => {
   const catalog = await loadGroupCatalog("rebar");
   const ribbed = catalog.categories.find((category) => category.id === "ribbed");

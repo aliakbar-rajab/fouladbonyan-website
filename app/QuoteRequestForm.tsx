@@ -183,10 +183,24 @@ export function QuoteRequestForm() {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  /*
+   * Contact fields only. Every item field is already re-validated by
+   * `updateItem`, which is the only place that knows the two things an item
+   * message needs: the row's position (messages name it, "کالای ۲") and its
+   * unit (a شاخه quantity must be a whole number, a تن quantity need not be).
+   *
+   * This handler runs on the form, so it fires *after* the item's own onChange
+   * for the same event. Validating item fields here too meant re-deriving them
+   * from nothing and always getting index 0 and تن: the correct message
+   * `updateItem` had just written was overwritten a moment later by one that
+   * named the wrong row, and a fractional شاخه quantity had its error cleared
+   * -- aria-invalid and all -- while submit went on rejecting it.
+   */
   const validateChangedField = (
     element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   ) => {
     const { name, value } = element;
+    if (name.startsWith("item")) return;
     const isCheckbox =
       element instanceof HTMLInputElement && element.type === "checkbox";
     const fieldValue = isCheckbox ? element.checked : value;

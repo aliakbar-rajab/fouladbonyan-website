@@ -5,6 +5,8 @@
  * - what counts as a **priced row**,
  * - the **Catalog price summary** of a category (min / max / rounded average of
  *   its own positive displayed row prices),
+ * - the **Displayed price summary**, the same over a category's *credible*
+ *   rows, which is the one the UI and SEO copy quote,
  * - the per-Sales-unit price ranges of a set of rows,
  * - the pricing state (has prices, which Sales units),
  * - whether a summary is a **Displayable price range** (all priced rows share
@@ -74,6 +76,111 @@ export function summarisePricedRows(rows) {
       prices.reduce((total, price) => total + price, 0) / prices.length,
     ),
   };
+}
+
+/**
+ * How far one row's price may sit from its own unit's median before it stops
+ * reading as this market's price at all.
+ *
+ * Upstream occasionally publishes a placeholder or mis-scaled figure — a
+ * 1,400 تومان/kg ribbed rebar row sitting beside that same factory's own
+ * 79,000 تومان/kg rows — and a single one of those drags a category's headline
+ * range down to a number no buyer can act on ("در بازه‌ای بین ۱٬۵۰۰ تا
+ * ۹۱٬۵۰۰ تومان").
+ *
+ * Deliberately loose. Steel prices within one unit rarely span even 2×; a
+ * whole order of magnitude is not a wide market, it is a broken row.
+ */
+export const IMPLAUSIBLE_PRICE_FACTOR = 10;
+
+/**
+ * @param {number[]} values non-empty
+ * @returns {number}
+ */
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = sorted.length >> 1;
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * The priced rows of a set, minus rows whose price is implausible *for their
+ * own unit*.
+ *
+ * Per unit, because a category priced partly per kilogram and partly per
+ * branch is not carrying an outlier, it is carrying two scales — that case is
+ * what hasDisplayablePriceRange exists to catch, and a unit-blind comparison
+ * here would mistake every kilogram row in it for a broken one.
+ *
+ * Feed this **one category at a time**. "Implausible" only means anything
+ * against rows describing the same product in the same market: pooled across a
+ * whole group, ribbed rebar (~76,000 تومان/kg) and stainless rebar (~2,036,000
+ * تومان/kg) are an order of magnitude apart and both entirely real, and this
+ * would throw away twenty genuine rows to catch the one broken one. Use
+ * categoriesCrediblePricedRows to span several categories.
+ *
+ * @param {Array<{ price: number | null, unit?: string }>} rows
+ * @returns {PricedCatalogRow[]}
+ */
+export function crediblePricedRows(rows) {
+  const priced = rows.filter(isPricedRow);
+  const medianByUnit = new Map();
+  for (const row of priced) {
+    const prices = medianByUnit.get(row.unit) ?? [];
+    prices.push(row.price);
+    medianByUnit.set(row.unit, prices);
+  }
+  for (const [unit, prices] of medianByUnit) {
+    medianByUnit.set(unit, median(prices));
+  }
+  return priced.filter((row) => {
+    const unitMedian = medianByUnit.get(row.unit);
+    return (
+      row.price >= unitMedian / IMPLAUSIBLE_PRICE_FACTOR &&
+      row.price <= unitMedian * IMPLAUSIBLE_PRICE_FACTOR
+    );
+  });
+}
+
+/**
+ * The credible priced rows of one category.
+ * @param {Parameters<typeof categoryPricedRows>[0]} category
+ * @returns {PricedCatalogRow[]}
+ */
+export function categoryCrediblePricedRows(category) {
+  return crediblePricedRows(categoryPricedRows(category));
+}
+
+/**
+ * The credible priced rows of several categories, judged one category at a
+ * time and then pooled — never pooled first (see crediblePricedRows).
+ * @param {Parameters<typeof categoryPricedRows>[0][]} categories
+ * @returns {PricedCatalogRow[]}
+ */
+export function categoriesCrediblePricedRows(categories) {
+  return categories.flatMap((category) =>
+    categoryCrediblePricedRows(category),
+  );
+}
+
+/**
+ * The **Displayed price summary** (CONTEXT.md): the Catalog price summary of a
+ * category's credible rows, and the only summary the UI quotes.
+ *
+ * Separate from the stored Catalog price summary on purpose. That one stays
+ * faithful to every upstream row — it is what the validator checks each
+ * snapshot against, and narrowing its definition would make every stored
+ * snapshot fail validation until it was refetched. This is only what the site
+ * is willing to put in a headline. The excluded row keeps its real price in
+ * the table either way; nothing is hidden from the reader.
+ *
+ * @param {Parameters<typeof categoryPricedRows>[0]} category
+ * @returns {{ min: number, max: number, average: number }}
+ */
+export function categoryCredibleSummary(category) {
+  return summarisePricedRows(categoryCrediblePricedRows(category));
 }
 
 /**

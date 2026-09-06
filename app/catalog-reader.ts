@@ -1,6 +1,6 @@
 import {
   priceRangesByUnit,
-  categoriesPricedRows,
+  categoriesCrediblePricedRows,
 } from "./catalog-pricing.mjs";
 import {
   productGroups,
@@ -328,7 +328,11 @@ function summariseGroup(
 
   return {
     ...groupFields(group),
-    priceRanges: priceRangesByUnit(categoriesPricedRows(categories)),
+    // Credible rows, judged per category: an upstream row carrying a
+    // placeholder price would otherwise set this group's advertised floor on
+    // the home page. See crediblePricedRows for why the judgement cannot be
+    // made across the pooled group.
+    priceRanges: priceRangesByUnit(categoriesCrediblePricedRows(categories)),
     date: summarizeCatalogDates(summaries),
     status: trend.status,
     percent: trend.percent,

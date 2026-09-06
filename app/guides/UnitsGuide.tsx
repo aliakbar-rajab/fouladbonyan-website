@@ -1,6 +1,6 @@
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
-import { QuoteChecklist } from "./GuideShared";
+import { GuideTableWrap, QuoteChecklist } from "./GuideShared";
 import { fa } from "./guide-helpers";
 
 export function UnitsGuide({ reference }: { reference: GuideReference }) {
@@ -13,7 +13,7 @@ export function UnitsGuide({ reference }: { reference: GuideReference }) {
           واقعی به‌کاررفته در جدول‌های قیمت این سایت را نشان می‌دهد، به‌همراه
           تعداد ردیفی که با هر واحد قیمت خورده‌اند.
         </p>
-        <div className="guide-table-wrap">
+        <GuideTableWrap label="جدول واحدهای قیمت‌گذاری مقاطع فولادی">
           <table className="guide-table">
             <caption>
               برداشت‌شده از داده قیمت{" "}
@@ -46,7 +46,7 @@ export function UnitsGuide({ reference }: { reference: GuideReference }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </GuideTableWrap>
       </section>
 
       <section className="content-card">

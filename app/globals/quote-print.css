@@ -465,6 +465,12 @@
 
 @media (max-width: 640px) {
   .quote-print-scroll {
+    /*
+     * The sheet below is wider than any phone on purpose, so this is the box
+     * that has to stay viewport-width for the swipe to work. Without the cap
+     * it takes the sheet's `min-width` as its own and scrolls nothing.
+     */
+    max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;

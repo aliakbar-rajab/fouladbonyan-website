@@ -59,13 +59,23 @@ function quoteHandoffFor(
 }
 
 
+/*
+ * One switch for the whole category, not one per factory card.
+ *
+ * It was rendered inside every card header, each labelled "ارزش افزوده در
+ * قیمت‌های {factory}" -- but all of them were bound to a single `taxIncluded`,
+ * so flipping ذوب آهن's switch silently re-priced all twenty-seven cards and
+ * the summary banner above them. The label promised a scope the control never
+ * had, which is worst for a screen reader: twenty-seven switches each claiming
+ * a different factory, one state behind them.
+ */
 function TaxSwitch({
   checked,
-  factoryName,
+  categoryLabel,
   onChange,
 }: {
   checked: boolean;
-  factoryName: string;
+  categoryLabel: string;
   onChange: () => void;
 }) {
   return (
@@ -74,7 +84,7 @@ function TaxSwitch({
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={`ارزش افزوده در قیمت‌های ${factoryName}`}
+      aria-label={`نمایش قیمت‌های ${categoryLabel} با ارزش افزوده`}
       onClick={onChange}
     >
       <span className="tax-switch-track" aria-hidden="true">
@@ -185,18 +195,27 @@ export function FactoryPriceCardList({
 }) {
   return (
     <>
-      <p className="rebar-result-status" role="status" aria-live="polite">
-        {filteredFactories.length
-          ? `${formatPersianNumber(
-              filteredFactories.reduce(
-                (total, factory) => total + factory.rows.length,
-                0,
-              ),
-            )} ردیف قیمت از ${formatPersianNumber(
-              filteredFactories.length,
-            )} ${category.groupingLabel}`
-          : "برای این فیلتر قیمتی پیدا نشد."}
-      </p>
+      <div className="rebar-result-bar">
+        <p className="rebar-result-status" role="status" aria-live="polite">
+          {filteredFactories.length
+            ? `${formatPersianNumber(
+                filteredFactories.reduce(
+                  (total, factory) => total + factory.rows.length,
+                  0,
+                ),
+              )} ردیف قیمت از ${formatPersianNumber(
+                filteredFactories.length,
+              )} ${category.groupingLabel}`
+            : "برای این فیلتر قیمتی پیدا نشد."}
+        </p>
+        {filteredFactories.length ? (
+          <TaxSwitch
+            checked={taxIncluded}
+            categoryLabel={category.label}
+            onChange={onToggleTax}
+          />
+        ) : null}
+      </div>
 
       <div className="factory-price-list" id={factoryListId}>
         {filteredFactories.map((factory, factoryIndex) => (
@@ -209,11 +228,6 @@ export function FactoryPriceCardList({
             key={factory.name}
           >
             <header>
-              <TaxSwitch
-                checked={taxIncluded}
-                factoryName={factory.name}
-                onChange={onToggleTax}
-              />
               <h4>
                 قیمت {category.label} {factory.name}
               </h4>

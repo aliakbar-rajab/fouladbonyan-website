@@ -34,6 +34,7 @@ export function BeamTypesGuide({ reference }: { reference: GuideReference }) {
       <section className="content-card">
         <h2>آنچه امروز در کاتالوگ موجود است</h2>
         <ComparisonTable
+          captionLabel="جدول مقایسه انواع تیرآهن در کاتالوگ امروز"
           caption={
             <>
               برداشت‌شده از داده قیمت{" "}

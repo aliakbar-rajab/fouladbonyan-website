@@ -24,6 +24,10 @@ _Avoid_: Partial publish, mixed snapshot, best-effort refresh
 The minimum, maximum, and rounded average of a category's own positive displayed row prices; `Price unavailable` rows are excluded. A category with none currently has a zero summary, a known contradiction recorded under `Open questions`; it is neither an upstream comparison value nor a price estimate.
 _Avoid_: Upstream summary, quote estimate, category price
 
+**Displayed price summary**:
+The catalog price summary of a category's *credible* rows — those whose price is within an order of magnitude of their own unit's median inside that category. It is what the UI and SEO copy quote. The stored Catalog price summary stays faithful to every upstream row and remains what the validator checks a snapshot against; this exists because a single upstream row carrying a placeholder or mis-scaled price (a 1,400 تومان/kg ribbed rebar row beside a 75,100 median) otherwise became a category's advertised floor. Credibility is judged one category at a time: across a whole group, ribbed and stainless rebar are legitimately an order of magnitude apart. The excluded row keeps its real price in the table.
+_Avoid_: Hidden row, corrected price, cross-category outlier test
+
 **Displayable price range**:
 A catalog price summary eligible for UI or SEO display only when all priced rows in its category share one unit. A mixed-unit category directs users to its row-level prices instead.
 _Avoid_: Cross-unit range, mixed-unit summary

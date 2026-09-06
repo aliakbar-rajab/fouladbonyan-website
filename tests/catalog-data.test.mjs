@@ -6,10 +6,13 @@ import {
   getTrendPresentation,
 } from "../app/catalog-behavior.mjs";
 import {
+  categoriesCrediblePricedRows,
+  categoryCredibleSummary,
   categoryPricedRows,
   categoryPricingState,
   hasDisplayablePriceRange,
   priceRangesByUnit,
+  summarisePricedRows,
 } from "../app/catalog-pricing.mjs";
 import { buildCatalogSearchGroups } from "../app/catalog-search-coordinator.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
@@ -388,6 +391,81 @@ test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md
       max: 0,
     }),
     false,
+  );
+});
+
+/** A category shaped just enough for the pricing helpers. */
+const pricedCategory = (id, rows) => ({
+  id,
+  factories: [{ name: "کارخانه", rows }],
+});
+
+const kg = (price) => ({ price, unit: "کیلوگرم" });
+
+test("catalog-pricing: a displayed summary drops an implausible row but keeps it priced", () => {
+  /*
+   * One upstream ribbed rebar row published 1,400 تومان/kg beside a 75,100
+   * median, and it became the advertised floor: "در بازه‌ای بین ۱٬۵۰۰ تا
+   * ۹۱٬۵۰۰ تومان" was the first sentence on the page.
+   */
+  const rows = [kg(1_400), kg(70_500), kg(75_100), kg(79_000), kg(83_200)];
+  const category = pricedCategory("ribbed", rows);
+
+  assert.deepEqual(summarisePricedRows(rows).min, 1_400, "the stored summary stays faithful");
+  assert.equal(categoryCredibleSummary(category).min, 70_500);
+  assert.equal(categoryCredibleSummary(category).max, 83_200);
+  assert.equal(
+    categoryPricedRows(category).length,
+    5,
+    "the row itself is still priced and still shown in the table",
+  );
+});
+
+test("catalog-pricing: an implausible row is judged against its own Sales unit", () => {
+  /*
+   * A category priced partly per kilogram and partly per branch is carrying
+   * two scales, not an outlier. A unit-blind comparison would throw away every
+   * kilogram row in it.
+   */
+  const category = pricedCategory("beam", [
+    kg(95_500),
+    kg(150_000),
+    kg(209_100),
+    { price: 15_000_000, unit: "شاخه" },
+    { price: 18_181_800, unit: "شاخه" },
+  ]);
+
+  assert.equal(
+    categoryPricedRows(category).length,
+    categoriesCrediblePricedRows([category]).length,
+    "nothing here is implausible; the units simply differ",
+  );
+});
+
+test("catalog-pricing: credibility is judged per category, never across a group", () => {
+  /*
+   * Ribbed rebar (~76,000 تومان/kg) and stainless rebar (~2,036,000 تومان/kg)
+   * are an order of magnitude apart and both entirely real. Pooled first, the
+   * outlier test would discard one of them wholesale.
+   */
+  const ribbed = pricedCategory("ribbed", [kg(70_500), kg(76_000), kg(83_200)]);
+  const stainless = pricedCategory("stainless", [
+    kg(1_900_000),
+    kg(2_036_000),
+  ]);
+
+  const credible = categoriesCrediblePricedRows([ribbed, stainless]);
+  assert.equal(credible.length, 5, "every row here is credible for its own category");
+  assert.deepEqual(priceRangesByUnit(credible), [
+    { unit: "کیلوگرم", min: 70_500, max: 2_036_000 },
+  ]);
+});
+
+test("catalog-pricing: a category with no implausible row summarises exactly as before", () => {
+  const rows = [kg(64_980), kg(79_900), kg(87_400)];
+  assert.deepEqual(
+    categoryCredibleSummary(pricedCategory("angle", rows)),
+    summarisePricedRows(rows),
   );
 });
 

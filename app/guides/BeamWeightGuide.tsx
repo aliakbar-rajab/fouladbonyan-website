@@ -2,6 +2,7 @@ import { toPersianDigits } from "../persian-numbers.mjs";
 import { guidePageUrl } from "../guide-page-data";
 import { siteConfig } from "../site-config";
 import type { GuideReference } from "../steel-reference";
+import { GuideTableWrap } from "./GuideShared";
 import { fa, list } from "./guide-helpers";
 
 export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
@@ -35,7 +36,7 @@ export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
 
       <section className="content-card">
         <h2>وزن شاخه تیرآهن IPE به تفکیک کارخانه</h2>
-        <div className="guide-table-wrap">
+        <GuideTableWrap label="جدول وزن شاخه تیرآهن IPE به تفکیک کارخانه">
           <table className="guide-table">
             <caption>
               وزن اعلامی کارخانه برای هر شاخه — {fa(beamTable.rows.length)} ردیف
@@ -79,7 +80,7 @@ export function BeamWeightGuide({ reference }: { reference: GuideReference }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </GuideTableWrap>
         <p className="guide-note">
           وزن اعلامی کارخانه یک عدد اسمی است. وزن واقعی هر بار در باسکول تعیین
           می‌شود و ملاک فاکتور همان است.

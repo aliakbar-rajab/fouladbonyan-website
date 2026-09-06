@@ -331,6 +331,91 @@ test("useCatalogWorkspace clearSearch resets query, status, and returns to defau
   );
 });
 
+test("clearing a search on a category route returns to that route's own catalog", async () => {
+  /*
+   * The reset was hardcoded to productGroups[0], which is only the right
+   * answer on the home page. On /beam/ it left the میلگرد catalog, the میلگرد
+   * heading and a میلگرد tab under a page whose URL, title, hero and
+   * breadcrumb all still said تیرآهن.
+   */
+  const searchLoader = async () =>
+    buildCatalogSearchGroups(productGroups, mockCatalogs);
+
+  const { result } = renderHook(() =>
+    useCatalogWorkspace({ initialCategory: "beam", searchLoader }),
+  );
+
+  await act(async () => {
+    await result.current.submitSearch("کویر کاشان");
+  });
+  assert.equal(result.current.activeGroup, "rebar");
+  assert.equal(result.current.search.isActive, true);
+
+  act(() => {
+    result.current.clearSearch();
+  });
+
+  assert.equal(result.current.search.isActive, false);
+  assert.equal(
+    result.current.activeGroup,
+    "beam",
+    "the page is /beam/, so clearing a search must land back on تیرآهن",
+  );
+  assert.equal(result.current.selectedTabId, "beam");
+  assert.match(result.current.heading.title, /تیرآهن/);
+});
+
+test("clearing a search on a subcategory route returns to that subcategory, not the group default", async () => {
+  const searchLoader = async () =>
+    buildCatalogSearchGroups(productGroups, mockCatalogs);
+
+  const { result } = renderHook(() =>
+    useCatalogWorkspace({
+      initialCategory: "rebar",
+      initialSubcategory: "simple",
+      initialSubcategoryLabel: "میلگرد ساده",
+      searchLoader,
+    }),
+  );
+
+  await act(async () => {
+    await result.current.submitSearch("تیرآهن");
+  });
+  assert.equal(result.current.search.isActive, true);
+
+  act(() => {
+    result.current.clearSearch();
+  });
+
+  assert.equal(result.current.activeGroup, "rebar");
+  assert.equal(
+    result.current.activeViewRequest.categoryId,
+    "simple",
+    "the route names میلگرد ساده, not the group's initial ribbed category",
+  );
+});
+
+test("submitting an empty query resets to the route's own catalog too", async () => {
+  const searchLoader = async () =>
+    buildCatalogSearchGroups(productGroups, mockCatalogs);
+
+  const { result } = renderHook(() =>
+    useCatalogWorkspace({ initialCategory: "beam", searchLoader }),
+  );
+
+  await act(async () => {
+    await result.current.submitSearch("کویر کاشان");
+  });
+  assert.equal(result.current.activeGroup, "rebar");
+
+  await act(async () => {
+    await result.current.submitSearch("   ");
+  });
+
+  assert.equal(result.current.activeGroup, "beam");
+  assert.equal(result.current.activeViewRequest.categoryId, "beam");
+});
+
 test("useCatalogWorkspace selectTab intercepts click under active search and allows native navigation when inactive", async () => {
   const searchLoader = async () =>
     buildCatalogSearchGroups(productGroups, mockCatalogs);

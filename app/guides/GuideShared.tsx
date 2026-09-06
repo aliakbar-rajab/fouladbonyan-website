@@ -1,17 +1,45 @@
 import type { ReactNode } from "react";
 import { siteConfig } from "../site-config";
 
+/**
+ * The scroll container every guide table sits in.
+ *
+ * These tables are wider than a phone -- the rebar weight chart is 740px
+ * against a 308px box at 375px -- so the wrapper scrolls horizontally. A bare
+ * `overflow-x: auto` div is reachable by mouse and touch only: it takes no
+ * focus, so a keyboard-only reader cannot scroll it and simply never sees the
+ * columns past the edge (WCAG 2.1.1). `tabIndex` makes it a scrollable region
+ * they can reach and arrow through, and the name tells them what they landed
+ * in rather than announcing an unlabelled "region".
+ */
+export function GuideTableWrap({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="guide-table-wrap" tabIndex={0} role="region" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
 export function ComparisonTable({
   caption,
+  captionLabel,
   columns,
   rows,
 }: {
   caption: ReactNode;
+  /** Plain-text name for the scroll region; `caption` may carry markup. */
+  captionLabel: string;
   columns: string[];
   rows: { label: string; values: string[] }[];
 }) {
   return (
-    <div className="guide-table-wrap">
+    <GuideTableWrap label={captionLabel}>
       <table className="guide-table">
         <caption>{caption}</caption>
         <thead>
@@ -35,7 +63,7 @@ export function ComparisonTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </GuideTableWrap>
   );
 }
 

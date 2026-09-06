@@ -1,6 +1,7 @@
 import { toPersianDigits } from "../persian-numbers.mjs";
 import { guidePageUrl } from "../guide-page-data";
 import type { GuideReference } from "../steel-reference";
+import { GuideTableWrap } from "./GuideShared";
 import { fa, faFixed, list } from "./guide-helpers";
 
 export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
@@ -40,7 +41,7 @@ export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
               .filter(Boolean)
               .join(" ")}
           </p>
-          <div className="guide-table-wrap">
+          <GuideTableWrap label={`جدول وزن ${table.label}`}>
             <table className="guide-table">
               <caption>
                 {`وزن ${table.label} بر پایه فرمول استاندارد وزن — ${fa(table.rows.length)} سایز`}
@@ -78,7 +79,7 @@ export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </GuideTableWrap>
           <div className="inline-actions">
             <a href={table.href}>{`قیمت روز ${table.label}`}</a>
           </div>

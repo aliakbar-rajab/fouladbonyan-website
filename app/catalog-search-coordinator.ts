@@ -361,6 +361,19 @@ export function useCatalogWorkspace({
 
   const isSearchActive = Boolean(committedQuery);
 
+  /*
+   * The view this page is *about*: the group and subcategory named in the URL,
+   * or the first group on the home page. Resetting a search returns here.
+   *
+   * It used to reset to `productGroups[0]` unconditionally, which is only the
+   * right answer on the home page. On /beam/, clearing a search left the
+   * میلگرد catalog, the میلگرد heading and a میلگرد tab carrying
+   * aria-current="page" under a page whose URL, <title>, hero H1 and
+   * breadcrumb all still said تیرآهن.
+   */
+  const routeGroupId = route.category ?? productGroups[0].id;
+  const routeCategoryId = route.subcategory ?? initialCategoryIdOf(routeGroupId);
+
   const selectedTabId = useMemo(
     () =>
       isCategoryRoute || isSearchActive
@@ -417,9 +430,9 @@ export function useCatalogWorkspace({
   );
 
   const clearSearch = useCallback(() => {
-    selectGroup(productGroups[0].id);
+    selectGroup(routeGroupId, { categoryId: routeCategoryId });
     setSearchStatusMessage("همه محصولات نمایش داده می‌شوند.");
-  }, [selectGroup]);
+  }, [selectGroup, routeGroupId, routeCategoryId]);
 
   const submitSearch = useCallback(
     async (query: string): Promise<boolean> => {
@@ -431,10 +444,10 @@ export function useCatalogWorkspace({
         setSearchGroups(null);
         setSearchStatusMessage("همه محصولات نمایش داده می‌شوند.");
         setIsSearching(false);
-        setActiveGroup(productGroups[0].id);
+        setActiveGroup(routeGroupId);
         setActiveViewRequest((current) => ({
           requestId: current.requestId + 1,
-          categoryId: initialCategoryIdOf(productGroups[0].id),
+          categoryId: routeCategoryId,
         }));
         return true;
       }
@@ -478,7 +491,7 @@ export function useCatalogWorkspace({
 
       return evaluation.matchedGroups.length > 0;
     },
-    [searchLoader],
+    [searchLoader, routeGroupId, routeCategoryId],
   );
 
   const selectTab = useCallback(

@@ -113,6 +113,43 @@ test("weight tables are accessible tables with scoped headers", () => {
   }
 });
 
+test("every guide table sits in a named scroll region a keyboard can reach", () => {
+  /*
+   * These tables are wider than a phone -- the rebar weight chart is 740px
+   * against a 308px box at 375px -- so their wrapper scrolls horizontally. A
+   * bare `overflow-x: auto` div takes no focus, so a keyboard-only reader
+   * could not scroll it and simply never saw the columns past the edge
+   * (WCAG 2.1.1).
+   */
+  for (const key of guidePageKeys) {
+    const { container, unmount } = render(
+      React.createElement(GuidePage, { guide: key, reference }),
+    );
+
+    for (const wrap of container.querySelectorAll(".guide-table-wrap")) {
+      assert.equal(wrap.getAttribute("tabindex"), "0", `${key}: wrapper must be focusable`);
+      assert.equal(wrap.getAttribute("role"), "region", `${key}: wrapper must be a region`);
+      const label = wrap.getAttribute("aria-label");
+      assert.ok(
+        label && label.trim(),
+        `${key}: an unlabelled region announces only "region"`,
+      );
+      assert.ok(
+        wrap.querySelector("table.guide-table"),
+        `${key}: the region must wrap the table it names`,
+      );
+    }
+
+    // Every guide table is inside one; none escaped the wrapper.
+    assert.equal(
+      container.querySelectorAll("table.guide-table").length,
+      container.querySelectorAll(".guide-table-wrap table.guide-table").length,
+      `${key}: a table outside the scroll region cannot be panned at all`,
+    );
+    unmount();
+  }
+});
+
 test("guides link out to the catalog pages they describe", () => {
   const expectations = {
     "rebar-weight-chart": ["/rebar/", "/rebar/ribbed/", "/rebar/simple/"],

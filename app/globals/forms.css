@@ -1,4 +1,14 @@
 .request-form {
+  /*
+   * A grid item's automatic minimum size is its content's min-content width,
+   * and the generated pre-invoice sheet carries `min-width: 42rem` below
+   * 640px. Left at `auto`, that floor propagated out here and pushed the whole
+   * form to ~725px inside a 375px viewport, where `.inner-page`'s
+   * `overflow-x: clip` cut it off with no page scrollbar to recover it -- and
+   * it defeated the sheet's own `overflow-x: auto` scroller, which grew with
+   * it instead of containing it.
+   */
+  min-width: 0;
   padding: clamp(1.35rem, 4vw, 2.5rem);
 }
 
