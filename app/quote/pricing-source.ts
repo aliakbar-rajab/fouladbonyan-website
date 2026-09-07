@@ -6,7 +6,7 @@ import type {
   GroupCatalog,
 } from "../catalog-types";
 import type { ProductGroupId } from "../category-meta";
-import { localizeCatalogValue } from "../catalog-utils";
+import { localizeCatalogValue } from "../catalog-presentation";
 import type { QuotePieceOptionChoice, QuoteProductName } from "../quote-types";
 import type { QuotePricingBaselines } from "./pricing-types";
 

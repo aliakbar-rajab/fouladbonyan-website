@@ -6,6 +6,7 @@ import {
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
+import { presentPriceRange } from "./catalog-presentation";
 import {
   getCategoryById,
   subcategoryHref,
@@ -22,20 +23,21 @@ function groupingCountLabel(category: CatalogCategory) {
 }
 
 /**
- * The price range this overview may advertise for one category, or null when
- * it has none to advertise.
+ * The price this overview advertises for one category, already presented.
  *
  * Derived from the category's credible rows rather than its stored summary,
  * for the reason CatalogSummaryBanner spells out: one upstream row carrying a
  * placeholder price otherwise sets the advertised floor. Shared by the table
  * row and the card below so the two shells cannot quote different prices for
- * the same category.
+ * the same category -- nor disagree about whether there is one to quote.
  */
-function overviewPriceRange(category: CatalogCategory) {
+function overviewPrice(category: CatalogCategory) {
   const summary = categoryCredibleSummary(category);
-  return hasDisplayablePriceRange(categoryPricingState(category), summary)
-    ? summary
-    : null;
+  return presentPriceRange(
+    hasDisplayablePriceRange(categoryPricingState(category), summary)
+      ? summary
+      : null,
+  );
 }
 
 function CategoryOverviewRow({
@@ -47,7 +49,7 @@ function CategoryOverviewRow({
 }) {
   const href = subcategoryHref(groupId, category.id);
   const pricingState = categoryPricingState(category);
-  const priceRange = overviewPriceRange(category);
+  const price = overviewPrice(category);
   const trend = getTrendPresentation(category.summary.status, category.summary.percent);
 
   return (
@@ -67,14 +69,13 @@ function CategoryOverviewRow({
         </span>
       </td>
       <td className="overview-cell-price">
-        {priceRange ? (
-          <span className="price-range" dir="rtl">
-            {formatPersianNumber(priceRange.min)} تا{" "}
-            {formatPersianNumber(priceRange.max)} <small>تومان</small>
-          </span>
-        ) : (
-          <span className="price-call">تماس بگیرید</span>
-        )}
+        <span
+          className={price.available ? "price-range" : "price-call"}
+          dir="rtl"
+        >
+          {price.text}
+          {price.suffix ? <small> {price.suffix}</small> : null}
+        </span>
       </td>
       <td className="overview-cell-unit">
         <span>{pricingState.units.length === 1 ? pricingState.units[0] : "متفاوت"}</span>
@@ -107,7 +108,7 @@ function CategoryOverviewCard({
   category: CatalogCategory;
 }) {
   const href = subcategoryHref(groupId, category.id);
-  const priceRange = overviewPriceRange(category);
+  const price = overviewPrice(category);
 
   return (
     <article className="overview-card">
@@ -122,14 +123,10 @@ function CategoryOverviewCard({
       <div className="overview-card-details">
         <div className="overview-card-price">
           <small>حدود قیمت:</small>
-          {priceRange ? (
-            <strong>
-              {formatPersianNumber(priceRange.min)} تا{" "}
-              {formatPersianNumber(priceRange.max)} تومان
-            </strong>
-          ) : (
-            <strong>تماس بگیرید</strong>
-          )}
+          <strong>
+            {price.text}
+            {price.suffix ? ` ${price.suffix}` : ""}
+          </strong>
         </div>
         <a href={href} className="overview-card-btn">
           مشاهده جدول کامل

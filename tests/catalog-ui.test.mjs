@@ -794,6 +794,61 @@ test("value added tax is one control for the whole category, not one per factory
   assert.notEqual(priceOf(), before, "prices must move with the switch");
 });
 
+/*
+ * Until this test existed, every fixture row in this file was priced, so the
+ * invariant CONTEXT.md states most explicitly -- a `Price unavailable` row
+ * stays in the table, reads «تماس بگیرید», and shows no price unit -- was
+ * never rendered by anything.
+ */
+test("a Price unavailable row keeps its place, names no price, and shows no unit", async () => {
+  const unpriced = { ...row(2, "same", 0), id: 2, price: null };
+  const mixed = {
+    ...category("mixed", "ترکیبی", row(1, "up", 1)),
+    factories: [
+      {
+        name: "آزمایش",
+        updatedAt: 1_700_000_000,
+        updatedDate: "۱۴۰۲/۰۸/۲۳",
+        rows: [row(1, "up", 1), unpriced],
+      },
+    ],
+  };
+  render(
+    React.createElement(PriceCatalog, {
+      catalog: { ...catalog, initialCategoryId: "mixed", categories: [mixed] },
+      phoneHref,
+    }),
+  );
+
+  const cells = [...document.querySelectorAll(".row-price")];
+  assert.equal(cells.length, 2, "the unpriced row stays visible in the table");
+
+  const [priced, unavailable] = cells;
+  assert.match(priced.textContent, /۶۰٬۰۰۰/);
+  assert.match(priced.textContent, /تومان \/ کیلوگرم/);
+  assert.ok(!priced.classList.contains("is-call"));
+
+  assert.match(unavailable.textContent, /تماس بگیرید/);
+  assert.ok(
+    unavailable.classList.contains("is-call"),
+    "the cell's colour must agree with its text",
+  );
+  assert.doesNotMatch(
+    unavailable.textContent,
+    /تومان|کیلوگرم/,
+    "an unavailable row must not show a price unit",
+  );
+
+  // The VAT switch re-prices the table; it must not invent a price here.
+  await act(async () => {
+    fireEvent.click(screen.getAllByRole("switch")[0]);
+  });
+  assert.match(
+    [...document.querySelectorAll(".row-price")][1].textContent,
+    /^تماس بگیرید$/,
+  );
+});
+
 test("a filter this category does not offer is ignored rather than held invisibly", async () => {
   /*
    * `?factory=X` is a valid link for the category that sells X and meaningless

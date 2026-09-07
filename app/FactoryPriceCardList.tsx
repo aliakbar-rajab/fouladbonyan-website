@@ -9,10 +9,10 @@ import {
 import type { ProductGroupId } from "./category-meta";
 import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
 import {
-  displayPrice,
   localizeCatalogValue,
+  presentPrice,
   unixSecondsToIso,
-} from "./catalog-utils";
+} from "./catalog-presentation";
 import {
   QUOTE_FORM_HREF,
   writeQuoteHandoff,
@@ -265,6 +265,11 @@ export function FactoryPriceCardList({
                       row.status,
                       row.percent,
                     );
+                    const price = presentPrice(row.price, {
+                      unit: row.unit,
+                      taxIncluded,
+                      taxRate,
+                    });
                     return (
                       <Fragment key={row.id}>
                         <tr
@@ -302,16 +307,14 @@ export function FactoryPriceCardList({
                           <td
                             data-label="قیمت"
                             className={
-                              row.price ? "row-price" : "row-price is-call"
+                              price.available
+                                ? "row-price"
+                                : "row-price is-call"
                             }
                           >
-                            {displayPrice(
-                              row.price,
-                              taxIncluded,
-                              taxRate,
-                            )}
-                            {row.price ? (
-                              <small> تومان / {row.unit}</small>
+                            {price.text}
+                            {price.suffix ? (
+                              <small> {price.suffix}</small>
                             ) : null}
                           </td>
                           <td

@@ -6,12 +6,29 @@ import {
 } from "./catalog-reader";
 import { formatPersianNumber } from "./persian-numbers.mjs";
 import { getTrendPresentation } from "./catalog-behavior.mjs";
+import {
+  PRICE_PENDING_TEXT,
+  PRICE_UNAVAILABLE_TEXT,
+  presentPriceRange,
+} from "./catalog-presentation";
 import { getThumbnailSources } from "./image-utils";
 
 function formatStatusText(status: string, percent: number): string {
   const trend = getTrendPresentation(status, percent);
   if (!trend.amount) return trend.direction;
   return `${trend.direction} (${formatPersianNumber(trend.amount, 1)}٪)`;
+}
+
+/**
+ * What an item with no price ranges reads.
+ *
+ * Before the snapshot arrives nothing is known either way, so the reader is
+ * not yet told to phone. The table applied that guard and the cards did not,
+ * so the two shells of this component showed different text for the same
+ * empty data while the page was still loading.
+ */
+function emptyPriceText(loaded: boolean) {
+  return loaded ? PRICE_UNAVAILABLE_TEXT : PRICE_PENDING_TEXT;
 }
 
 export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
@@ -103,22 +120,27 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                   <td className="overview-cell-price">
                     {item.priceRanges.length ? (
                       <span className="price-range-group">
-                        {item.priceRanges.map((range) => (
-                          <span
-                            className="price-range"
-                            dir="rtl"
-                            key={range.unit}
-                          >
-                            {formatPersianNumber(range.min)} تا{" "}
-                            {formatPersianNumber(range.max)}{" "}
-                            <small>تومان / {range.unit}</small>
-                          </span>
-                        ))}
+                        {item.priceRanges.map((range) => {
+                          const price = presentPriceRange(range, {
+                            unit: range.unit,
+                          });
+                          return (
+                            <span
+                              className="price-range"
+                              dir="rtl"
+                              key={range.unit}
+                            >
+                              {price.text} <small>{price.suffix}</small>
+                            </span>
+                          );
+                        })}
                       </span>
-                    ) : loaded ? (
-                      <span className="price-call">تماس بگیرید</span>
                     ) : (
-                      <span className="price-loading">در حال به‌روزرسانی…</span>
+                      <span
+                        className={loaded ? "price-call" : "price-loading"}
+                      >
+                        {emptyPriceText(loaded)}
+                      </span>
                     )}
                   </td>
                   <td className="overview-cell-unit">
@@ -180,15 +202,18 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                 <div className="overview-card-price">
                   <small>حدود قیمت:</small>
                   {item.priceRanges.length ? (
-                    item.priceRanges.map((range) => (
-                      <strong key={range.unit}>
-                        {formatPersianNumber(range.min)} تا{" "}
-                        {formatPersianNumber(range.max)} تومان
-                        <span> ({range.unit})</span>
-                      </strong>
-                    ))
+                    item.priceRanges.map((range) => {
+                      const price = presentPriceRange(range, {
+                        unit: range.unit,
+                      });
+                      return (
+                        <strong key={range.unit}>
+                          {price.text} <span>{price.suffix}</span>
+                        </strong>
+                      );
+                    })
                   ) : (
-                    <strong>تماس بگیرید</strong>
+                    <strong>{emptyPriceText(loaded)}</strong>
                   )}
                 </div>
                 <a href={`/${item.id}/`} className="overview-card-btn">

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Breadcrumb } from "./Breadcrumb";
 import { WhatsAppIcon } from "./icons";
-import { localizeCatalogValue } from "./catalog-utils";
+import { localizeCatalogValue } from "./catalog-presentation";
 import {
   buildGoogleMapsUrl,
   buildWazeUrl,

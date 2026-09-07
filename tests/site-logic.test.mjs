@@ -4,7 +4,7 @@ import {
   filterProductGroups,
   normalizeSearchText,
 } from "../app/site-logic.mjs";
-import { localizeCatalogValue } from "../app/catalog-utils.ts";
+import { localizeCatalogValue } from "../app/catalog-presentation.ts";
 import { toAsciiDigits, toPersianDigits } from "../app/persian-numbers.mjs";
 
 // Shaped like the rows buildCatalogSearchGroups actually produces: ASCII digits
@@ -104,13 +104,5 @@ test("calculateRebarWeight correctly calculates weight with Persian digits and n
   assert.equal(calculateRebarWeight("0", "12", "1"), null);
   assert.equal(calculateRebarWeight("16", "12", "۰"), null);
   assert.equal(calculateRebarWeight("invalid", "12", "1"), null);
-});
-
-test("displayPrice formats prices with and without tax correctly", async () => {
-  const { displayPrice } = await import("../app/catalog-utils.ts");
-  assert.equal(displayPrice(null, false, 0.1), "تماس بگیرید");
-  assert.equal(displayPrice(0, false, 0.1), "تماس بگیرید");
-  assert.equal(displayPrice(30000, false, 0.1), "۳۰٬۰۰۰");
-  assert.equal(displayPrice(30000, true, 0.1), "۳۳٬۰۰۰");
 });
 

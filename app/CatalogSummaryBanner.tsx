@@ -5,9 +5,8 @@ import {
   hasDisplayablePriceRange,
 } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
-import { formatPersianNumber } from "./persian-numbers.mjs";
-import { displayPrice } from "./catalog-utils";
-import { toPersianDigits } from "./persian-numbers.mjs";
+import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
+import { presentPrice } from "./catalog-presentation";
 
 function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
   return (
@@ -29,7 +28,7 @@ export function CatalogSummaryBanner({
   pricingState: { hasPrices: boolean; units: string[] };
 }) {
   const summaryPrice = (price: number) =>
-    displayPrice(price, taxIncluded, taxRate);
+    presentPrice(price, { taxIncluded, taxRate }).text;
   const trend = getTrendPresentation(
     category.summary.status,
     category.summary.percent,

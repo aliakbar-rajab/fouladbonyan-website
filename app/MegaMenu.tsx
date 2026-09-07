@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { localizeCatalogValue } from "./catalog-utils";
+import { localizeCatalogValue } from "./catalog-presentation";
 import {
   productGroups,
   subcategoryHref,

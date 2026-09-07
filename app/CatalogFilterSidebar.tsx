@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { CatalogCategory } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
-import { localizeCatalogValue } from "./catalog-utils";
+import { localizeCatalogValue } from "./catalog-presentation";
 import { PhoneIcon } from "./icons";
 
 export function CatalogFilterSidebar({
