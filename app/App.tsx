@@ -20,14 +20,11 @@ import { useMediaQuery } from "./use-media-query";
 import { PhoneIcon } from "./icons";
 import { KnowledgeSection } from "./KnowledgeSection";
 import { QuoteCtaSection } from "./QuoteCtaSection";
-import { useCatalogWorkspace } from "./catalog-search-coordinator";
-
-function scrollToPriceWorkspace() {
-  document.getElementById("price-workspace")?.scrollIntoView({
-    behavior: "auto",
-    block: "start",
-  });
-}
+import {
+  PRICE_WORKSPACE_ID,
+  scrollToPriceWorkspace,
+  useCatalogWorkspace,
+} from "./use-catalog-workspace";
 
 export default function App({
   initialCategory,
@@ -109,7 +106,7 @@ export default function App({
               description={workspace.heading.description}
             />
 
-            <div className="price-workspace" id="price-workspace">
+            <div className="price-workspace" id={PRICE_WORKSPACE_ID}>
               <div className="price-workspace-tools">
                 <form className="site-search" role="search" onSubmit={submitSearch}>
                   <label className="sr-only" htmlFor="site-search">

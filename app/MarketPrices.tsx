@@ -1,6 +1,7 @@
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import { EurIcon, GoldIcon, TetherIcon, UsdIcon, type IconProps } from "./icons";
 import { useMarketPrices, type MarketPriceItem } from "./use-market-prices";
+import { PRICE_WORKSPACE_ID } from "./use-catalog-workspace";
 
 const ASSET_ICONS: Record<string, (props: IconProps) => ReturnType<typeof GoldIcon>> = {
   gold: GoldIcon,
@@ -127,7 +128,7 @@ export function MarketPrices({ compactStatus = false }: { compactStatus?: boolea
               <p className="market-status-title">در حال دریافت زمینه بازار</p>
               <p>جدول قیمت فولاد آماده است و پایین‌تر در دسترس شماست.</p>
             </div>
-            <a href="#price-workspace">مشاهده قیمت فولاد</a>
+            <a href={`#${PRICE_WORKSPACE_ID}`}>مشاهده قیمت فولاد</a>
           </div>
         ) : null}
 
@@ -142,7 +143,7 @@ export function MarketPrices({ compactStatus = false }: { compactStatus?: boolea
               <button type="button" onClick={state.retry}>
                 تلاش دوباره
               </button>
-              <a href="#price-workspace">مشاهده قیمت فولاد</a>
+              <a href={`#${PRICE_WORKSPACE_ID}`}>مشاهده قیمت فولاد</a>
             </div>
           </div>
         ) : null}

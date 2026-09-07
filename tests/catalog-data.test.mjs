@@ -14,7 +14,7 @@ import {
   priceRangesByUnit,
   summarisePricedRows,
 } from "../app/catalog-pricing.mjs";
-import { buildCatalogSearchGroups } from "../app/catalog-search-coordinator.ts";
+import { buildCatalogSearchGroups } from "../app/catalog-search.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import { createRetryableLoader } from "../app/catalog-reader.ts";
 import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
