@@ -17,11 +17,14 @@ on:
     # imports catalog-pricing.mjs -- the definition of a priced row and of a
     # category summary -- so a change there moves what the live Worker accepts
     # while leaving the deployed copy behind, which is the exact drift this
-    # workflow exists to close.
+    # workflow exists to close. price-catalog-config.mjs itself imports
+    # catalog-taxonomy.mjs (the shared source of every catalog/subcategory id,
+    # label and initial category), so that file is transitively bundled too.
     paths:
       - "workers/price-refresh/**"
       - "app/catalog-validation.mjs"
       - "app/catalog-pricing.mjs"
+      - "app/catalog-taxonomy.mjs"
       - "scripts/price-catalog-config.mjs"
 
   workflow_dispatch:

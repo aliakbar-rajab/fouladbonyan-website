@@ -2,6 +2,7 @@ import {
   priceRangesByUnit,
   categoriesCrediblePricedRows,
 } from "./catalog-pricing.mjs";
+import { initialCategoryIdOf as taxonomyInitialCategoryIdOf } from "./catalog-taxonomy.mjs";
 import {
   productGroups,
   type ProductGroup,
@@ -125,17 +126,6 @@ export const loadCatalogSnapshot = Object.assign(
   },
 );
 
-const defaultInitialCategories: Record<ProductGroupId, string> = {
-  rebar: "ribbed",
-  beam: "beam",
-  sheet: "black-sheet",
-  profile: "box-profile",
-  pipe: "scaffold-pipe",
-  angle: "angle",
-  channel: "channel",
-  wire: "wire",
-};
-
 function enrichGroupCatalog(
   snapshot: CatalogSnapshot,
   group: GroupCatalog,
@@ -153,7 +143,9 @@ function enrichGroupCatalog(
 export function initialCategoryIdOf(groupId: ProductGroupId): string {
   const cached = loadCatalogSnapshot.getCached();
   const catalog = cached?.catalogs.find((c) => c.id === groupId);
-  return catalog?.initialCategoryId ?? defaultInitialCategories[groupId] ?? "";
+  return (
+    catalog?.initialCategoryId ?? taxonomyInitialCategoryIdOf(groupId) ?? ""
+  );
 }
 
 export async function loadGroupCatalog(

@@ -1,5 +1,7 @@
+import { catalogGroups, subcategoryLabel } from "./catalog-taxonomy.mjs";
 import type { ProductCatalogId, ProductGroupId } from "./catalog-types";
 
+export { subcategoryLabels } from "./catalog-taxonomy.mjs";
 export type { ProductCatalogId, ProductGroupId };
 
 export type ProductGroup = {
@@ -19,13 +21,11 @@ export type ProductGroup = {
   seoDescription: string;
 };
 
-// This module has no React exports, so it also doubles as the source of truth
-// for build-time tooling (see scripts/lib/prerender-pipeline.mjs) that needs
-// each category's slug, label, and description without pulling in the app.
-export const productGroups: ProductGroup[] = [
-  {
-    id: "rebar",
-    label: "میلگرد",
+/** Presentation-only fields, keyed by group id, in taxonomy order. */
+type GroupPresentation = Omit<ProductGroup, "id" | "label">;
+
+const presentationByGroupId: Record<ProductGroupId, GroupPresentation> = {
+  rebar: {
     shortLabel: "میلگرد",
     image: "/categories/01-rebar.jpg",
     imageAlt: "انواع میلگرد آجدار و ساده ساختمانی",
@@ -39,9 +39,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز میلگرد آجدار، ساده، استیل و آلیاژی از کارخانه‌های معتبر. استعلام قیمت و درخواست پیش‌فاکتور میلگرد با مشاوره تلفنی.",
   },
-  {
-    id: "beam",
-    label: "تیرآهن",
+  beam: {
     shortLabel: "تیرآهن",
     image: "/categories/02-ibeam.jpg",
     imageAlt: "انواع تیرآهن IPE و هاش سازه‌ای",
@@ -55,9 +53,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز تیرآهن IPE و هاش از کارخانه‌های معتبر. استعلام قیمت و درخواست پیش‌فاکتور تیرآهن با مشاوره تلفنی.",
   },
-  {
-    id: "sheet",
-    label: "ورق فولادی",
+  sheet: {
     shortLabel: "ورق",
     image: "/categories/03-sheet-coil.jpg",
     imageAlt: "انواع رول و شیت ورق فولادی سیاه و گالوانیزه",
@@ -71,9 +67,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز ورق فولادی سیاه، گالوانیزه، روغنی و رنگی. استعلام قیمت و درخواست پیش‌فاکتور ورق با مشاوره تلفنی.",
   },
-  {
-    id: "profile",
-    label: "قوطی و پروفیل",
+  profile: {
     shortLabel: "پروفیل",
     image: "/categories/04-profile.jpg",
     imageAlt: "انواع قوطی و پروفیل ساختمانی و صنعتی",
@@ -87,9 +81,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز قوطی و پروفیل ساختمانی و صنعتی در ابعاد گوناگون. استعلام قیمت و درخواست پیش‌فاکتور پروفیل با مشاوره تلفنی.",
   },
-  {
-    id: "pipe",
-    label: "لوله فولادی",
+  pipe: {
     shortLabel: "لوله",
     image: "/categories/05-pipe.jpg",
     imageAlt: "انواع لوله فولادی صنعتی، گازی و داربستی",
@@ -103,9 +95,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز لوله فولادی صنعتی، گازی و داربستی. استعلام قیمت و درخواست پیش‌فاکتور لوله با مشاوره تلفنی.",
   },
-  {
-    id: "angle",
-    label: "نبشی",
+  angle: {
     shortLabel: "نبشی",
     image: "/categories/06-angle.jpg",
     imageAlt: "انواع نبشی فولادی بال مساوی و نامساوی",
@@ -119,9 +109,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز نبشی بال مساوی و بال نامساوی. استعلام قیمت و درخواست پیش‌فاکتور نبشی با مشاوره تلفنی.",
   },
-  {
-    id: "channel",
-    label: "ناودانی",
+  channel: {
     shortLabel: "ناودانی",
     image: "/categories/07-channel.jpg",
     imageAlt: "انواع ناودانی فولادی سبک و سنگین ساختمانی",
@@ -135,9 +123,7 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز ناودانی سبک و سنگین برای مصارف سازه‌ای. استعلام قیمت و درخواست پیش‌فاکتور ناودانی با مشاوره تلفنی.",
   },
-  {
-    id: "wire",
-    label: "مفتول و سیم",
+  wire: {
     shortLabel: "مفتول",
     image: "/categories/08-wire.jpg",
     imageAlt: "انواع مفتول سیاه، گالوانیزه و محصولات سیمی",
@@ -151,7 +137,18 @@ export const productGroups: ProductGroup[] = [
     seoDescription:
       "قیمت روز مفتول سیاه، گالوانیزه و محصولات سیمی. استعلام قیمت و درخواست پیش‌فاکتور مفتول با مشاوره تلفنی.",
   },
-];
+};
+
+// This module has no React exports, so it also doubles as the source of truth
+// for build-time tooling (see scripts/lib/prerender-pipeline.mjs) that needs
+// each category's slug, label, and description without pulling in the app.
+// id and label come from the taxonomy (app/catalog-taxonomy.mjs); only the
+// presentation fields above are this module's own concern.
+export const productGroups: ProductGroup[] = catalogGroups.map((group) => ({
+  id: group.id as ProductGroupId,
+  label: group.label,
+  ...presentationByGroupId[group.id as ProductGroupId],
+}));
 
 export function getCategoryById(id: string): ProductGroup | undefined {
   return productGroups.find((group) => group.id === id);
@@ -193,70 +190,6 @@ export function subcategoryHref(
   return `/${groupId}/${subcategoryId}/`;
 }
 
-export const subcategoryLabels: Record<string, string> = {
-  // rebar
-  ribbed: "میلگرد آجدار",
-  simple: "میلگرد ساده",
-  stainless: "میلگرد استیل",
-  alloy: "میلگرد آلیاژی",
-
-  // beam
-  beam: "تیرآهن",
-  hash: "تیرآهن هاش",
-
-  // sheet
-  "black-sheet": "ورق سیاه",
-  "sheet-st52": "ورق ST52",
-  "sheet-a283": "ورق A283",
-  "sheet-a285": "ورق A285",
-  "sheet-a516": "ورق A516",
-  "steel-strip": "تسمه آهنی",
-  "galvanized-sheet": "ورق گالوانیزه",
-  "colored-sheet": "ورق رنگی",
-  "oily-sheet": "ورق روغنی",
-  "checkered-sheet": "ورق آجدار",
-  "pickled-sheet": "ورق اسیدشویی",
-  "decking-sheet": "عرشه فولادی",
-  "stainless-sheet": "ورق استیل",
-  "wear-resistant-sheet": "ورق ضد سایش",
-  "sheet-ck45": "ورق CK45",
-
-  // profile
-  "box-profile": "قوطی و پروفیل",
-  "building-profile": "پروفیل ساختمانی",
-  "industrial-profile": "پروفیل صنعتی",
-  "stainless-profile": "پروفیل استیل",
-  "furniture-profile": "پروفیل مبلی",
-  "galvanized-profile": "پروفیل گالوانیزه",
-  "z-profile": "پروفیل Z",
-
-  // pipe
-  "scaffold-pipe": "لوله داربست",
-  "galvanized-pipe": "لوله گالوانیزه",
-  "stainless-pipe": "لوله استیل",
-  "water-test-pipe": "لوله تست آب",
-  "spiral-pipe": "لوله اسپیرال",
-  "api-pipe": "لوله API",
-  "gas-pipe": "لوله گاز",
-  "well-casing-pipe": "لوله جدار چاه",
-  "seamless-pipe": "لوله مانیسمان",
-  "thick-wall-pipe": "لوله گوشتدار",
-
-  // angle
-  angle: "نبشی",
-
-  // channel
-  channel: "ناودانی",
-
-  // wire
-  wire: "سیم مفتول",
-  "rib-lath": "رابیتس",
-  "steel-mesh": "مش",
-  "chicken-mesh": "توری مرغی",
-  "chain-link-mesh": "توری حصاری",
-  "crimped-mesh": "توری پرسی",
-};
-
 export function getSubcategoryLabel(subcategoryId?: string): string | undefined {
-  return subcategoryId ? subcategoryLabels[subcategoryId] : undefined;
+  return subcategoryId ? subcategoryLabel(subcategoryId) : undefined;
 }
