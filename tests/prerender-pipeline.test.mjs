@@ -8,9 +8,12 @@ import {
   buildBreadcrumbJsonLd,
   buildHeroPreloadTag,
   buildSitemapXml,
-  collectSitePageDescriptors,
   renderStaticDocument,
   replaceSocialMeta,
+} from "../scripts/lib/static-document.mjs";
+import { collectSitePageDescriptors } from "../scripts/lib/site-pages.mjs";
+import {
+  generateStaticSite,
   writePrerenderArtifacts,
 } from "../scripts/lib/prerender-pipeline.mjs";
 import {
@@ -346,4 +349,54 @@ test("replaceSocialMeta updates OpenGraph, Twitter and description meta tags", (
   assert.match(updated, /<meta property="og:url" content="https:\/\/fouladbonyan\.com\/new-url\/" \/>/);
   assert.match(updated, /<meta name="twitter:title" content="عنوان جدید" \/>/);
   assert.match(updated, /<meta name="twitter:description" content="توضیحات جدید" \/>/);
+});
+
+/*
+ * The orchestration itself, with no build behind it.
+ *
+ * generateStaticSite used to read dist/index.html and the 2.4 MB snapshot off
+ * disk unconditionally, so everything it sequences -- priming the catalog
+ * caches, building the menu and overview projections, the guide reference, and
+ * handing the descriptors to the writer -- was reachable only by running
+ * `vite build` first and then asserting against dist/.
+ */
+test("generateStaticSite sequences the build without a dist or a writer", async () => {
+  let templateReads = 0;
+  const written = [];
+
+  const result = await generateStaticSite({
+    siteUrl: "https://example.test",
+    readTemplate: () => {
+      templateReads += 1;
+      return Promise.resolve(MOCK_TEMPLATE);
+    },
+    writeArtifacts: (args) => {
+      written.push(args);
+      return { pageCount: args.pages.length };
+    },
+  });
+
+  assert.equal(templateReads, 1, "the template is read through the seam, once");
+  assert.equal(written.length, 1);
+
+  const [args] = written;
+  assert.equal(args.templateHtml, MOCK_TEMPLATE, "the injected template is what reaches the writer");
+  assert.equal(args.siteUrl, "https://example.test");
+  assert.match(args.rootLastmod, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(result.pageCount, args.pages.length);
+
+  // The descriptors are real: the homepage, and every page carrying the fields
+  // renderStaticDocument and buildSitemapXml each need.
+  assert.ok(args.pages.length > 0);
+  const home = args.pages.find((page) => page.pageUrl === "https://example.test/");
+  assert.ok(home, "the homepage descriptor is present");
+  assert.ok(home.title && home.description && home.rootElement);
+
+  for (const page of args.pages) {
+    assert.ok(Array.isArray(page.outPath), `${page.pageUrl} needs an outPath`);
+    assert.ok(page.title, `${page.pageUrl} needs a title`);
+    assert.ok(page.description, `${page.pageUrl} needs a description`);
+    assert.match(page.lastmod, /^\d{4}-\d{2}-\d{2}$/, `${page.pageUrl} needs a lastmod`);
+    assert.ok(page.pageUrl.startsWith("https://example.test/"), "every URL honours the injected siteUrl");
+  }
 });

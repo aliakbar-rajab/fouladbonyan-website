@@ -13,6 +13,18 @@ export const siteConfig = {
     alternateName: "Bonyan Foulad Daria",
   },
   siteUrl: "https://fouladbonyan.com",
+  /*
+   * The homepage's own title and description. index.html carries the same two
+   * strings four times over -- <title>, the description meta, og:title and
+   * og:description -- because a static shell cannot import this file, and the
+   * prerender pipeline restated them a fifth time. They are written here now,
+   * and built-seo.test.mjs fails if the shell drifts from them.
+   */
+  home: {
+    title: "قیمت روز آهن و فولاد | بنیان فولاد داریا",
+    description:
+      "قیمت روز آهن و فولاد، میلگرد، تیرآهن، ورق، پروفیل و انواع مقاطع فولادی در بازار. استعلام لحظه‌ای و صدور پیش‌فاکتور در بنیان فولاد داریا.",
+  },
   contact: {
     phones: [
       { label: "۰۲۱-۸۸۸۸۸۲۸۰", href: "tel:+982188888280" },

@@ -961,3 +961,39 @@ test("the homepage H1 keeps a whitespace boundary between its two lines", async 
   assert.equal(text, "قیمت روز آهن و فولاد؛ بنیان فولاد داریا");
   assert.doesNotMatch(text, /؛بنیان/, "the two lines must not run together");
 });
+
+/*
+ * index.html is the pristine shell Vite builds from, so it cannot import
+ * site-config. It states the homepage's title in three places and its
+ * description in three more, and the prerender pipeline used to restate both a
+ * seventh and eighth time. siteConfig.home owns them now; this is what keeps
+ * the static shell honest about it.
+ */
+test("the template shell quotes the homepage title and description siteConfig owns", async () => {
+  const shell = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const { title, description } = siteConfig.home;
+
+  // Whitespace between attributes varies: some of these tags are wrapped.
+  const contentOf = (matcher) =>
+    shell.match(new RegExp(`<meta\\s+${matcher}\\s+content="([^"]*)"`, "s"))?.[1];
+
+  assert.equal(
+    shell.match(/<title>([^<]*)<\/title>/)?.[1],
+    title,
+    "<title> must be the homepage title siteConfig owns",
+  );
+  for (const matcher of ['property="og:title"', 'name="twitter:title"']) {
+    assert.equal(contentOf(matcher), title, `${matcher} must carry the same title`);
+  }
+  for (const matcher of [
+    'name="description"',
+    'property="og:description"',
+    'name="twitter:description"',
+  ]) {
+    assert.equal(
+      contentOf(matcher),
+      description,
+      `${matcher} must carry the homepage description siteConfig owns`,
+    );
+  }
+});
