@@ -65,7 +65,7 @@ The external publisher of a market-reference price, currently exactly فولاد
 _Avoid_: Foulad Bonyan verified price, house price
 
 **Price estimate**:
-An indicative quote-request calculation derived from the market-price snapshot, distinct from both a source row price and a sales-confirmed final price. It uses rounded means of positive source prices (per kilogram, or per size/specification for selected real piece units), converts tonnes to kilograms, applies the 12-metre rebar weight formula for rebar branches, and adds no markup or VAT (confirmed absent from the current calculation); generated quote totals convert toman to rial by a factor of ten—see [Open questions](#open-questions) for its source-attribution gap.
+An indicative quote-request calculation derived from the market-price snapshot, distinct from both a source row price and a sales-confirmed final price. It uses rounded means of the same *credible* per-kilogram rows the [Displayed price summary](#commercial-boundary) is built from, so an estimate and the category page it was reached from quote the same rows; a selected real piece unit is priced from its own row, at that row's real price. It converts tonnes to kilograms, applies the 12-metre rebar weight formula for rebar branches, and adds no markup or VAT (see [VAT scope](#commercial-boundary)); generated quote totals convert toman to rial by a factor of ten—see [Open questions](#open-questions) for its source-attribution gap.
 _Avoid_: Source row price, final price, sale price
 
 **VAT scope**:

@@ -22,6 +22,11 @@ import {
   quoteUnits,
 } from "../app/quote-types.ts";
 import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
+import {
+  categoryCrediblePricedRows,
+  categoryPricedRows,
+  summarisePricedRows,
+} from "../app/catalog-pricing.mjs";
 
 const contact = {
   fullName: "کاربر آزمایشی",
@@ -749,4 +754,40 @@ test("quote evaluator evaluates against live catalog files", async () => {
     unit: "تن",
   });
   assert.ok(rebarEvaluation.approximateTotalToman !== null && rebarEvaluation.approximateTotalToman > 0);
+});
+
+/*
+ * The pre-invoice and the category page it is reached from must price the same
+ * rows the same way.
+ *
+ * They did not. The page quotes its Displayed price summary -- the average of
+ * a category's *credible* rows -- while the quote baseline averaged every
+ * priced row. Ribbed rebar carries one 1,400 تومان/kg placeholder beside a
+ * 75,100 median, so the page said ۷۵٬۴۲۷ and the pre-invoice built from the
+ * same category used 75,073, and nothing compared the two.
+ */
+test("a quote baseline is the average the catalog page shows for that category", async () => {
+  const catalogs = await loadAllGroupCatalogs();
+  const baselines = extractQuotePricingBaselines(catalogs);
+
+  const ribbed = catalogs
+    .find((catalog) => catalog.id === "rebar")
+    .categories.find((category) => category.id === "ribbed");
+
+  const kilogramRows = categoryCrediblePricedRows(ribbed).filter(
+    (row) => row.unit === "کیلوگرم",
+  );
+  assert.ok(kilogramRows.length > 0, "the fixture category must carry prices");
+
+  assert.equal(
+    baselines["میلگرد"].unitPriceTomanPerKg,
+    summarisePricedRows(kilogramRows).average,
+    "the quote must average the rows the page averages",
+  );
+
+  // And the excluded row is still a real, visible price in the table.
+  assert.ok(
+    categoryPricedRows(ribbed).length >= kilogramRows.length,
+    "excluding a row from the average must not remove it from the catalog",
+  );
 });

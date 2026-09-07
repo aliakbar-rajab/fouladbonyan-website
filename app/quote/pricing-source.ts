@@ -1,4 +1,7 @@
-import { categoryPricedRows } from "../catalog-pricing.mjs";
+import {
+  categoryCrediblePricedRows,
+  isPricedRow,
+} from "../catalog-pricing.mjs";
 import type {
   CatalogCategory,
   CatalogRow,
@@ -52,8 +55,18 @@ const quoteSources: Partial<Record<QuoteProductName, QuoteSource>> = {
 const averageToman = (prices: number[]) =>
   Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length);
 
+/**
+ * The per-kilogram prices a `Price estimate` averages.
+ *
+ * Credible rows, not every priced row -- the same rows the catalog page
+ * averages into its `Displayed price summary`. Reading the raw rows here meant
+ * a placeholder upstream price fed the pre-invoice after the page above it had
+ * already excluded that row: ribbed rebar carries one 1,400 تومان/kg row
+ * beside a 75,100 median, and it put the estimate 354 تومان/kg below the
+ * average the visitor had just read on the same category's own page.
+ */
 function extractKilogramPrices(category: CatalogCategory): number[] {
-  return categoryPricedRows(category)
+  return categoryCrediblePricedRows(category)
     .filter((row) => row.unit === "کیلوگرم")
     .map((row) => row.price);
 }
@@ -64,14 +77,16 @@ function extractPieceOptions(
 ): QuotePieceOptionChoice[] {
   if (!category) return [];
 
+  /*
+   * Every priced row of this unit, not only the credible ones. A piece option
+   * is a row the visitor picks by name, the same way the catalog table shows
+   * every row's real price; credibility is a question about aggregates.
+   */
   return category.factories
     .flatMap((factory) => factory.rows)
     .filter(
       (row): row is CatalogRow & { price: number } =>
-        row.unit === unit &&
-        typeof row.price === "number" &&
-        Number.isFinite(row.price) &&
-        row.price > 0,
+        row.unit === unit && isPricedRow(row),
     )
     .map((row) => ({
       key: `${category.id}:${row.id}`,
