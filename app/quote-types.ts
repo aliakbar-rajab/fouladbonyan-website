@@ -98,10 +98,32 @@ export type QuoteItemEvaluation = {
   approximateTotalRial: number | null;
   unitPriceRial: number | null;
   weightInKg: number | null;
-  priceExplanation: string;
   supportsPieceUnits: boolean;
   requiresRebarDiameter: boolean;
 };
+
+/**
+ * What a `Price estimate` is calculated from, for one product: the average
+ * per-kilogram price of the credible catalog rows behind it, the real rows a
+ * visitor may pick by the piece, and the weight formula, if any, that turns a
+ * branch count into kilograms.
+ *
+ * Only what the calculation reads. It once also carried min, max, a row count,
+ * a snapshot date and a `supportsPieceUnits` flag; nothing consumed any of
+ * them, and the flag had already been superseded by
+ * `quoteProductSupportsPieceUnits`, which is a domain rule rather than a
+ * side effect of loading prices.
+ */
+export type ProductPricingBaseline = {
+  product: QuoteProductName;
+  unitPriceTomanPerKg: number;
+  pieceOptions: QuotePieceOptionChoice[];
+  branchWeight?: "rebar-12m";
+};
+
+export type QuotePricingBaselines = Partial<
+  Record<QuoteProductName, ProductPricingBaseline>
+>;
 
 /** Aggregated pricing totals across all items. */
 export type QuoteTotals = {

@@ -13,6 +13,15 @@ import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
 import { createQuoteEvaluator } from "../app/quote/evaluator.ts";
 import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
 
+/*
+ * The form reaches pricing only through estimateItems, so the tests do too.
+ * evaluateItem/evaluateItems/getPieceOptions/requiresRebarDiameter were four
+ * public members that forwarded here; the estimate is a superset of what they
+ * each returned.
+ */
+const evaluateItem = (evaluator, item) => evaluator.estimateItems([item]).items[0];
+
+
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("all required informational pages are defined and the intended links stay in place", async () => {
@@ -118,26 +127,21 @@ test("quote estimates reuse site price data and calculate weight-based totals", 
   const estimate = {
     product: "میلگرد",
     unitPriceTomanPerKg: 67_293,
-    minPriceTomanPerKg: 67_293,
-    maxPriceTomanPerKg: 67_293,
-    rowCount: 1,
-    date: "امروز",
-    supportsPieceUnits: false,
   };
   const estimates = { میلگرد: estimate };
   const mockEvaluator = createQuoteEvaluator(estimates);
 
-  const tonneItem = mockEvaluator.evaluateItem(
+  const tonneItem = evaluateItem(mockEvaluator, 
     { product: "میلگرد", quantity: "1", unit: "تن" },
   );
   assert.equal(tonneItem.approximateTotalToman, 67_293_000);
 
-  const kgItem = mockEvaluator.evaluateItem(
+  const kgItem = evaluateItem(mockEvaluator, 
     { product: "میلگرد", quantity: "10", unit: "کیلوگرم" },
   );
   assert.equal(kgItem.approximateTotalToman, 672_930);
 
-  const pieceItem = mockEvaluator.evaluateItem(
+  const pieceItem = evaluateItem(mockEvaluator, 
     { product: "میلگرد", quantity: "2", unit: "شاخه" },
   );
   assert.equal(pieceItem.approximateTotalToman, null);
@@ -146,7 +150,7 @@ test("quote estimates reuse site price data and calculate weight-based totals", 
     extractQuotePricingBaselines(await loadAllGroupCatalogs()),
   );
   for (const product of ["میلگرد", "تیرآهن", "هاش", "ورق فولادی"]) {
-    const evaluated = evaluator.evaluateItem({ product, quantity: "1", unit: "تن" });
+    const evaluated = evaluateItem(evaluator, { product, quantity: "1", unit: "تن" });
     assert.ok(evaluated.approximateTotalToman !== null && evaluated.approximateTotalToman > 0);
   }
 });

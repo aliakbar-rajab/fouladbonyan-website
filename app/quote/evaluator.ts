@@ -3,7 +3,6 @@ import {
   evaluateItemPricing,
   isPieceUnit,
 } from "./calculation";
-import type { QuotePricingBaselines } from "./pricing-types";
 import {
   buildQuoteDocument,
   buildQuoteMessage,
@@ -16,7 +15,7 @@ import type {
   QuoteEvaluationResult,
   QuoteItemEvaluation,
   QuotePieceOptionChoice,
-  QuoteProductName,
+  QuotePricingBaselines,
   QuoteTotals,
   QuoteUnit,
   RawQuoteItem,
@@ -36,18 +35,18 @@ export type QuoteItemEstimate = QuoteItemEvaluation & {
   unitPriceTomanPerKg: number | null;
 };
 
+/**
+ * What the quote form may ask of pricing.
+ *
+ * Three members, because three is what the form calls. It used to expose
+ * seven: `evaluateItem` and `evaluateItems` forwarded straight to
+ * calculation.ts, and `getPieceOptions` and `requiresRebarDiameter` answered
+ * questions whose answers already travel on the estimate -- so completely that
+ * a test had to forbid the form from naming them in order to keep the seam
+ * from eroding. All four are still reachable through `estimateItems`, which is
+ * the path the form actually takes.
+ */
 export type QuoteEvaluator = {
-  /** Evaluate a single line item against market pricing baselines. */
-  evaluateItem: (
-    item: Partial<RawQuoteItem> | null | undefined,
-  ) => QuoteItemEvaluation;
-
-  /** Evaluate multiple line items and compute aggregated totals. */
-  evaluateItems: (items: (Partial<RawQuoteItem> | null | undefined)[]) => {
-    items: QuoteItemEvaluation[];
-    totals: QuoteTotals;
-  };
-
   /** Evaluate items into the presentation-ready shape the quote form renders. */
   estimateItems: (
     items: (Partial<RawQuoteItem> | null | undefined)[],
@@ -69,33 +68,27 @@ export type QuoteEvaluator = {
 
   /** Validate and evaluate a complete quote request (pricing, validation, message, document). */
   evaluateRequest: (request: RawQuoteRequest) => QuoteEvaluationResult;
-
-  /** Retrieve piece unit options for a product from catalog pricing. */
-  getPieceOptions: (product: QuoteProductName | "") => QuotePieceOptionChoice[];
-
-  /** Whether the product requires rebar diameter for piece weight calculations. */
-  requiresRebarDiameter: (product: QuoteProductName | "") => boolean;
 };
 
 /**
  * Construct a QuoteEvaluator over already-derived pricing baselines.
- * Catalog translation belongs to the infrastructure layer (pricing-source).
+ * Catalog translation belongs to pricing-source.
  */
 export function createQuoteEvaluator(
   source?: QuotePricingBaselines | null,
 ): QuoteEvaluator {
   const baselines = source ?? {};
 
-  const evaluateItem = (
-    item: Partial<RawQuoteItem> | null | undefined,
-  ): QuoteItemEvaluation => evaluateItemPricing(item, baselines);
-
   const evaluateItems = (
     items: (Partial<RawQuoteItem> | null | undefined)[],
   ): { items: QuoteItemEvaluation[]; totals: QuoteTotals } => {
-    const evaluatedItems = (items ?? []).map(evaluateItem);
-    const totals = aggregateQuoteTotals(evaluatedItems);
-    return { items: evaluatedItems, totals };
+    const evaluatedItems = (items ?? []).map((item) =>
+      evaluateItemPricing(item, baselines),
+    );
+    return {
+      items: evaluatedItems,
+      totals: aggregateQuoteTotals(evaluatedItems),
+    };
   };
 
   const estimateItems = (
@@ -106,15 +99,22 @@ export function createQuoteEvaluator(
       totals: evaluation.totals,
       items: evaluation.items.map((item) => ({
         ...item,
-        pieceOptions: getPieceOptions(item.product),
-        isPieceUnit: item.unit === "شاخه" || item.unit === "عدد",
+        pieceOptions: item.product
+          ? (baselines[item.product]?.pieceOptions ?? [])
+          : [],
+        isPieceUnit: isPieceUnit(item.unit),
+        /*
+         * The per-kilogram figure the form's hint shows. Distinct from
+         * `unitPriceRial`, which is per *order* unit -- per tonne, per branch
+         * -- and is what the printed sheet's «مبلغ واحد» column carries.
+         */
         unitPriceTomanPerKg:
           item.weightInKg && item.approximateTotalToman !== null
             ? Math.round(item.approximateTotalToman / item.weightInKg)
             : null,
-        availableUnits: quoteProductSupportsPieceUnits(item.product)
+        availableUnits: item.supportsPieceUnits
           ? [...quoteUnits]
-          : quoteUnits.filter((unit) => unit !== "شاخه" && unit !== "عدد"),
+          : quoteUnits.filter((unit) => !isPieceUnit(unit)),
       })),
     };
   };
@@ -168,25 +168,5 @@ export function createQuoteEvaluator(
     };
   };
 
-  const getPieceOptions = (
-    product: QuoteProductName | "",
-  ): QuotePieceOptionChoice[] => {
-    if (!product || !baselines[product]) return [];
-    return baselines[product]?.pieceOptions ?? [];
-  };
-
-  const requiresRebarDiameter = (product: QuoteProductName | ""): boolean => {
-    if (!product || !baselines[product]) return false;
-    return Boolean(baselines[product]?.branchWeight);
-  };
-
-  return {
-    evaluateItem,
-    evaluateItems,
-    estimateItems,
-    applyItemChange,
-    evaluateRequest,
-    getPieceOptions,
-    requiresRebarDiameter,
-  };
+  return { estimateItems, applyItemChange, evaluateRequest };
 }

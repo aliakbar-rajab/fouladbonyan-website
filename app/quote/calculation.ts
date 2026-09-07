@@ -2,22 +2,22 @@ import { calculateRebarWeight } from "../catalog-behavior.mjs";
 import { formatPersianNumber } from "../persian-numbers.mjs";
 import { parsePersianNumber } from "../persian-numbers.mjs";
 import type {
+  ProductPricingBaseline,
   QuoteItemEvaluation,
   QuotePieceOptionChoice,
+  QuotePricingBaselines,
   QuoteProductName,
   QuoteTotals,
   RawQuoteItem,
 } from "../quote-types";
 import { quoteProductSupportsPieceUnits } from "../quote-types";
-import type {
-  ProductPricingBaseline,
-  QuotePricingBaselines,
-} from "./pricing-types";
 
-export const RIAL_PER_TOMAN = 10;
-export const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
+/* CONTEXT.md, Currency representation: rial per toman is a representation
+ * change, not markup or VAT. Nothing outside this module converts. */
+const RIAL_PER_TOMAN = 10;
+const REBAR_STANDARD_BRANCH_LENGTH_M = 12;
 
-export const tomanToRial = (toman: number): number => toman * RIAL_PER_TOMAN;
+const tomanToRial = (toman: number): number => toman * RIAL_PER_TOMAN;
 
 export const formatToman = (value: number): string =>
   `${formatPersianNumber(value)} تومان`;
@@ -34,55 +34,6 @@ function resolvePieceOption(
 ): QuotePieceOptionChoice | undefined {
   if (!pieceOptionKey || !baseline?.pieceOptions?.length) return undefined;
   return baseline.pieceOptions.find((option) => option.key === pieceOptionKey);
-}
-
-function buildPriceExplanation({
-  product,
-  quantity,
-  unit,
-  approximateTotalToman,
-  baseline,
-  pieceOption,
-  rebarDiameterMm,
-  pieceOptionKey,
-}: {
-  product: QuoteProductName | "";
-  quantity: string;
-  unit: string;
-  approximateTotalToman: number | null;
-  baseline: ProductPricingBaseline | undefined;
-  pieceOption: QuotePieceOptionChoice | undefined;
-  rebarDiameterMm: string;
-  pieceOptionKey: string;
-}): string {
-  const byPiece = isPieceUnit(unit);
-
-  if (!product) {
-    return "پس از انتخاب کالا و واردکردن مقدار، قیمت تقریبی نمایش داده می‌شود.";
-  }
-  if (!baseline) {
-    return "برای این کالا قیمت وزنی قابل محاسبه نیست؛ با واحد فروش تماس بگیرید.";
-  }
-  if (byPiece && baseline.branchWeight && !rebarDiameterMm) {
-    return `برای محاسبه قیمت بر اساس ${unit}، قطر میلگرد (میلی‌متر) را در فیلد بالا وارد کنید.`;
-  }
-  if (byPiece && (baseline.pieceOptions?.length ?? 0) > 0 && !pieceOptionKey) {
-    return "برای محاسبه قیمت، آیتم دقیق را از فهرست قیمت سایت در فیلد بالا انتخاب کنید.";
-  }
-  if (approximateTotalToman === null || !quantity.trim()) {
-    return "برای مشاهده برآورد، مقدار معتبر بزرگ‌تر از صفر وارد کنید.";
-  }
-
-  if (pieceOption) {
-    return `قیمت واقعی سایت برای ${pieceOption.label}: ${formatToman(pieceOption.priceToman)} برای هر ${pieceOption.unit} | قیمت تقریبی: ${formatToman(approximateTotalToman)}`;
-  }
-
-  const weightDetail =
-    baseline.branchWeight && byPiece
-      ? ` (بر اساس وزن تقریبی هر ${unit} با فرمول استاندارد میلگرد و طول شاخه ${formatPersianNumber(REBAR_STANDARD_BRANCH_LENGTH_M)} متر)`
-      : "";
-
-  return `میانگین داده قیمت سایت: ${formatToman(baseline.unitPriceTomanPerKg)} برای هر کیلوگرم${weightDetail} | قیمت تقریبی: ${formatToman(approximateTotalToman)}`;
 }
 
 export function evaluateItemPricing(
@@ -150,17 +101,6 @@ export function evaluateItemPricing(
       ? null
       : Math.round(approximateTotalRial / quantityNumeric);
 
-  const priceExplanation = buildPriceExplanation({
-    product,
-    quantity: rawQuantity,
-    unit,
-    approximateTotalToman,
-    baseline,
-    pieceOption,
-    rebarDiameterMm: rawDiameter,
-    pieceOptionKey,
-  });
-
   return {
     id,
     product,
@@ -177,7 +117,6 @@ export function evaluateItemPricing(
     approximateTotalRial,
     unitPriceRial,
     weightInKg,
-    priceExplanation,
     supportsPieceUnits: quoteProductSupportsPieceUnits(product),
     requiresRebarDiameter: Boolean(baseline?.branchWeight),
   };

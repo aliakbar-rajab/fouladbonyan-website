@@ -28,6 +28,14 @@ import {
   summarisePricedRows,
 } from "../app/catalog-pricing.mjs";
 
+/*
+ * The form reaches pricing only through estimateItems, so the tests do too.
+ * evaluateItem/evaluateItems/getPieceOptions/requiresRebarDiameter were four
+ * public members that forwarded here; the estimate is a superset of what they
+ * each returned.
+ */
+const evaluateItem = (evaluator, item) => evaluator.estimateItems([item]).items[0];
+
 const contact = {
   fullName: "کاربر آزمایشی",
   phone: "09121234567",
@@ -44,30 +52,25 @@ test("React consumes the quote estimate flow without coordinating evaluator inte
   assert.match(source, /evaluator\.evaluateRequest\(/);
   assert.match(source, /validateQuoteField\(/);
   assert.doesNotMatch(source, /createQuoteEvaluator|loadQuoteEvaluator|QuoteEvaluator/);
-  assert.doesNotMatch(source, /supportsPieceUnits|getPieceOptions/);
+  /*
+   * The form reads availableUnits, not the raw capability flag behind it.
+   * getPieceOptions used to be forbidden here too; it is now simply not on the
+   * interface, so the seam holds by construction rather than by grep.
+   */
+  assert.doesNotMatch(source, /supportsPieceUnits/);
   assert.doesNotMatch(source, /approximateTotalToman\s*\/\s*priced\.weightInKg/);
 });
 
 const rebarEstimate = {
   product: "میلگرد",
   unitPriceTomanPerKg: 60_000,
-  minPriceTomanPerKg: 60_000,
-  maxPriceTomanPerKg: 60_000,
-  rowCount: 1,
-  date: "امروز",
   branchWeight: "rebar-12m",
-  supportsPieceUnits: true,
   pieceOptions: [],
 };
 
 const beamEstimate = {
   product: "تیرآهن",
   unitPriceTomanPerKg: 70_000,
-  minPriceTomanPerKg: 70_000,
-  maxPriceTomanPerKg: 70_000,
-  rowCount: 1,
-  date: "امروز",
-  supportsPieceUnits: true,
   pieceOptions: [
     { key: "beam:14", label: "تیرآهن — ۱۴", unit: "شاخه", priceToman: 5_500_000 },
   ],
@@ -76,11 +79,6 @@ const beamEstimate = {
 const pipeEstimate = {
   product: "لوله فولادی",
   unitPriceTomanPerKg: 45_000,
-  minPriceTomanPerKg: 40_000,
-  maxPriceTomanPerKg: 50_000,
-  rowCount: 5,
-  date: "امروز",
-  supportsPieceUnits: false,
   pieceOptions: [],
 };
 
@@ -242,10 +240,10 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
     extractQuotePricingBaselines(mockSnapshot),
   );
   assert.equal(quoteProductSupportsPieceUnits("میلگرد"), true);
-  assert.equal(evaluator.requiresRebarDiameter("میلگرد"), true);
-  assert.equal(evaluator.requiresRebarDiameter("تیرآهن"), false);
+  assert.equal(evaluateItem(evaluator, { product: "میلگرد" }).requiresRebarDiameter, true);
+  assert.equal(evaluateItem(evaluator, { product: "تیرآهن" }).requiresRebarDiameter, false);
 
-  const beamPieceOptions = evaluator.getPieceOptions("تیرآهن");
+  const beamPieceOptions = evaluateItem(evaluator, { product: "تیرآهن" }).pieceOptions;
   assert.equal(beamPieceOptions.length, 2);
   assert.equal(beamPieceOptions[0].unit, "شاخه");
   assert.equal(beamPieceOptions[0].priceToman, 6_000_000);
@@ -259,7 +257,7 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
   assert.match(beamPieceOptions[1].label, /سنگین/);
 
   // Evaluate rebar branch with diameter 14
-  const rebarItem = evaluator.evaluateItem({
+  const rebarItem = evaluateItem(evaluator, {
     id: 1,
     product: "میلگرد",
     quantity: "10",
@@ -270,7 +268,7 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
   assert.ok(rebarItem.weightInKg !== null && rebarItem.weightInKg > 0);
 
   // Evaluate beam piece option
-  const beamItem = evaluator.evaluateItem({
+  const beamItem = evaluateItem(evaluator, {
     id: 2,
     product: "تیرآهن",
     quantity: "2",
@@ -283,7 +281,7 @@ test("catalog snapshot to quote evaluator extracts accurate baseline prices and 
 
 test("missing or partial catalog prices handle unpriced products gracefully", () => {
   const evaluator = createQuoteEvaluator({}); // empty catalog
-  const item = evaluator.evaluateItem({
+  const item = evaluateItem(evaluator, {
     id: 1,
     product: "ورق فولادی",
     quantity: "5",
@@ -293,7 +291,14 @@ test("missing or partial catalog prices handle unpriced products gracefully", ()
   assert.equal(item.approximateTotalToman, null);
   assert.equal(item.approximateTotalRial, null);
   assert.equal(item.unitPriceRial, null);
-  assert.match(item.priceExplanation, /با واحد فروش تماس بگیرید/);
+  /*
+   * The item carries no baseline, which is what the form's hint reads to tell
+   * the visitor to phone. It used to also carry a priceExplanation string
+   * saying so; nothing rendered it, the hint's JSX had said the same thing in
+   * parallel for some time, and the two had already drifted apart.
+   */
+  assert.equal(item.unitPriceTomanPerKg, null);
+  assert.equal(item.pieceOptions.length, 0);
 
   const requestResult = evaluator.evaluateRequest({
     contact: { fullName: "تست", phone: "09121111111", destination: "تهران", notes: "" },
@@ -387,7 +392,7 @@ test("evaluator evaluates items and computes accurate Toman and Rial for weight,
   const evaluator = createQuoteEvaluator(allEstimates);
 
   // 1. Weight based (tonne -> 2 tonnes @ 45,000 toman/kg = 90,000,000 toman)
-  const weightItem = evaluator.evaluateItem({
+  const weightItem = evaluateItem(evaluator, {
     id: 1,
     product: "لوله فولادی",
     quantity: "2",
@@ -402,7 +407,7 @@ test("evaluator evaluates items and computes accurate Toman and Rial for weight,
   assert.equal(weightItem.unitPriceRial, 450_000_000);
 
   // 2. Rebar branch weight (10 branches of rebar 16)
-  const rebarItem = evaluator.evaluateItem({
+  const rebarItem = evaluateItem(evaluator, {
     id: 2,
     product: "میلگرد",
     quantity: "۱۰",
@@ -416,7 +421,7 @@ test("evaluator evaluates items and computes accurate Toman and Rial for weight,
   assert.equal(rebarItem.approximateTotalRial, rebarItem.approximateTotalToman * 10);
 
   // 3. Piece option item (5 branches of beam 14 @ 5,500,000 toman = 27,500,000 toman)
-  const beamItem = evaluator.evaluateItem({
+  const beamItem = evaluateItem(evaluator, {
     id: 3,
     product: "تیرآهن",
     quantity: "5",
@@ -454,7 +459,7 @@ test("evaluator evaluateItems aggregates multi-item totals and item counts", () 
     },
   ];
 
-  const pricing = evaluator.evaluateItems(items);
+  const pricing = evaluator.estimateItems(items);
   assert.equal(pricing.totals.totalItemCount, 2);
   assert.equal(pricing.totals.pricedItemCount, 1);
   assert.equal(pricing.totals.hasAnyPriced, true);
@@ -577,7 +582,7 @@ test("product unit capability is stable before and after the asynchronous price 
 
 test("buildQuoteMessage creates a human-readable Persian quote summary with disclaimer", () => {
   const evaluator = createQuoteEvaluator(allEstimates);
-  const evaluation = evaluator.evaluateItems([
+  const evaluation = evaluator.estimateItems([
     {
       id: 1,
       product: "تیرآهن",
@@ -692,7 +697,7 @@ test("validateQuoteRequestInput checks full form structure correctly — no cata
 
 test("buildQuoteDocument generates complete printable document structure", () => {
   const evaluator = createQuoteEvaluator(allEstimates);
-  const evaluation = evaluator.evaluateItems([
+  const evaluation = evaluator.estimateItems([
     {
       id: 1,
       product: "میلگرد",
@@ -747,7 +752,7 @@ test("quote evaluator evaluates against live catalog files", async () => {
   const evaluator = createQuoteEvaluator(
     extractQuotePricingBaselines(await loadAllGroupCatalogs()),
   );
-  const rebarEvaluation = evaluator.evaluateItem({
+  const rebarEvaluation = evaluateItem(evaluator, {
     id: 1,
     product: "میلگرد",
     quantity: "1",

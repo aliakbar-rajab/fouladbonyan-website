@@ -10,8 +10,11 @@ import type {
 } from "../catalog-types";
 import type { ProductGroupId } from "../category-meta";
 import { localizeCatalogValue } from "../catalog-presentation";
-import type { QuotePieceOptionChoice, QuoteProductName } from "../quote-types";
-import type { QuotePricingBaselines } from "./pricing-types";
+import type {
+  QuotePieceOptionChoice,
+  QuotePricingBaselines,
+  QuoteProductName,
+} from "../quote-types";
 
 type BranchWeightFormula = "rebar-12m";
 
@@ -144,14 +147,8 @@ export function extractQuotePricingBaselines(
     baselines[product] = {
       product,
       unitPriceTomanPerKg: averageToman(prices),
-      minPriceTomanPerKg: Math.min(...prices),
-      maxPriceTomanPerKg: Math.max(...prices),
-      rowCount: prices.length,
-      date: pricedCategory.summary?.date ?? "امروز",
       pieceOptions,
       ...(src.branchWeight ? { branchWeight: src.branchWeight } : {}),
-      supportsPieceUnits:
-        pieceOptions.length > 0 || Boolean(src.branchWeight),
     };
   }
 
