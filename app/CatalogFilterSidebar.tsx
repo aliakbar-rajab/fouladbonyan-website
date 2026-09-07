@@ -1,44 +1,47 @@
-import type { ReactNode } from "react";
-import type { CatalogCategory } from "./catalog-types";
+import { useId, type ReactNode } from "react";
+import type { CatalogCategory, GroupCatalog } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
 import { localizeCatalogValue } from "./catalog-presentation";
 import { PhoneIcon } from "./icons";
 
+const fetchedDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  dateStyle: "short",
+  timeStyle: "short",
+  timeZone: "Asia/Tehran",
+});
+
 export function CatalogFilterSidebar({
-  catalogLabel,
+  catalog,
   category,
   factoryFilter,
   sizeFilter,
   activeFilterCount,
-  factorySelectId,
-  sizeSelectId,
-  fetchedDate,
-  sourceName,
   phoneHref,
   sidebarExtra,
   onFactoryFilterChange,
   onSizeFilterChange,
   onClearFilters,
 }: {
-  catalogLabel: string;
+  catalog: GroupCatalog;
   category: CatalogCategory;
   factoryFilter: string;
   sizeFilter: string;
   activeFilterCount: number;
-  factorySelectId: string;
-  sizeSelectId: string;
-  fetchedDate: string;
-  sourceName: string;
   phoneHref: string;
   sidebarExtra?: ReactNode;
   onFactoryFilterChange: (value: string) => void;
   onSizeFilterChange: (value: string) => void;
   onClearFilters: () => void;
 }) {
+  const baseId = useId();
+  const factorySelectId = `${baseId}-factory-select`;
+  const sizeSelectId = `${baseId}-size-select`;
+  const fetchedDate = fetchedDateFormatter.format(new Date(catalog.fetchedAt));
+
   return (
     <aside
       className="rebar-sidebar"
-      aria-label={`فیلترهای قیمت ${catalogLabel}`}
+      aria-label={`فیلترهای قیمت ${catalog.label}`}
     >
       <section className="filter-card">
         <header>
@@ -97,7 +100,7 @@ export function CatalogFilterSidebar({
           از خرید باید با واحد فروش تأیید شوند.
         </p>
         <a href={category.sourceUrl} target="_blank" rel="noreferrer">
-          منبع: {sourceName}
+          منبع: {catalog.sourceName}
         </a>
       </section>
 

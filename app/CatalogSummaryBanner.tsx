@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { getTrendPresentation } from "./catalog-behavior.mjs";
 import {
   categoryCredibleSummary,
+  categoryPricingState,
   hasDisplayablePriceRange,
 } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
@@ -19,19 +20,21 @@ export function CatalogSummaryBanner({
   fetchedAt,
   taxIncluded,
   taxRate,
-  pricingState,
 }: {
   category: CatalogCategory;
   fetchedAt: string;
   taxIncluded: boolean;
   taxRate: number;
-  pricingState: { hasPrices: boolean; units: string[] };
 }) {
   const summaryPrice = (price: number) =>
     presentPrice(price, { taxIncluded, taxRate }).text;
   const trend = getTrendPresentation(
     category.summary.status,
     category.summary.percent,
+  );
+  const pricingState = useMemo(
+    () => categoryPricingState(category),
+    [category],
   );
 
   /*

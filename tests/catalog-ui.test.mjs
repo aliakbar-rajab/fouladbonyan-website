@@ -84,8 +84,6 @@ const catalog = {
   ],
 };
 
-const presentation = {};
-
 const phoneHref = "tel:+982100000000";
 
 /*
@@ -115,7 +113,6 @@ const renderWide = () =>
         initialCategoryId: "wide",
         categories: [wideCategory()],
       },
-      presentation: {},
       phoneHref,
     }),
   );
@@ -172,7 +169,6 @@ test("catalog category pages use truthful navigation-link semantics", () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -198,7 +194,6 @@ test("trend direction is textual and no fake chart is exposed", () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -222,7 +217,6 @@ test("catalog rows alternate between light and dark treatments", () => {
         initialCategoryId: "striped",
         categories: [stripedCategory],
       },
-      presentation: { categoryIcons: { striped: "۱" } },
       phoneHref,
     }),
   );
@@ -244,7 +238,6 @@ test("F4: a sub-one-percent move keeps its magnitude instead of showing zero", (
         initialCategoryId: "only",
         categories: [category("only", "آزمون", smallMove)],
       },
-      presentation: { categoryIcons: { only: "۱" } },
       phoneHref,
     }),
   );
@@ -268,7 +261,6 @@ test("F4: a whole-number move is not padded with decimals", () => {
         initialCategoryId: "only",
         categories: [category("only", "آزمون", row(4, "down", -3))],
       },
-      presentation: { categoryIcons: { only: "۱" } },
       phoneHref,
     }),
   );
@@ -315,7 +307,6 @@ test("calculator rejects fractional branch quantities", async () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
       sidebarExtra: React.createElement(RebarWeightCalculator),
     }),
@@ -337,7 +328,6 @@ test("calculator rejects zero or non-numeric diameter and length", async () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
       sidebarExtra: React.createElement(RebarWeightCalculator),
     }),
@@ -442,7 +432,6 @@ test("every row's quote action is an anchor on the one clean URL", async () => {
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -481,7 +470,6 @@ test("a catalog row carries validated product details into the quote form", asyn
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -576,7 +564,6 @@ test("the quote action is reachable and activatable from the keyboard", async ()
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -617,7 +604,6 @@ test("a modifier-click still opens normally and still hands off the prefill", as
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
     }),
   );
@@ -860,7 +846,6 @@ test("a filter this category does not offer is ignored rather than held invisibl
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
       requestedView: {
         requestId: 1,
@@ -894,7 +879,6 @@ test("a filter this category does offer is still applied from the link", async (
   render(
     React.createElement(PriceCatalog, {
       catalog,
-      presentation,
       phoneHref,
       requestedView: {
         requestId: 1,
