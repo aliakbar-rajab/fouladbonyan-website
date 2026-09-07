@@ -28,6 +28,8 @@ Treat the current repository state, configuration, and the user's latest instruc
 
 - New dependencies are allowed when they are useful.
 
+- Styling is one global stylesheet, imported once by the browser entry, because the prerender and the jsdom tests run page components under plain `node --import tsx`, which cannot parse a CSS import. Component-scoped CSS (CSS Modules and similar) therefore needs a stub loader wired into both before any component can import a stylesheet. That is a real piece of work, not a preference — cost it before proposing it. `tests/stylesheet-cascade.test.mjs` keeps the global namespace honest in the meantime.
+
 - Performance is not a primary project constraint. Do not weaken visual quality, interaction, animation, or UX merely to reduce JavaScript, bundle size, or rendering cost. Address performance when the site becomes genuinely slow, unstable, or annoying to use.
 
 ## Company Information and Content
