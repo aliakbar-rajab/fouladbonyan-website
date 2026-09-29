@@ -13,19 +13,17 @@ name: Deploy price-refresh Worker
 on:
   push:
     branches: ["main"]
-    # Everything the Worker bundle actually pulls in. catalog-validation.mjs
-    # imports catalog-pricing.mjs -- the definition of a priced row and of a
-    # category summary -- so a change there moves what the live Worker accepts
-    # while leaving the deployed copy behind, which is the exact drift this
-    # workflow exists to close. price-catalog-config.mjs itself imports
-    # catalog-taxonomy.mjs (the shared source of every catalog/subcategory id,
-    # label and initial category), so that file is transitively bundled too.
+    # Everything the Worker bundle actually pulls in: its own directory plus
+    # the Catalog snapshot contract and that contract's imports. A change to
+    # any of them moves what the live Worker accepts, so it must redeploy.
+    # tests/worker-deploy-paths.test.mjs walks the Worker's import graph and
+    # fails if a file it reaches is missing here.
     paths:
       - "workers/price-refresh/**"
       - "app/catalog-validation.mjs"
       - "app/catalog-pricing.mjs"
       - "app/catalog-taxonomy.mjs"
-      - "scripts/price-catalog-config.mjs"
+      - "app/catalog-trend.mjs"
 
   workflow_dispatch:
 

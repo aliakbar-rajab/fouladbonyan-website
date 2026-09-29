@@ -1,4 +1,3 @@
-import { allCatalogConfigs } from "../../scripts/price-catalog-config.mjs";
 import {
   isRecord,
   validateCatalogSnapshot,
@@ -19,12 +18,7 @@ function normalizeToSnapshot(payloads) {
 
 export function validateAll(payloads) {
   const snapshot = normalizeToSnapshot(payloads);
-  validateCatalogSnapshot(snapshot, {
-    expectedCatalogs: allCatalogConfigs.map((catalog) => ({
-      id: catalog.id,
-      categoryIds: catalog.sources.map((source) => source.id),
-    })),
-  });
+  validateCatalogSnapshot(snapshot);
   return snapshot;
 }
 

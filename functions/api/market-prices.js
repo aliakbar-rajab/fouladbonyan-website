@@ -1,4 +1,4 @@
-import { validateMarketPriceData } from "../../app/catalog-validation.mjs";
+import { validateMarketPriceData } from "../../app/market-price-validation.mjs";
 
 // Cloudflare Pages Function, served same-origin at /api/market-prices.
 // Runs at *request* time (not build time), so it can genuinely refresh

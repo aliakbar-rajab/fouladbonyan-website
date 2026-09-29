@@ -1,5 +1,19 @@
-import { summarisePricedRows } from "./catalog-pricing.mjs";
-
+/**
+ * The Catalog snapshot contract: what a payload must be before it may replace
+ * the stored snapshot (Worker ingest), be written to disk (fetch, pull) or be
+ * built into the site (validate). There is one contract, not a family of
+ * options: the expected catalogs and categories — ids, labels, order and
+ * initial categories — are read from catalog-taxonomy.mjs here, rather than
+ * being re-derived from the scrape config and passed in by each caller, which
+ * made the "every expected category" half of the rule optional and dragged
+ * build tooling into the Worker bundle.
+ *
+ * Everything this file imports is bundled into the price-refresh Worker;
+ * tests/worker-deploy-paths.test.mjs keeps the Worker's deploy trigger in step
+ * with that import closure.
+ */
+import { catalogGroups } from "./catalog-taxonomy.mjs";
+import { isPricedRow, summarisePricedRows } from "./catalog-pricing.mjs";
 import { MAX_RELIABLE_TREND_PERCENT } from "./catalog-trend.mjs";
 
 const VALID_STATUSES = new Set(["up", "down", "same", "unverified"]);
@@ -31,7 +45,7 @@ function validateSummary(summary, location, rows) {
   }
   validateTrend(summary.status, summary.percent, `${location}.summary`);
 
-  const pricedRows = rows.filter((row) => row.price !== null);
+  const pricedRows = rows.filter(isPricedRow);
   if (!pricedRows.length) {
     assert(
       summary.min === 0 && summary.max === 0 && summary.average === 0,
@@ -190,10 +204,40 @@ function validateEnvelope(payload, location) {
   );
 }
 
-export function validateCatalogSnapshot(
-  payload,
-  { expectedCatalogs } = {},
-) {
+function validateAgainstTaxonomy(payload) {
+  assert(
+    payload.catalogs.length === catalogGroups.length,
+    "تعداد کاتالوگ‌ها با قرارداد منبع همخوان نیست",
+  );
+  catalogGroups.forEach((group, index) => {
+    const actual = payload.catalogs[index];
+    assert(actual.id === group.id, `کاتالوگ ${group.id} جابه‌جا شده است`);
+    assert(
+      actual.label === group.label,
+      `برچسب کاتالوگ ${group.id} با قرارداد منبع همخوان نیست`,
+    );
+    assert(
+      actual.initialCategoryId === group.initialCategoryId,
+      `دسته آغازین کاتالوگ ${group.id} با قرارداد منبع همخوان نیست`,
+    );
+    assert(
+      actual.categories.length === group.subcategories.length &&
+        group.subcategories.every(
+          (expected, categoryIndex) =>
+            actual.categories[categoryIndex].id === expected.id &&
+            actual.categories[categoryIndex].label === expected.label,
+        ),
+      `دسته‌های کاتالوگ ${group.id} با قرارداد منبع همخوان نیست`,
+    );
+  });
+}
+
+/**
+ * Throws unless `payload` is a complete, publishable Catalog snapshot: every
+ * catalog and category the taxonomy expects, in its order, each internally
+ * consistent. Returns the payload unchanged.
+ */
+export function validateCatalogSnapshot(payload) {
   validateEnvelope(payload, "catalog");
   assert(Array.isArray(payload.catalogs), "catalog.catalogs آرایه نیست");
   assert(payload.catalogs.length > 0, "catalog.catalogs خالی است");
@@ -220,84 +264,7 @@ export function validateCatalogSnapshot(
     catalog.categories.forEach((category, categoryIndex) =>
       validateCategory(category, `${location}.categories[${categoryIndex}]`),
     );
-    assert(
-      catalog.categories.some(
-        (category) => category.id === catalog.initialCategoryId,
-      ),
-      `${location}.initialCategoryId در دسته‌ها وجود ندارد`,
-    );
   });
-
-  if (expectedCatalogs) {
-    assert(
-      payload.catalogs.length === expectedCatalogs.length,
-      "تعداد کاتالوگ‌ها با قرارداد منبع همخوان نیست",
-    );
-    expectedCatalogs.forEach((expected, index) => {
-      const actual = payload.catalogs[index];
-      assert(actual?.id === expected.id, `کاتالوگ ${expected.id} جابه‌جا شده است`);
-      assert(
-        actual.categories.length === expected.categoryIds.length &&
-          expected.categoryIds.every(
-            (id, categoryIndex) =>
-              actual.categories[categoryIndex]?.id === id,
-          ),
-        `دسته‌های کاتالوگ ${expected.id} با قرارداد منبع همخوان نیست`,
-      );
-    });
-  }
-  return payload;
-}
-
-const MARKET_ITEM_IDS = ["gold", "usd", "tether", "eur"];
-
-export function validateMarketPriceData(payload) {
-  assert(isRecord(payload), "market شیء نیست");
-  assert(
-    typeof payload.fetchedAt === "string" &&
-      Number.isFinite(Date.parse(payload.fetchedAt)),
-    "market.fetchedAt معتبر نیست",
-  );
-  assert(
-    typeof payload.sourceName === "string" && payload.sourceName.trim(),
-    "market.sourceName خالی است",
-  );
-  assert(
-    typeof payload.sourceUrl === "string" &&
-      /^https:\/\//.test(payload.sourceUrl),
-    "market.sourceUrl معتبر نیست",
-  );
-  assert(Array.isArray(payload.items), "market.items آرایه نیست");
-  assert(
-    payload.items.length === MARKET_ITEM_IDS.length &&
-      MARKET_ITEM_IDS.every((id, index) => payload.items[index]?.id === id),
-    "ترتیب یا تعداد آیتم‌های بازار با قرارداد منبع همخوان نیست",
-  );
-  payload.items.forEach((item, index) => {
-    const location = `market.items[${index}]`;
-    assert(isRecord(item), `${location} شیء نیست`);
-    assert(
-      typeof item.label === "string" && item.label.trim(),
-      `${location}.label خالی است`,
-    );
-    assert(
-      typeof item.unit === "string" && item.unit.trim(),
-      `${location}.unit خالی است`,
-    );
-    assert(
-      Number.isFinite(item.price) && item.price > 0,
-      `${location}.price معتبر نیست`,
-    );
-    assert(VALID_STATUSES.has(item.status), `${location}.status معتبر نیست`);
-    assert(
-      Number.isFinite(item.percent) && item.percent >= 0,
-      `${location}.percent معتبر نیست`,
-    );
-    assert(
-      typeof item.updatedAt === "string" &&
-        Number.isFinite(Date.parse(item.updatedAt)),
-      `${location}.updatedAt معتبر نیست`,
-    );
-  });
+  validateAgainstTaxonomy(payload);
   return payload;
 }

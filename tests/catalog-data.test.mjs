@@ -42,6 +42,29 @@ test("committed price payloads pass runtime semantic validation", async () => {
   assert.equal(validateCatalogSnapshot(snapshot), snapshot);
 });
 
+test("a snapshot that drops, reorders or relabels what the taxonomy expects is not publishable", async () => {
+  const snapshot = await readJson("../app/data/catalog-prices.json");
+  const tamperings = {
+    "a missing catalog": (s) => s.catalogs.pop(),
+    "a missing category": (s) => s.catalogs[0].categories.pop(),
+    "reordered catalogs": (s) => s.catalogs.reverse(),
+    "reordered categories": (s) => s.catalogs[0].categories.reverse(),
+    "a relabelled catalog": (s) => (s.catalogs[0].label += " "),
+    "a relabelled category": (s) => (s.catalogs[0].categories[0].label += " "),
+    "a different initial category": (s) =>
+      (s.catalogs[0].initialCategoryId = s.catalogs[0].categories[1].id),
+  };
+  for (const [name, tamper] of Object.entries(tamperings)) {
+    const tampered = structuredClone(snapshot);
+    tamper(tampered);
+    assert.throws(
+      () => validateCatalogSnapshot(tampered),
+      /قرارداد منبع|جابه‌جا/,
+      `${name} must be rejected`,
+    );
+  }
+});
+
 test("F1: every published summary equals the rows it summarises", async () => {
   const snapshot = await readJson("../app/data/catalog-prices.json");
 

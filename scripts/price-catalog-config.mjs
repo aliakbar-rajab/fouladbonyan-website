@@ -1,8 +1,8 @@
 // Scrape configuration for every price category: the slugs and per-source
-// scrape knobs used to build fetch requests (scripts/fetch-*-prices.mjs) and
-// to assert the fetched payload shape (scripts/validate-price-data.mjs).
-// Kept free of network code so validate-price-data.mjs can import it without
-// triggering a live fetch.
+// scrape knobs scripts/lib/price-pipeline.mjs uses to build fetch requests
+// and parse what comes back. Build tooling only — the Catalog snapshot
+// contract (app/catalog-validation.mjs) reads its expectations from the
+// taxonomy, so neither the Worker nor the validate script needs this file.
 //
 // The ids, labels and initial categories themselves live in
 // app/catalog-taxonomy.mjs (the single source of truth shared with
@@ -161,8 +161,7 @@ const scrapeConfigById = {
   },
 };
 
-// The exact shape scripts/lib/price-pipeline.mjs, scripts/validate-price-data.mjs
-// and workers/price-refresh/ingest.mjs depend on: each catalog's id, label,
+// The exact shape scripts/lib/price-pipeline.mjs depends on: each catalog's id, label,
 // initialCategoryId, and each of its sources' id, label plus scrape config —
 // composed from the taxonomy (ids, labels, initial categories) and the
 // scrape config above, rather than written out twice.

@@ -394,12 +394,7 @@ async function buildCatalogSnapshot(options = {}) {
     })),
   };
 
-  validateCatalogSnapshot(snapshot, {
-    expectedCatalogs: catalogs.map((catalog) => ({
-      id: catalog.id,
-      categoryIds: catalog.sources.map((item) => item.id),
-    })),
-  });
+  validateCatalogSnapshot(snapshot);
 
   const enrichedDiagnostics = {
     totalCategories: diagnostics.total,
@@ -486,12 +481,7 @@ export async function pullPriceSnapshot({
       throw new Error(`HTTP ${response.status}`);
     }
     const data = await response.json();
-    validateCatalogSnapshot(data, {
-      expectedCatalogs: allCatalogConfigs.map((catalog) => ({
-        id: catalog.id,
-        categoryIds: catalog.sources.map((source) => source.id),
-      })),
-    });
+    validateCatalogSnapshot(data);
     await writeFile(outputPath, `${JSON.stringify(data, null, 2)}\n`);
     return { ok: true, fetchedAt: data.fetchedAt };
   } catch (error) {
