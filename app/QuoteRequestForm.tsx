@@ -9,13 +9,12 @@ import {
   formatToman,
 } from "./quote/calculation";
 import {
-  isQuoteProduct,
   isQuoteUnit,
   quoteDisclaimer,
-  quoteProductNames,
   type GeneratedQuote,
   type RawQuoteItem,
 } from "./quote-types";
+import { isQuoteProduct, quoteProductNames } from "./quote/products";
 import { takeQuoteHandoff } from "./quote-handoff";
 import { validateQuoteField } from "./quote/validation";
 import type { QuoteItemEstimate } from "./quote/evaluator";
@@ -161,9 +160,9 @@ export function QuoteRequestForm() {
       params.get("dimensions") ??
       ""
     ).slice(0, 240);
-    const matchedProduct = quoteProductNames.find(
-      (product) => product === requestedProduct,
-    );
+    const matchedProduct = isQuoteProduct(requestedProduct)
+      ? requestedProduct
+      : undefined;
     if (!matchedProduct && !requestedDimensions) return;
 
     const frame = window.requestAnimationFrame(() => {

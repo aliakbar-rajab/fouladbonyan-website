@@ -1,49 +1,15 @@
+import type { BranchWeightFormula, QuoteProductName } from "./quote/products";
+
 export const quoteDisclaimer =
   "ثبت این درخواست به معنی ثبت سفارش، انعقاد قرارداد، تضمین موجودی یا قطعی‌شدن قیمت نیست. قیمت و شرایط نهایی پس از بررسی واحد فروش در پیش‌فاکتور دارای مدت اعتبار اعلام می‌شود.";
 
 export const quoteUnits = ["تن", "کیلوگرم", "شاخه", "عدد"] as const;
 export type QuoteUnit = (typeof quoteUnits)[number];
 
-export const quoteProductNames = [
-  "میلگرد",
-  "تیرآهن",
-  "هاش",
-  "ورق فولادی",
-  "پروفیل و قوطی",
-  "لوله فولادی",
-  "نبشی",
-  "ناودانی",
-  "مفتول و سیم",
-  "سایر محصولات فولادی",
-] as const;
-export type QuoteProductName = (typeof quoteProductNames)[number];
-
-const quoteWeightOnlyProducts = new Set<QuoteProductName>([
-  "هاش",
-  "ورق فولادی",
-  "پروفیل و قوطی",
-  "نبشی",
-  "ناودانی",
-]);
-
-/** Product capability is a domain rule, not a side effect of price loading. */
-export function quoteProductSupportsPieceUnits(
-  product: QuoteProductName | "",
-): boolean {
-  return !product || !quoteWeightOnlyProducts.has(product);
-}
-
 export function isQuoteUnit(value: unknown): value is QuoteUnit {
   return (
     typeof value === "string" &&
     (quoteUnits as readonly string[]).includes(value)
-  );
-}
-
-export function isQuoteProduct(value: unknown): value is QuoteProductName {
-  return (
-    typeof value === "string" &&
-    (quoteProductNames as readonly string[]).includes(value as QuoteProductName)
   );
 }
 
@@ -111,14 +77,14 @@ export type QuoteItemEvaluation = {
  * Only what the calculation reads. It once also carried min, max, a row count,
  * a snapshot date and a `supportsPieceUnits` flag; nothing consumed any of
  * them, and the flag had already been superseded by
- * `quoteProductSupportsPieceUnits`, which is a domain rule rather than a
- * side effect of loading prices.
+ * `quoteProductSupportsPieceUnits` (quote/products.ts), which is a domain rule
+ * rather than a side effect of loading prices.
  */
 export type ProductPricingBaseline = {
   product: QuoteProductName;
   unitPriceTomanPerKg: number;
   pieceOptions: QuotePieceOptionChoice[];
-  branchWeight?: "rebar-12m";
+  branchWeight?: BranchWeightFormula;
 };
 
 export type QuotePricingBaselines = Partial<

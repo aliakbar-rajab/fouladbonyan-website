@@ -4,7 +4,7 @@ import type {
   RawQuoteContact,
   RawQuoteRequest,
 } from "../quote-types";
-import { quoteProductSupportsPieceUnits } from "../quote-types";
+import { quoteProductSupportsPieceUnits } from "./products";
 import {
   normalizePhone,
   validateFullName,

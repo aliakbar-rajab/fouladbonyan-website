@@ -3,11 +3,11 @@ import {
   quoteDisclaimer,
   type GeneratedQuote,
   type QuoteItemEvaluation,
-  type QuoteProductName,
   type QuoteTotals,
   type RawQuoteContact,
 } from "../quote-types";
 import { formatToman } from "./calculation";
+import type { QuoteProductName } from "./products";
 
 // Pinned to Tehran like every other formatter on the site: the date on a quote
 // is the seller's business date, not the reader's, and without the zone a

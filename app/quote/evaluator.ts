@@ -21,7 +21,8 @@ import type {
   RawQuoteItem,
   RawQuoteRequest,
 } from "../quote-types";
-import { quoteProductSupportsPieceUnits, quoteUnits } from "../quote-types";
+import { quoteUnits } from "../quote-types";
+import { quoteProductSupportsPieceUnits } from "./products";
 
 /**
  * Presentation-ready item estimate consumed by the quote form. Pricing

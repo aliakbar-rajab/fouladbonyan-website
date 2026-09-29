@@ -6,11 +6,13 @@ import type {
   QuoteItemEvaluation,
   QuotePieceOptionChoice,
   QuotePricingBaselines,
-  QuoteProductName,
   QuoteTotals,
   RawQuoteItem,
 } from "../quote-types";
-import { quoteProductSupportsPieceUnits } from "../quote-types";
+import {
+  quoteProductSupportsPieceUnits,
+  type QuoteProductName,
+} from "./products";
 
 /* CONTEXT.md, Currency representation: rial per toman is a representation
  * change, not markup or VAT. Nothing outside this module converts. */

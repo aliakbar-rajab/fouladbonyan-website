@@ -80,6 +80,10 @@ _Avoid_: Currency conversion as price adjustment
 A customer's request for pricing or purchase terms that requires human sales follow-up.
 _Avoid_: Order, checkout, purchase
 
+**Quote product**:
+One of the fixed products a quote request line can name (میلگرد, تیرآهن, هاش, …, سایر محصولات فولادی). Each is either priced from one catalog—a named product category, or the catalog's initial category—or not priced from the catalog at all. It is also the product a price row hands to the quote form: a row in a product category that prices a quote product of its own (تیرآهن هاش → هاش) hands off that product; any other row hands off its catalog's first quote product. A quote product takes piece units (شاخه, عدد) only when it has real rows to price a piece from, a branch-weight formula, or no catalog pricing.
+_Avoid_: Catalog label, product category, free-text product
+
 **Sales confirmation**:
 The human confirmation by sales, phone, or WhatsApp of the final price, stock, delivery, tonnage, and other sale terms.
 _Avoid_: Automatic confirmation, online acceptance

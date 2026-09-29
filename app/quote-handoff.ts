@@ -16,13 +16,16 @@
  * read of a page load; see pageLoadHandoff for why the value itself is then
  * held for the rest of that load.
  */
+import { isQuoteProduct, type QuoteProductName } from "./quote/products";
+
 export const QUOTE_HANDOFF_KEY = "bonyan-foulad-daria-quote-handoff-v1";
 
 /** Where a price row's quote action navigates to. No query string. */
 export const QUOTE_FORM_HREF = "/quote-process/#quote-form";
 
 export type QuoteHandoff = {
-  product: string;
+  /** "" when a stored value named something that is not a quote product. */
+  product: QuoteProductName | "";
   dimensions: string;
 };
 
@@ -87,7 +90,7 @@ function parseHandoff(raw: string | null): QuoteHandoff | null {
     if (typeof product !== "string" || typeof dimensions !== "string") {
       return null;
     }
-    return { product, dimensions };
+    return { product: isQuoteProduct(product) ? product : "", dimensions };
   } catch {
     return null;
   }

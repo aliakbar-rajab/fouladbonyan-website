@@ -19,17 +19,7 @@ import {
   type QuoteHandoff,
 } from "./quote-handoff";
 import { ChevronDownIcon } from "./icons";
-
-const quoteProductByGroup: Record<ProductGroupId, string> = {
-  rebar: "میلگرد",
-  beam: "تیرآهن",
-  sheet: "ورق فولادی",
-  profile: "پروفیل و قوطی",
-  pipe: "لوله فولادی",
-  angle: "نبشی",
-  channel: "ناودانی",
-  wire: "مفتول و سیم",
-};
+import { quoteProductForCategory } from "./quote/products";
 
 /*
  * The row's quote action does go somewhere -- /quote-process/ -- so it stays an
@@ -48,14 +38,13 @@ const quoteProductByGroup: Record<ProductGroupId, string> = {
  */
 function quoteHandoffFor(
   groupId: ProductGroupId,
-  categoryLabel: string,
+  categoryId: string,
   row: CatalogRow,
 ): QuoteHandoff {
-  const product =
-    groupId === "beam" && categoryLabel.includes("هاش")
-      ? "هاش"
-      : quoteProductByGroup[groupId];
-  return { product, dimensions: row.title };
+  return {
+    product: quoteProductForCategory(groupId, categoryId) ?? "",
+    dimensions: row.title,
+  };
 }
 
 
@@ -334,7 +323,7 @@ export function FactoryPriceCardList({
                                 writeQuoteHandoff(
                                   quoteHandoffFor(
                                     catalogId,
-                                    category.label,
+                                    category.id,
                                     row,
                                   ),
                                 )

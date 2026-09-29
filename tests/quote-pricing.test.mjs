@@ -4,7 +4,13 @@ import test from "node:test";
 import { parsePersianNumber } from "../app/persian-numbers.mjs";
 import { formatToman } from "../app/quote/calculation.ts";
 import { createQuoteEvaluator } from "../app/quote/evaluator.ts";
-import { quoteProductSupportsPieceUnits } from "../app/quote-types.ts";
+import {
+  isQuoteProduct,
+  quoteProductCatalog,
+  quoteProductForCategory,
+  quoteProductNames,
+  quoteProductSupportsPieceUnits,
+} from "../app/quote/products.ts";
 import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
 import {
   buildQuoteDocument,
@@ -15,13 +21,12 @@ import {
   validateQuoteRequestInput,
 } from "../app/quote/validation.ts";
 import {
-  isQuoteProduct,
   isQuoteUnit,
   quoteDisclaimer,
-  quoteProductNames,
   quoteUnits,
 } from "../app/quote-types.ts";
 import { loadAllGroupCatalogs } from "../app/catalog-reader.ts";
+import { catalogGroups } from "../app/catalog-taxonomy.mjs";
 import {
   categoryCrediblePricedRows,
   categoryPricedRows,
@@ -728,6 +733,50 @@ test("domain product and unit metadata arrays and type guards behave accurately"
   assert.equal(isQuoteProduct("ناشناخته"), false);
   assert.equal(isQuoteUnit("تن"), true);
   assert.equal(isQuoteUnit("متر"), false);
+});
+
+test("every catalog category's quote action names a quote product priced from its own catalog", () => {
+  for (const group of catalogGroups) {
+    for (const { id: categoryId } of group.subcategories) {
+      const product = quoteProductForCategory(group.id, categoryId);
+      const where = `${group.id}/${categoryId}`;
+      assert.ok(product && isQuoteProduct(product), `${where} hands off no quote product`);
+      assert.equal(
+        quoteProductCatalog(product)?.group,
+        group.id,
+        `${where} hands off ${product}, which is priced from another catalog`,
+      );
+    }
+  }
+  // The one group with two products tells them apart by category id.
+  assert.equal(quoteProductForCategory("beam", "beam"), "تیرآهن");
+  assert.equal(quoteProductForCategory("beam", "hash"), "هاش");
+  assert.equal(quoteProductForCategory("rebar", "simple"), "میلگرد");
+});
+
+test("every category a quote product prices from exists in the taxonomy", () => {
+  const categoriesOf = (groupId) =>
+    catalogGroups.find((group) => group.id === groupId)?.subcategories.map((c) => c.id) ?? [];
+  for (const product of quoteProductNames) {
+    const catalog = quoteProductCatalog(product);
+    if (!catalog) continue;
+    const known = categoriesOf(catalog.group);
+    assert.ok(known.length, `${product}: unknown catalog ${catalog.group}`);
+    for (const id of [
+      catalog.categoryId,
+      ...(catalog.pieceSources ?? []).map((source) => source.categoryId),
+    ].filter(Boolean)) {
+      assert.ok(known.includes(id), `${product}: ${catalog.group} has no category ${id}`);
+    }
+  }
+});
+
+test("piece units follow from what a product can be priced by the piece from", () => {
+  assert.deepEqual(
+    quoteProductNames.filter((product) => !quoteProductSupportsPieceUnits(product)),
+    ["هاش", "ورق فولادی", "پروفیل و قوطی", "نبشی", "ناودانی"],
+  );
+  assert.equal(quoteProductSupportsPieceUnits(""), true);
 });
 
 test("formatToman currency formatting helper displays Persian localized amounts", () => {

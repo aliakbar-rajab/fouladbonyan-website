@@ -8,52 +8,12 @@ import type {
   CatalogSnapshot,
   GroupCatalog,
 } from "../catalog-types";
-import type { ProductGroupId } from "../category-meta";
 import { localizeCatalogValue } from "../catalog-presentation";
 import type {
   QuotePieceOptionChoice,
   QuotePricingBaselines,
-  QuoteProductName,
 } from "../quote-types";
-
-type BranchWeightFormula = "rebar-12m";
-
-type QuoteSource = {
-  group: ProductGroupId;
-  categoryId?: string;
-  pieceSources?: { categoryId: string; unit: string }[];
-  branchWeight?: BranchWeightFormula;
-};
-
-const quoteSources: Partial<Record<QuoteProductName, QuoteSource>> = {
-  میلگرد: { group: "rebar", categoryId: "ribbed", branchWeight: "rebar-12m" },
-  تیرآهن: {
-    group: "beam",
-    categoryId: "beam",
-    pieceSources: [{ categoryId: "beam", unit: "شاخه" }],
-  },
-  هاش: { group: "beam", categoryId: "hash" },
-  "ورق فولادی": { group: "sheet" },
-  "پروفیل و قوطی": { group: "profile" },
-  نبشی: { group: "angle" },
-  ناودانی: { group: "channel" },
-  "لوله فولادی": {
-    group: "pipe",
-    pieceSources: [
-      { categoryId: "api-pipe", unit: "شاخه" },
-      { categoryId: "gas-pipe", unit: "شاخه" },
-      { categoryId: "seamless-pipe", unit: "شاخه" },
-    ],
-  },
-  "مفتول و سیم": {
-    group: "wire",
-    pieceSources: [
-      { categoryId: "rib-lath", unit: "برگ" },
-      { categoryId: "chicken-mesh", unit: "طاقه‌ای" },
-      { categoryId: "chain-link-mesh", unit: "مترمربع" },
-    ],
-  },
-};
+import { quoteProductCatalog, quoteProductNames } from "./products";
 
 const averageToman = (prices: number[]) =>
   Math.round(prices.reduce((sum, price) => sum + price, 0) / prices.length);
@@ -122,10 +82,9 @@ export function extractQuotePricingBaselines(
   );
   const baselines: QuotePricingBaselines = {};
 
-  for (const [product, src] of Object.entries(quoteSources) as [
-    QuoteProductName,
-    QuoteSource,
-  ][]) {
+  for (const product of quoteProductNames) {
+    const src = quoteProductCatalog(product);
+    if (!src) continue;
     const catalog = catalogs.get(src.group);
     if (!catalog) continue;
 
