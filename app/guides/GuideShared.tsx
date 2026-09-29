@@ -1,3 +1,4 @@
+import { QUOTE_FORM_HREF } from "../quote-handoff";
 import type { ReactNode } from "react";
 import { siteConfig } from "../site-config";
 
@@ -85,7 +86,7 @@ export function QuoteChecklist() {
         <li>نیاز یا عدم نیاز به فاکتور رسمی و احتساب مالیات بر ارزش افزوده</li>
       </ul>
       <div className="inline-actions">
-        <a href="/quote-process/#quote-form">آماده‌سازی متن درخواست</a>
+        <a href={QUOTE_FORM_HREF}>آماده‌سازی متن درخواست</a>
         <a href={siteConfig.contact.phones[0].href}>تماس با واحد فروش</a>
       </div>
     </section>

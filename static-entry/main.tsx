@@ -1,9 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
-import App from "../app/App";
-import ContactPage from "../app/ContactPage";
-import InfoPage from "../app/InfoPage";
-import GuidePage from "../app/GuidePage";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
 import { buildOrganizationStructuredData } from "../app/site-config";
@@ -16,6 +12,8 @@ import {
   isHeroRoute,
   isOrganizationRoute,
 } from "../app/site-route";
+import { pagePayloadIds } from "../app/site-page";
+import { pageElement } from "../app/site-page-element";
 import "../app/globals.css";
 
 function readJsonScript(id: string) {
@@ -36,14 +34,16 @@ if (!root) {
 const rootElement = root;
 
 primeCatalogReader({
-  snapshot: readJsonScript("initial-page-data"),
-  menu: readJsonScript("initial-menu-data"),
-  overview: readJsonScript("initial-overview-data"),
+  snapshot: readJsonScript(pagePayloadIds.catalog),
+  menu: readJsonScript(pagePayloadIds.menu),
+  overview: readJsonScript(pagePayloadIds.overview),
 });
 
 // Derived reference tables for /guide/*, computed at build time so the page
 // hydrates against exactly the bytes it was prerendered from.
-const guideReference: GuideReference | null = readJsonScript("initial-guide-data");
+const guideReference: GuideReference | null = readJsonScript(
+  pagePayloadIds.guide,
+);
 
 const route = interpretSiteRoute({
   pathname: window.location.pathname,
@@ -68,23 +68,14 @@ if (organizationJsonLd) {
   }
 }
 async function resolveContent() {
-  if (route.kind === "contact") return <ContactPage />;
-  if (route.kind === "info") {
-    return <InfoPage page={route.page} />;
-  }
-  if (route.kind === "guide") {
-    // Production pages carry a build-time reference payload. The Vite
-    // development server has no prerender step, so load the same validated
-    // snapshots lazily instead of falling back to the homepage for /guide/*.
-    const reference: GuideReference =
-      guideReference ??
-      (await loadCatalogSnapshot().then((snapshot) =>
-        buildGuideReference(snapshot),
-      ));
-    return <GuidePage guide={route.guide} reference={reference} />;
-  }
-
-  return <App />;
+  // Production guide pages carry a build-time reference payload. The Vite
+  // development server has no prerender step, so it loads the same validated
+  // snapshot lazily instead of falling back to the homepage for /guide/*.
+  const reference =
+    route.kind === "guide" && !guideReference
+      ? buildGuideReference(await loadCatalogSnapshot())
+      : guideReference;
+  return pageElement(route, { guideReference: reference });
 }
 
 /*

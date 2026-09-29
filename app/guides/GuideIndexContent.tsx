@@ -1,3 +1,4 @@
+import { QUOTE_FORM_HREF } from "../quote-handoff";
 import {
   guidePageDefinitions,
   guidePageKeys,
@@ -40,7 +41,7 @@ export function GuideIndexContent() {
         </p>
         <div className="inline-actions">
           <a href="/#prices">قیمت روز آهن و فولاد</a>
-          <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
+          <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
         </div>
       </section>
     </>

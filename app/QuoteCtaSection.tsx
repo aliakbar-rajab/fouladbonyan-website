@@ -1,3 +1,4 @@
+import { QUOTE_FORM_HREF } from "./quote-handoff";
 import {
   ChevronLeftBoldIcon,
   ClockFastIcon,
@@ -86,7 +87,7 @@ export function QuoteCtaSection() {
               </div>
             </div>
 
-            <a href="/quote-process/#quote-form" className="quote-cta-btn">
+            <a href={QUOTE_FORM_HREF} className="quote-cta-btn">
               <span className="quote-btn-text">تکمیل فرم پیش‌سفارش</span>
               <ChevronLeftBoldIcon className="quote-btn-icon" />
             </a>

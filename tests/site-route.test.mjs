@@ -61,22 +61,23 @@ test("root dataset wins during hydration and unknown paths preserve the home fal
   });
 });
 
-test("catalog requests share route interpretation while allowing explicit prerender props", () => {
+test("a catalog request is normalised against the taxonomy", () => {
   assert.deepEqual(
-    resolveCatalogRouteRequest({ pathname: "/rebar/ribbed/" }),
+    resolveCatalogRouteRequest({ category: "rebar", subcategory: "ribbed" }),
     {
       category: "rebar",
       subcategory: "ribbed",
       subcategoryLabel: "میلگرد آجدار",
     },
   );
-
+  assert.deepEqual(resolveCatalogRouteRequest({ category: "beam" }), {
+    category: "beam",
+    subcategory: undefined,
+    subcategoryLabel: undefined,
+  });
   assert.deepEqual(
-    resolveCatalogRouteRequest({
-      pathname: "/",
-      overrides: { category: "beam" },
-    }),
-    { category: "beam", subcategory: undefined, subcategoryLabel: undefined },
+    resolveCatalogRouteRequest({ category: "nope", subcategory: "ribbed" }),
+    { category: undefined, subcategory: undefined, subcategoryLabel: undefined },
   );
 });
 

@@ -115,11 +115,12 @@ test("footer links point to working canonical pages with no trailing slash viola
 });
 
 test("homepage navigation reaches the quote form directly", async () => {
+  const { QUOTE_FORM_HREF } = await import("../app/quote-handoff.ts");
+  assert.equal(QUOTE_FORM_HREF, "/quote-process/#quote-form");
   const header = await read("../app/SiteHeader.tsx");
-  assert.match(header, /const QUOTE_HREF = "\/quote-process\/#quote-form";/);
   assert.match(
     header,
-    /<a\s+className="header-quote"[\s\S]*?href=\{QUOTE_HREF\}[\s\S]*?درخواست پیش‌فاکتور/,
+    /<a\s+className="header-quote"[\s\S]*?href=\{QUOTE_FORM_HREF\}[\s\S]*?درخواست پیش‌فاکتور/,
   );
 });
 

@@ -1,3 +1,5 @@
+import { QUOTE_FORM_HREF } from "./quote-handoff";
+import { subcategoryHref } from "./category-meta";
 import { useEffect, useState } from "react";
 import {
   buildFallbackOverviews,
@@ -94,7 +96,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                 <tr key={item.id} className="overview-row">
                   <td className="overview-cell-group">
                     <a
-                      href={`/${item.id}/`}
+                      href={subcategoryHref(item.id)}
                       className="overview-group-link"
                       title={`مشاهده جدول کامل قیمت ${item.label}`}
                     >
@@ -158,7 +160,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                   </td>
                   <td className="overview-cell-action">
                     <a
-                      href={`/${item.id}/`}
+                      href={subcategoryHref(item.id)}
                       className="overview-action-link"
                       aria-label={`مشاهده جدول قیمت و مشخصات ${item.label}`}
                     >
@@ -193,7 +195,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                 </picture>
                 <div>
                   <h4>
-                    <a href={`/${item.id}/`}>قیمت {item.label}</a>
+                    <a href={subcategoryHref(item.id)}>قیمت {item.label}</a>
                   </h4>
                   <p>{item.subTypes}</p>
                 </div>
@@ -216,7 +218,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
                     <strong>{emptyPriceText(loaded)}</strong>
                   )}
                 </div>
-                <a href={`/${item.id}/`} className="overview-card-btn">
+                <a href={subcategoryHref(item.id)} className="overview-card-btn">
                   مشاهده جدول کامل
                 </a>
               </div>
@@ -234,7 +236,7 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
           </p>
         </div>
         <div className="overview-footer-actions">
-          <a href="/quote-process/#quote-form" className="overview-quote-btn">
+          <a href={QUOTE_FORM_HREF} className="overview-quote-btn">
             درخواست پیش‌فاکتور
           </a>
           <a href={phoneHref} className="overview-call-btn">

@@ -1,6 +1,5 @@
 import { InnerPageLayout } from "./InnerPageLayout";
 import {
-  GUIDE_BASE_PATH,
   guideIndex,
   guidePageDefinitions,
   type GuidePageKey,
@@ -42,25 +41,11 @@ export default function GuidePage({ guide, reference }: GuidePageProps) {
 
   return (
     <InnerPageLayout
-      // Must match the <title> the build stamps into the head, or the tab
-      // title changes the moment hydration runs.
-      documentTitle={definition.seoTitle}
+      route={{ kind: "guide", guide }}
       eyebrow={definition.eyebrow}
       title={definition.title}
       description={definition.description}
       contentClassName="guide-content"
-      breadcrumbItems={
-        guide
-          ? [
-              { label: "صفحه اصلی", href: "/" },
-              { label: guideIndex.title, href: GUIDE_BASE_PATH },
-              { label: definition.title },
-            ]
-          : [
-              { label: "صفحه اصلی", href: "/" },
-              { label: guideIndex.title },
-            ]
-      }
     >
       {guide ? (
         <GuideContent guide={guide} reference={reference} />

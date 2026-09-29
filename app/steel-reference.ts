@@ -153,7 +153,7 @@ function buildProfile(
   return {
     groupId,
     groupLabel,
-    groupHref: `/${groupId}/`,
+    groupHref: subcategoryHref(groupId),
     id: category.id,
     label: category.label,
     href: subcategoryHref(groupId, category.id),

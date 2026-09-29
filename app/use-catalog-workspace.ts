@@ -103,24 +103,16 @@ export function useCatalogWorkspace({
   initialSubcategoryLabel,
   searchLoader = loadCatalogSearchGroups,
 }: CatalogWorkspaceOptions = {}): CatalogWorkspace {
+  // The route arrives as props on the server and in the browser alike -- both
+  // build this tree with pageElement (site-page-element.tsx) -- so the hook
+  // never goes back to the DOM or the address bar to find out where it is.
   const route = useMemo(
-    () => {
-      const dataset =
-        typeof document === "undefined"
-          ? undefined
-          : document.getElementById("root")?.dataset;
-      const pathname =
-        typeof window === "undefined" ? "/" : window.location.pathname;
-      return resolveCatalogRouteRequest({
-        pathname,
-        dataset,
-        overrides: {
-          category: initialCategory,
-          subcategory: initialSubcategory,
-          subcategoryLabel: initialSubcategoryLabel,
-        },
-      });
-    },
+    () =>
+      resolveCatalogRouteRequest({
+        category: initialCategory,
+        subcategory: initialSubcategory,
+        subcategoryLabel: initialSubcategoryLabel,
+      }),
     [initialCategory, initialSubcategory, initialSubcategoryLabel],
   );
 

@@ -1,4 +1,4 @@
-import { productGroups } from "./category-meta";
+import { productGroups, subcategoryHref } from "./category-meta";
 import { getCategoryImageSources } from "./image-utils";
 
 export function CategoryGrid() {
@@ -14,7 +14,7 @@ export function CategoryGrid() {
           return (
             <a
               className="category-card"
-              href={`/${group.id}/`}
+              href={subcategoryHref(group.id)}
               key={group.id}
             >
               <picture>

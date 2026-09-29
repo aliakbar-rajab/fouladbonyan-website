@@ -1,3 +1,4 @@
+import { QUOTE_FORM_HREF } from "./quote-handoff";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Brand } from "./site-ui";
 import { LightPillar } from "./LightPillar";
@@ -24,7 +25,6 @@ type SiteHeaderProps = {
   }) => ReactNode;
 };
 
-const QUOTE_HREF = "/quote-process/#quote-form";
 
 export function SiteHeader({
   brandHref = "#top",
@@ -141,7 +141,7 @@ export function SiteHeader({
 
           <a
             className="header-quote"
-            href={QUOTE_HREF}
+            href={QUOTE_FORM_HREF}
             onClick={closeMobileNav}
           >
             درخواست پیش‌فاکتور

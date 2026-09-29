@@ -194,7 +194,7 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
             <div>
               {productGroups.map((group) => (
                 <a
-                  href={`/${group.id}/`}
+                  href={subcategoryHref(group.id)}
                   key={group.id}
                   className={`mega-group-link${shownProduct === group.id ? " is-active" : ""}`}
                   aria-current={shownProduct === group.id ? "true" : undefined}

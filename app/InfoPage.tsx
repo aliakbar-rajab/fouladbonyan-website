@@ -270,17 +270,10 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
 
   return (
     <InnerPageLayout
-      documentTitle={`${definition.title} | ${siteConfig.brand.name}`}
+      route={{ kind: "info", page }}
       eyebrow={definition.eyebrow}
       title={definition.title}
       description={definition.description}
-      // Only /about/ is one of the primary destinations today; the rest simply
-      // match nothing, the same way the contact page's own href does its job.
-      currentHref={`/${page}/`}
-      breadcrumbItems={[
-        { label: "صفحه اصلی", href: "/" },
-        { label: definition.title },
-      ]}
     >
       <PageContent page={page} />
     </InnerPageLayout>

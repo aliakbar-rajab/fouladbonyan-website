@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
-import React from "react";
 import { setupDomEnv } from "./helpers/dom-env.mjs";
 
 const dom = setupDomEnv({ url: "https://example.test/" });
@@ -19,7 +18,20 @@ const { act, cleanup, render, screen, waitFor } = await import(
   "@testing-library/react"
 );
 const userEvent = (await import("@testing-library/user-event")).default;
-const App = (await import("../app/App.tsx")).default;
+const { interpretSiteRoute } = await import("../app/site-route.ts");
+const { pageElement } = await import("../app/site-page-element.tsx");
+
+// What static-entry/main.tsx does: read the route off the address bar and the
+// root's data attributes, and render the element the Site page module builds.
+const renderPage = () =>
+  render(
+    pageElement(
+      interpretSiteRoute({
+        pathname: window.location.pathname,
+        dataset: document.getElementById("root")?.dataset,
+      }),
+    ),
+  );
 const { loadGroupCatalog } = await import("../app/catalog-reader.ts");
 
 const settle = () =>
@@ -63,7 +75,7 @@ function dispatchClick(element) {
 
 test("the homepage mega menu's subcategory, factory and size links are real navigations to pages that exist", async () => {
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   const user = userEvent.setup({ document });
@@ -99,7 +111,7 @@ test("a mega-menu group link switches the panel on a plain click and opens norma
    * along, so the two gestures disagreed.
    */
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   const user = userEvent.setup({ document });
@@ -150,7 +162,7 @@ test("landing on a subcategory page with a ?factory= query param applies it as t
     `/rebar/ribbed/?factory=${encodeURIComponent(factory)}`,
   );
   addRoot("rebar", "ribbed");
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   await waitFor(() => {

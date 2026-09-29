@@ -1,12 +1,4 @@
-import React from "react";
-import App from "../../app/App.tsx";
-import ContactPage from "../../app/ContactPage.tsx";
-import GuidePage from "../../app/GuidePage.tsx";
-import InfoPage from "../../app/InfoPage.tsx";
-import {
-  isSingleSubcategoryGroup,
-  productGroups,
-} from "../../app/category-meta.ts";
+import { isSingleSubcategoryGroup, productGroups } from "../../app/category-meta.ts";
 import {
   guideIndex,
   guidePageDefinitions,
@@ -19,6 +11,12 @@ import {
 } from "../../app/site-config.ts";
 import { loadGroupCatalog } from "../../app/catalog-reader.ts";
 import {
+  pageBreadcrumb,
+  pageHead,
+  pagePayloadIds,
+} from "../../app/site-page.ts";
+import { pageElement } from "../../app/site-page-element.tsx";
+import {
   HERO_OG_IMAGE,
   buildArticleJsonLd,
   buildHeroPreloadTag,
@@ -27,13 +25,34 @@ import {
 } from "./static-document.mjs";
 
 /**
- * Which pages the site has, and the editorial metadata each one carries.
- *
- * The catalogue: titles, descriptions, lastmods, Open Graph images,
- * breadcrumbs, and the hydration payloads each page ships. It says nothing
- * about how any of that becomes HTML -- static-document.mjs owns that -- so it
- * can be called and asserted on without rendering or writing anything.
+ * Which pages the site has, and what the build adds to each: lastmods, Open
+ * Graph images, extra JSON-LD, hero preloads, and the data behind each
+ * hydration payload. What a page *is* -- its title, description, trail, root
+ * element and payload ids -- comes from the Site page module
+ * (app/site-page.ts, app/site-page-element.tsx), which the page components and
+ * the browser boot read too. This file says nothing about how any of it
+ * becomes HTML -- static-document.mjs owns that -- so it can be called and
+ * asserted on without rendering or writing anything.
  */
+
+/**
+ * The shared parts of a descriptor, from the route: head, JSON-LD trail,
+ * root element, the root's route attributes and where the page is written.
+ */
+function describeRoute(route, siteUrl, { guideReference } = {}) {
+  const head = pageHead(route);
+  return {
+    ...routeLocation(route, siteUrl),
+    route,
+    title: head.title,
+    description: head.description,
+    rootElement: pageElement(route, { guideReference }),
+    breadcrumb: pageBreadcrumb(route).map((crumb) => ({
+      name: crumb.label,
+      url: `${siteUrl}${crumb.href}`,
+    })),
+  };
+}
 
 /**
  * Compiles the site's page descriptors: the homepage, every catalog group and
@@ -53,27 +72,22 @@ export async function collectSitePageDescriptors({
 }) {
   const rootLastmod = snapshot.fetchedAt.slice(0, 10);
   const organizationData = buildOrganizationStructuredData();
-  const homeCrumb = { name: "صفحه اصلی", url: `${siteUrl}/` };
-  const menuPayload = { id: "initial-menu-data", data: menuCatalog };
+  const menuPayload = { id: pagePayloadIds.menu, data: menuCatalog };
+  const describe = (route) => describeRoute(route, siteUrl);
 
   const pages = [];
 
   // 1. Homepage
-  const homeLocation = routeLocation({ kind: "home" }, siteUrl);
   pages.push({
-    ...homeLocation,
+    ...describe({ kind: "home" }),
     lastmod: rootLastmod,
-    title: siteConfig.home.title,
-    description: siteConfig.home.description,
-    rootElement: React.createElement(App),
     heroPreload: undefined, // Preserves template default hero preload
     payloads: [
       menuPayload,
-      { id: "initial-overview-data", data: overviewSummaries },
+      { id: pagePayloadIds.overview, data: overviewSummaries },
     ],
     organizationData: null,
     extraHeadHtml: buildWebSiteJsonLd({ siteUrl }),
-    breadcrumb: [],
   });
 
   // 2. Category Landing Pages & Subcategories
@@ -81,10 +95,6 @@ export async function collectSitePageDescriptors({
     const catalog = await loadGroupCatalog(group.id);
     const lastmod = catalog.fetchedAt.slice(0, 10);
     const heroPreload = buildHeroPreloadTag(group);
-    const groupRoute = { kind: "catalog", category: group.id };
-    const groupLocation = routeLocation(groupRoute, siteUrl);
-    const groupUrl = groupLocation.pageUrl;
-    const groupCrumb = { name: group.label, url: groupUrl };
 
     // Scoped hydration payload: contains only the current group's catalog
     // instead of injecting the entire multi-category snapshot
@@ -97,120 +107,80 @@ export async function collectSitePageDescriptors({
     };
     const catalogPayloads = [
       menuPayload,
-      { id: "initial-page-data", data: groupSnapshot },
+      { id: pagePayloadIds.catalog, data: groupSnapshot },
     ];
     const groupOgImage = `${siteUrl}/categories/hero-${group.id}-${HERO_OG_IMAGE.variant}.jpg`;
-    const groupOgImageAlt = `قیمت ${group.label} | بنیان فولاد داریا`;
-
-    const isSingleCategoryGroup = isSingleSubcategoryGroup(group.id);
+    const ogImageSize = {
+      ogImageWidth: HERO_OG_IMAGE.width,
+      ogImageHeight: HERO_OG_IMAGE.height,
+    };
 
     // Category landing page
     pages.push({
-      ...groupLocation,
+      ...describe({ kind: "catalog", category: group.id }),
       lastmod,
-      title: group.seoTitle,
-      description: group.seoDescription,
       ogImage: groupOgImage,
-      ogImageAlt: groupOgImageAlt,
-      ogImageWidth: HERO_OG_IMAGE.width,
-      ogImageHeight: HERO_OG_IMAGE.height,
-      rootElement: React.createElement(App, {
-        initialCategory: group.id,
-        initialSubcategory: isSingleCategoryGroup ? group.id : undefined,
-      }),
+      ogImageAlt: `قیمت ${group.label} | ${siteConfig.brand.name}`,
+      ...ogImageSize,
       heroPreload,
       payloads: catalogPayloads,
       organizationData: null,
-      breadcrumb: [homeCrumb, groupCrumb],
     });
 
     // Subcategory pages: single-subcategory families (angle, channel)
     // are consolidated onto their parent category page.
-    if (!isSingleCategoryGroup) {
+    if (!isSingleSubcategoryGroup(group.id)) {
       for (const sub of catalog.categories) {
-        const subRoute = {
-          kind: "catalog",
-          category: group.id,
-          subcategory: sub.id,
-          subcategoryLabel: sub.label,
-        };
-        const subLocation = routeLocation(subRoute, siteUrl);
-        const subUrl = subLocation.pageUrl;
         pages.push({
-          ...subLocation,
-          lastmod,
-          title: `قیمت ${sub.label} امروز | بنیان فولاد داریا`,
-          description: `قیمت روز ${sub.label} از کارخانه‌های معتبر کشور. استعلام قیمت، مشخصات فنی و درخواست پیش‌فاکتور ${sub.label} با مشاوره تلفنی بنیان فولاد داریا.`,
-          ogImage: groupOgImage,
-          ogImageAlt: `قیمت روز ${sub.label} | بنیان فولاد داریا`,
-          ogImageWidth: HERO_OG_IMAGE.width,
-          ogImageHeight: HERO_OG_IMAGE.height,
-          rootElement: React.createElement(App, {
-            initialCategory: group.id,
-            initialSubcategory: sub.id,
-            initialSubcategoryLabel: sub.label,
+          ...describe({
+            kind: "catalog",
+            category: group.id,
+            subcategory: sub.id,
+            subcategoryLabel: sub.label,
           }),
+          lastmod,
+          ogImage: groupOgImage,
+          ogImageAlt: `قیمت روز ${sub.label} | ${siteConfig.brand.name}`,
+          ...ogImageSize,
           heroPreload,
           payloads: catalogPayloads,
           organizationData: null,
-          breadcrumb: [homeCrumb, groupCrumb, { name: sub.label, url: subUrl }],
         });
       }
     }
   }
 
   // 3. Contact Page
-  const contactLocation = routeLocation({ kind: "contact" }, siteUrl);
-  const contactUrl = contactLocation.pageUrl;
   pages.push({
-    ...contactLocation,
+    ...describe({ kind: "contact" }),
     lastmod: "2026-08-11",
-    title: "تماس با ما و نشانی | بنیان فولاد داریا",
-    description:
-      "شماره‌های تماس، نشانی دفتر و مسیریابی روی نقشه برای بنیان فولاد داریا. تماس با واحد فروش و مدیریت برای استعلام قیمت آهن و فولاد.",
-    rootElement: React.createElement(ContactPage),
     heroPreload: null,
     payloads: [],
     organizationData,
-    breadcrumb: [homeCrumb, { name: "تماس با ما", url: contactUrl }],
   });
 
   // 4. Info Pages
-  for (const [slug, definition] of Object.entries(infoPageDefinitions)) {
-    const infoLocation = routeLocation({ kind: "info", page: slug }, siteUrl);
-    const pageUrl = infoLocation.pageUrl;
+  for (const [page, definition] of Object.entries(infoPageDefinitions)) {
     pages.push({
-      ...infoLocation,
+      ...describe({ kind: "info", page }),
       lastmod: definition.lastmod,
-      title: `${definition.title} | ${siteConfig.brand.name}`,
-      description: definition.seoDescription,
-      rootElement: React.createElement(InfoPage, { page: slug }),
       heroPreload: null,
       payloads: [],
       organizationData: null,
-      breadcrumb: [homeCrumb, { name: definition.title, url: pageUrl }],
     });
   }
 
   // 5. Guide Index & Articles
-  const guideIndexLocation = routeLocation({ kind: "guide" }, siteUrl);
-  const guideIndexUrl = guideIndexLocation.pageUrl;
-  const guideIndexCrumb = { name: guideIndex.title, url: guideIndexUrl };
-  const guidePayloads = [{ id: "initial-guide-data", data: reference }];
+  const guidePayloads = [{ id: pagePayloadIds.guide, data: reference }];
+  const describeGuide = (route) =>
+    describeRoute(route, siteUrl, { guideReference: reference });
 
   pages.push({
-    ...guideIndexLocation,
+    ...describeGuide({ kind: "guide" }),
     lastmod: guideIndex.lastmod,
-    title: guideIndex.seoTitle,
-    description: guideIndex.seoDescription,
-    rootElement: React.createElement(GuidePage, {
-      guide: undefined,
-      reference,
-    }),
     heroPreload: null,
     payloads: guidePayloads,
     organizationData: null,
-    breadcrumb: [homeCrumb, guideIndexCrumb],
   });
 
   const guideImages = {
@@ -227,14 +197,10 @@ export async function collectSitePageDescriptors({
 
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
-    const guideLocation = routeLocation({ kind: "guide", guide: key }, siteUrl);
-    const pageUrl = guideLocation.pageUrl;
+    const described = describeGuide({ kind: "guide", guide: key });
     pages.push({
-      ...guideLocation,
+      ...described,
       lastmod: definition.lastmod,
-      title: definition.seoTitle,
-      description: definition.seoDescription,
-      rootElement: React.createElement(GuidePage, { guide: key, reference }),
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,
@@ -243,18 +209,13 @@ export async function collectSitePageDescriptors({
       ogType: "article",
       extraHeadHtml: buildArticleJsonLd({
         headline: definition.title,
-        description: definition.seoDescription,
-        pageUrl,
+        description: described.description,
+        pageUrl: described.pageUrl,
         datePublished: guidePublishedOn,
         lastmod: definition.lastmod,
         siteUrl,
         image: guideImages[key],
       }),
-      breadcrumb: [
-        homeCrumb,
-        guideIndexCrumb,
-        { name: definition.title, url: pageUrl },
-      ],
     });
   }
 

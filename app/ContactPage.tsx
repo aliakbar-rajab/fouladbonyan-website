@@ -7,12 +7,16 @@ import {
   buildWazeUrl,
   siteConfig,
 } from "./site-config";
+import { pageBreadcrumb, pageHead } from "./site-page";
+import { siteRoutePath } from "./site-route";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
 import { PrimaryNav } from "./site-ui";
 
 const googleMapsUrl = buildGoogleMapsUrl(siteConfig.officeCoordinates);
 const wazeUrl = buildWazeUrl(siteConfig.officeCoordinates);
+
+const route = { kind: "contact" } as const;
 
 const mapDestinations = [
   {
@@ -31,7 +35,7 @@ const mapDestinations = [
 
 export default function ContactPage() {
   useEffect(() => {
-    document.title = "تماس با ما | بنیان فولاد داریا";
+    document.title = pageHead(route).title;
   }, []);
 
   return (
@@ -43,19 +47,17 @@ export default function ContactPage() {
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <PrimaryNav currentHref="/contact/" onLinkClick={closeMobileNav} />
+          <PrimaryNav
+            currentHref={siteRoutePath(route)}
+            onLinkClick={closeMobileNav}
+          />
         )}
       />
 
       <main id="main-content" className="contact-main">
         <section className="contact-hero">
           <div className="shell">
-            <Breadcrumb
-              items={[
-                { label: "صفحه اصلی", href: "/" },
-                { label: "تماس با ما" },
-              ]}
-            />
+            <Breadcrumb items={pageBreadcrumb(route)} />
             <span className="contact-hero-eyebrow">بنیان فولاد داریا</span>
             <h1 className="contact-hero-title">تماس با ما</h1>
           </div>

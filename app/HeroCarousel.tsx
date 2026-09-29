@@ -1,6 +1,8 @@
+import { QUOTE_FORM_HREF } from "./quote-handoff";
 import { useEffect, useState } from "react";
 import { productGroups, type ProductGroup } from "./category-meta";
 import { Breadcrumb } from "./Breadcrumb";
+import { pageBreadcrumb } from "./site-page";
 import { getHeroImageSources } from "./image-utils";
 import { ArrowIcon } from "./icons";
 
@@ -57,16 +59,12 @@ export function HeroCarousel({
       ? `استعلام قیمت روز ${subcategory.label} از کارخانه‌های معتبر کشور. برای دریافت پیش‌فاکتور، استعلام موجودی و مشاوره تخصصی خرید ${subcategory.label} با واحد فروش بنیان فولاد داریا تماس بگیرید.`
       : categoryGroup.intro;
 
-    const breadcrumbItems = subcategory
-      ? [
-          { label: "صفحه اصلی", href: "/" },
-          { label: categoryGroup.label, href: `/${categoryGroup.id}/` },
-          { label: subcategory.label },
-        ]
-      : [
-          { label: "صفحه اصلی", href: "/" },
-          { label: categoryGroup.label },
-        ];
+    const breadcrumbItems = pageBreadcrumb({
+      kind: "catalog",
+      category: categoryGroup.id,
+      subcategory: subcategory?.id,
+      subcategoryLabel: subcategory?.label,
+    });
 
     return (
       <div className="hero-frame hero-frame-category">
@@ -112,7 +110,7 @@ export function HeroCarousel({
               >
                 مشاهده جدول قیمت {displayLabel}
               </button>
-              <a href="/quote-process/#quote-form">
+              <a href={QUOTE_FORM_HREF}>
                 درخواست پیش‌فاکتور {displayLabel}
               </a>
             </div>
@@ -196,7 +194,7 @@ export function HeroCarousel({
             >
               ورود به مرکز قیمت فولاد
             </button>
-            <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
+            <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
           </div>
         </div>
 

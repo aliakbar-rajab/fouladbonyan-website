@@ -1,3 +1,4 @@
+import { QUOTE_FORM_HREF } from "./quote-handoff";
 import {
   FormEvent,
   useEffect,
@@ -7,7 +8,7 @@ import {
 import CatalogPrices from "./CatalogPrices";
 import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
-import { productGroups, type ProductGroupId } from "./category-meta";
+import { productGroups, type ProductGroupId, subcategoryHref } from "./category-meta";
 import { siteConfig } from "./site-config";
 import { SiteFooter } from "./SiteFooter";
 import { SectionTitle } from "./site-ui";
@@ -150,7 +151,7 @@ export default function App({
                         scrollToPriceWorkspace();
                         return;
                       }
-                      window.location.assign(`/${groupId}/`);
+                      window.location.assign(subcategoryHref(groupId));
                     }}
                   >
                     <option value="" disabled>انتخاب گروه محصول</option>
@@ -171,7 +172,7 @@ export default function App({
                       const selected = group.id === workspace.selectedTabId;
                       return (
                         <a
-                          href={`/${group.id}/`}
+                          href={subcategoryHref(group.id)}
                           aria-current={
                             selected && workspace.isCategoryRoute
                               ? "page"
@@ -244,7 +245,7 @@ export default function App({
           <PhoneIcon className="mobile-action-icon" />
           تماس
         </a>
-        <a href="/quote-process/#quote-form">درخواست پیش‌فاکتور</a>
+        <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
       </div>
     </div>
   );

@@ -130,7 +130,7 @@ export function buildWebSiteJsonLd({ siteUrl }) {
     url: `${siteUrl}/`,
     name: siteConfig.brand.name,
     alternateName: siteConfig.brand.alternateName,
-    description: siteConfig.brand.tagline,
+    description: siteConfig.home.description,
     publisher: {
       "@id": `${siteUrl}/#organization`,
     },

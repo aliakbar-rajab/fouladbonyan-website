@@ -15,7 +15,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { JSDOM } from "jsdom";
-import React from "react";
 
 const route = process.argv[2] ?? "";
 const projectDir = resolve(import.meta.dirname, "..", "..");
@@ -67,13 +66,12 @@ console.error = (...args) => {
 };
 
 const { hydrateRoot } = await import("react-dom/client");
-const App = (await import("../../app/App.tsx")).default;
-const ContactPage = (await import("../../app/ContactPage.tsx")).default;
-const InfoPage = (await import("../../app/InfoPage.tsx")).default;
-const GuidePage = (await import("../../app/GuidePage.tsx")).default;
 const { primeCatalogReader } = await import(
   "../../app/catalog-reader.ts"
 );
+const { interpretSiteRoute } = await import("../../app/site-route.ts");
+const { pagePayloadIds } = await import("../../app/site-page.ts");
+const { pageElement } = await import("../../app/site-page-element.tsx");
 
 const root = document.getElementById("root");
 
@@ -87,29 +85,18 @@ function readJsonScript(id) {
   }
 }
 
+// The same steps, in the same order, as static-entry/main.tsx -- the route and
+// the element come from the modules the browser boot uses, not a copy of them.
 primeCatalogReader({
-  snapshot: readJsonScript("initial-page-data"),
-  menu: readJsonScript("initial-menu-data"),
-  overview: readJsonScript("initial-overview-data"),
+  snapshot: readJsonScript(pagePayloadIds.catalog),
+  menu: readJsonScript(pagePayloadIds.menu),
+  overview: readJsonScript(pagePayloadIds.overview),
 });
 
-const guideReference = readJsonScript("initial-guide-data");
-
-
-const page = root.dataset.page ?? "";
-let element;
-if (page === "contact") {
-  element = React.createElement(ContactPage);
-} else if (page === "guide") {
-  element = React.createElement(GuidePage, {
-    guide: root.dataset.guide || undefined,
-    reference: guideReference,
-  });
-} else if (page) {
-  element = React.createElement(InfoPage, { page });
-} else {
-  element = React.createElement(App);
-}
+const element = pageElement(
+  interpretSiteRoute({ pathname: window.location.pathname, dataset: root.dataset }),
+  { guideReference: readJsonScript(pagePayloadIds.guide) },
+);
 
 const recoverable = [];
 hydrateRoot(root, element, {

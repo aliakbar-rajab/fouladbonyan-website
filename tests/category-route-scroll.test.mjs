@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
-import React from "react";
 import { setupDomEnv } from "./helpers/dom-env.mjs";
 
 const dom = setupDomEnv({ url: "https://example.test/" });
@@ -25,7 +24,20 @@ dom.window.matchMedia = (query) => ({
 const { act, cleanup, render, screen, waitFor, within } = await import(
   "@testing-library/react"
 );
-const App = (await import("../app/App.tsx")).default;
+const { interpretSiteRoute } = await import("../app/site-route.ts");
+const { pageElement } = await import("../app/site-page-element.tsx");
+
+// What static-entry/main.tsx does: read the route off the address bar and the
+// root's data attributes, and render the element the Site page module builds.
+const renderPage = () =>
+  render(
+    pageElement(
+      interpretSiteRoute({
+        pathname: window.location.pathname,
+        dataset: document.getElementById("root")?.dataset,
+      }),
+    ),
+  );
 
 const settle = () =>
   act(async () => {
@@ -53,7 +65,7 @@ afterEach(() => {
 
 test("a direct category route activates its tab and scrolls to prices", async () => {
   addRoot("beam");
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   assert.equal(
@@ -89,7 +101,7 @@ test("a direct category route activates its tab and scrolls to prices", async ()
 
 test("product page links use navigation semantics without broken tab relationships", async () => {
   addRoot("beam");
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   const navigation = screen.getByRole("navigation", { name: "گروه محصولات" });
@@ -102,7 +114,7 @@ test("product page links use navigation semantics without broken tab relationshi
 test("the development shell resolves a category directly from the pathname", async () => {
   window.history.replaceState({}, "", "/channel/");
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   assert.equal(
@@ -119,7 +131,7 @@ test("the development shell resolves a category directly from the pathname", asy
 
 test("the homepage product navigation does not claim a category page is current", async () => {
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   const productNavigation = screen.getByRole("navigation", {
@@ -171,7 +183,7 @@ test("the homepage product navigation does not claim a category page is current"
 
 test("the homepage hero price action reaches the live price workspace", async () => {
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   screen.getByRole("button", { name: "ورود به مرکز قیمت فولاد" }).click();
@@ -184,7 +196,7 @@ test("the homepage hero price action reaches the live price workspace", async ()
 test("a direct category route keeps the price jump immediate under reduced motion", async () => {
   prefersReducedMotion = true;
   addRoot("rebar");
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   // Verify rebar H1 is distinct
@@ -222,7 +234,7 @@ test("all category routes produce distinct H1 headings", async () => {
 
 test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and subcategory H1", async () => {
   addRoot("rebar", "simple", "میلگرد ساده");
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   assert.equal(
@@ -259,7 +271,7 @@ test("a direct subcategory route activates its tab, sets 3-level breadcrumbs and
 test("a subcategory route resolved from pathname or without explicit label resolves Persian H1 and breadcrumbs", async () => {
   window.history.replaceState({}, "", "/rebar/ribbed/");
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   assert.equal(
@@ -273,7 +285,7 @@ test("a subcategory route resolved from pathname or without explicit label resol
 
 test("every product page link stays in the browser's normal keyboard tab order", async () => {
   addRoot();
-  render(React.createElement(App));
+  renderPage();
   await settle();
 
   const links = within(

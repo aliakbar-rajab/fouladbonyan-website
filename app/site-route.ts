@@ -103,25 +103,23 @@ export function interpretSiteRoute({
   return { kind: "home" };
 }
 
+/**
+ * Normalise the catalog part of a route handed to the catalog workspace: an
+ * unknown group is no group, a subcategory only counts under a known group,
+ * and a missing label is filled from the taxonomy.
+ */
 export function resolveCatalogRouteRequest(
-  input: RouteInput & { overrides?: CatalogRouteRequest } = {},
+  request: CatalogRouteRequest = {},
 ): CatalogRouteRequest {
-  const route = interpretSiteRoute(input);
-  const routeCatalog = route.kind === "catalog" ? route : undefined;
-  const category = input.overrides?.category ?? routeCatalog?.category;
-  const validCategory = isProductGroupId(category) ? category : undefined;
-  const subcategory =
-    input.overrides?.subcategory ??
-    (validCategory ? routeCatalog?.subcategory : undefined);
-
+  const category = isProductGroupId(request.category)
+    ? request.category
+    : undefined;
+  const subcategory = category ? request.subcategory : undefined;
   return {
-    category: validCategory,
+    category,
     subcategory,
     subcategoryLabel:
-      input.overrides?.subcategoryLabel ??
-      routeCatalog?.subcategoryLabel ??
-      getSubcategoryLabel(subcategory) ??
-      undefined,
+      request.subcategoryLabel ?? getSubcategoryLabel(subcategory) ?? undefined,
   };
 }
 
