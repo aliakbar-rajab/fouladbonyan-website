@@ -15,7 +15,7 @@ import {
   pageHead,
   pagePayloadIds,
 } from "../../app/site-page.ts";
-import { pageElement } from "../../app/site-page-element.tsx";
+import { loadPageElement, routePageSource } from "../../app/site-page-element.tsx";
 import {
   HERO_OG_IMAGE,
   buildArticleJsonLd,
@@ -39,14 +39,15 @@ import {
  * The shared parts of a descriptor, from the route: head, JSON-LD trail,
  * root element, the root's route attributes and where the page is written.
  */
-function describeRoute(route, siteUrl, { guideReference } = {}) {
+async function describeRoute(route, siteUrl, { guideReference } = {}) {
   const head = pageHead(route);
   return {
     ...routeLocation(route, siteUrl),
     route,
     title: head.title,
     description: head.description,
-    rootElement: pageElement(route, { guideReference }),
+    rootElement: await loadPageElement(route, { guideReference }),
+    pageModuleSource: routePageSource(route),
     breadcrumb: pageBreadcrumb(route).map((crumb) => ({
       name: crumb.label,
       url: `${siteUrl}${crumb.href}`,
@@ -79,7 +80,7 @@ export async function collectSitePageDescriptors({
 
   // 1. Homepage
   pages.push({
-    ...describe({ kind: "home" }),
+    ...(await describe({ kind: "home" })),
     lastmod: rootLastmod,
     heroPreload: undefined, // Preserves template default hero preload
     payloads: [
@@ -117,7 +118,7 @@ export async function collectSitePageDescriptors({
 
     // Category landing page
     pages.push({
-      ...describe({ kind: "catalog", category: group.id }),
+      ...(await describe({ kind: "catalog", category: group.id })),
       lastmod,
       ogImage: groupOgImage,
       ogImageAlt: `قیمت ${group.label} | ${siteConfig.brand.name}`,
@@ -132,12 +133,12 @@ export async function collectSitePageDescriptors({
     if (!isSingleSubcategoryGroup(group.id)) {
       for (const sub of catalog.categories) {
         pages.push({
-          ...describe({
+          ...(await describe({
             kind: "catalog",
             category: group.id,
             subcategory: sub.id,
             subcategoryLabel: sub.label,
-          }),
+          })),
           lastmod,
           ogImage: groupOgImage,
           ogImageAlt: `قیمت روز ${sub.label} | ${siteConfig.brand.name}`,
@@ -152,7 +153,7 @@ export async function collectSitePageDescriptors({
 
   // 3. Contact Page
   pages.push({
-    ...describe({ kind: "contact" }),
+    ...(await describe({ kind: "contact" })),
     lastmod: "2026-08-11",
     heroPreload: null,
     payloads: [],
@@ -162,7 +163,7 @@ export async function collectSitePageDescriptors({
   // 4. Info Pages
   for (const [page, definition] of Object.entries(infoPageDefinitions)) {
     pages.push({
-      ...describe({ kind: "info", page }),
+      ...(await describe({ kind: "info", page })),
       lastmod: definition.lastmod,
       heroPreload: null,
       payloads: [],
@@ -176,7 +177,7 @@ export async function collectSitePageDescriptors({
     describeRoute(route, siteUrl, { guideReference: reference });
 
   pages.push({
-    ...describeGuide({ kind: "guide" }),
+    ...(await describeGuide({ kind: "guide" })),
     lastmod: guideIndex.lastmod,
     heroPreload: null,
     payloads: guidePayloads,
@@ -197,7 +198,7 @@ export async function collectSitePageDescriptors({
 
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
-    const described = describeGuide({ kind: "guide", guide: key });
+    const described = await describeGuide({ kind: "guide", guide: key });
     pages.push({
       ...described,
       lastmod: definition.lastmod,

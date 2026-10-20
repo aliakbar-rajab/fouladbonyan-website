@@ -13,7 +13,7 @@ import {
   isOrganizationRoute,
 } from "../app/site-route";
 import { pagePayloadIds } from "../app/site-page";
-import { pageElement } from "../app/site-page-element";
+import { loadPageElement } from "../app/site-page-element";
 import "../app/globals.css";
 
 function readJsonScript(id: string) {
@@ -75,7 +75,7 @@ async function resolveContent() {
     route.kind === "guide" && !guideReference
       ? buildGuideReference(await loadCatalogSnapshot())
       : guideReference;
-  return pageElement(route, { guideReference: reference });
+  return loadPageElement(route, { guideReference: reference });
 }
 
 /*

@@ -15,4 +15,9 @@ const allowViteDevelopmentStyles = (): Plugin => ({
 
 export default defineConfig(({ command }) => ({
   plugins: [react(), ...(command === "serve" ? [allowViteDevelopmentStyles()] : [])],
+  build: {
+    // The prerender reads the manifest to preload each lazily loaded page's
+    // chunk in that page's HTML, then deletes it (it is not for publishing).
+    manifest: true,
+  },
 }));

@@ -260,6 +260,7 @@ export function renderStaticDocument(
     payloads = [],
     breadcrumb = [],
     organizationData = null,
+    modulePreloadHrefs = [],
   },
 ) {
   let html = baseHtml
@@ -330,6 +331,21 @@ export function renderStaticDocument(
       "</head>",
       insert(`${buildBreadcrumbJsonLd(breadcrumb)}\n  </head>`),
     );
+  }
+
+  // Preload the page's own lazily loaded chunk (see routePageSource in
+  // app/site-page-element.tsx), so it downloads alongside the main bundle
+  // instead of after it. `crossorigin` matches the module script's request.
+  if (modulePreloadHrefs.length > 0) {
+    const links = modulePreloadHrefs
+      .map(
+        (href) =>
+          `
+    <link rel="modulepreload" crossorigin href="${escapeHtmlAttribute(href)}">`,
+      )
+      .join("");
+    html = html.replace("</head>", insert(`${links}
+  </head>`));
   }
 
   // Inject extra head elements (e.g. WebSite or Article JSON-LD) before </head>

@@ -71,7 +71,7 @@ const { primeCatalogReader } = await import(
 );
 const { interpretSiteRoute } = await import("../../app/site-route.ts");
 const { pagePayloadIds } = await import("../../app/site-page.ts");
-const { pageElement } = await import("../../app/site-page-element.tsx");
+const { loadPageElement } = await import("../../app/site-page-element.tsx");
 
 const root = document.getElementById("root");
 
@@ -93,7 +93,7 @@ primeCatalogReader({
   overview: readJsonScript(pagePayloadIds.overview),
 });
 
-const element = pageElement(
+const element = await loadPageElement(
   interpretSiteRoute({ pathname: window.location.pathname, dataset: root.dataset }),
   { guideReference: readJsonScript(pagePayloadIds.guide) },
 );

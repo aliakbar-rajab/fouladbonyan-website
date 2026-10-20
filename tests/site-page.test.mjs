@@ -20,7 +20,7 @@ const { buildMenuCatalog, loadOverviewSummaries, primeCatalogSnapshot } =
   await import("../app/catalog-reader.ts");
 const { buildGuideReference } = await import("../app/steel-reference.ts");
 const { interpretSiteRoute } = await import("../app/site-route.ts");
-const { pageElement } = await import("../app/site-page-element.tsx");
+const { loadPageElement } = await import("../app/site-page-element.tsx");
 
 const snapshot = JSON.parse(
   await readFile(new URL("../app/data/catalog-prices.json", import.meta.url), "utf8"),
@@ -50,9 +50,9 @@ const browserRouteOf = (page) =>
 
 afterEach(cleanup);
 
-test("the browser builds the same root element the build rendered, for every page", () => {
+test("the browser builds the same root element the build rendered, for every page", async () => {
   for (const page of pages) {
-    const hydrated = pageElement(browserRouteOf(page), { guideReference: reference });
+    const hydrated = await loadPageElement(browserRouteOf(page), { guideReference: reference });
     assert.equal(hydrated.type, page.rootElement.type, `${page.pageUrl} root component`);
     assert.deepEqual(hydrated.props, page.rootElement.props, `${page.pageUrl} root props`);
   }

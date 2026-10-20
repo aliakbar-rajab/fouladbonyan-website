@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { siteConfig } from "../../app/site-config.ts";
 import { buildGuideReference } from "../../app/steel-reference.ts";
@@ -27,6 +27,27 @@ import { collectSitePageDescriptors } from "./site-pages.mjs";
  * off disk unconditionally. Both reads are now seams: production passes
  * nothing and gets the real files, a test passes its own.
  */
+
+/**
+ * The files to modulepreload for a lazily loaded page module: its own chunk
+ * and the shared chunks it imports, but not the entry bundle, which the page
+ * already loads. `manifest` is Vite's build manifest; null preloads nothing.
+ */
+export function modulePreloadsFor(manifest, source) {
+  if (!manifest || !source) return [];
+  if (!manifest[source]) {
+    throw new Error(`No chunk for ${source} in the Vite build manifest.`);
+  }
+  const files = [];
+  const visit = (key) => {
+    const chunk = manifest[key];
+    if (!chunk || chunk.isEntry || files.includes(`/${chunk.file}`)) return;
+    files.push(`/${chunk.file}`);
+    for (const imported of chunk.imports ?? []) visit(imported);
+  };
+  visit(source);
+  return files;
+}
 
 /**
  * Renders every page in memory before writing anything, so a failure part-way
@@ -89,11 +110,13 @@ export async function generateStaticSite({
   readTemplate = () => readFile(resolve(distDir, "index.html"), "utf8"),
   readSnapshot = async () =>
     JSON.parse(await readFile(resolve(dataDir, "catalog-prices.json"), "utf8")),
+  readManifest = () => readViteManifest(distDir),
   writeArtifacts = writePrerenderArtifacts,
 } = {}) {
-  const [templateHtml, snapshot] = await Promise.all([
+  const [templateHtml, snapshot, manifest] = await Promise.all([
     readTemplate(),
     readSnapshot(),
+    readManifest(),
   ]);
 
   // Prime catalog cache
@@ -117,11 +140,26 @@ export async function generateStaticSite({
     siteUrl,
   });
 
-  return writeArtifacts({
+  const result = await writeArtifacts({
     distDir,
     templateHtml,
-    pages,
+    pages: pages.map((page) => ({
+      ...page,
+      modulePreloadHrefs: modulePreloadsFor(manifest, page.pageModuleSource),
+    })),
     rootLastmod,
     siteUrl,
   });
+  if (manifest) await rm(resolve(distDir, ".vite"), { recursive: true, force: true });
+  return result;
+}
+
+/** Vite's build manifest, or null when there is none (a test's distDir). */
+async function readViteManifest(distDir) {
+  try {
+    return JSON.parse(await readFile(resolve(distDir, ".vite", "manifest.json"), "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
 }
