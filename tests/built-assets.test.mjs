@@ -246,10 +246,12 @@ test("F13: responsive images, modern formats (WebP/AVIF), alt text, and preload 
     /<picture class="hero-image is-active">[\s\S]*?<img [^>]*loading="eager"[^>]*fetch[pP]riority="high"/,
     "Homepage active hero img must have loading=eager and fetchpriority=high",
   );
-  assert.match(
-    homeHtml,
-    /<picture class="hero-image">[\s\S]*?<img [^>]*loading="lazy"[^>]*fetch[pP]riority="low"/,
-    "Homepage inactive hero img must have loading=lazy and fetchpriority=low",
+  // The hidden slides' photos are requested only after the page load (see
+  // app/hero-carousel-state.ts), so the prerender ships them empty.
+  assert.equal(
+    homeHtml.match(/<picture class="hero-image"><\/picture>/g)?.length,
+    2,
+    "Homepage inactive hero slides must not carry a photo in the initial HTML",
   );
 
   // 2. Category pages: hero picture and preload matching the category

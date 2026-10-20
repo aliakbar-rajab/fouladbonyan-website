@@ -1,13 +1,58 @@
 import { QUOTE_FORM_HREF } from "./quote-handoff";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Dispatch,
+} from "react";
 import { productGroups, type ProductGroup } from "./category-meta";
 import { Breadcrumb } from "./Breadcrumb";
 import { pageBreadcrumb } from "./site-page";
 import { getHeroImageSources } from "./image-utils";
 import { ArrowIcon } from "./icons";
+import {
+  carouselReducer,
+  initialCarouselState,
+  type CarouselAction,
+} from "./hero-carousel-state";
 
 const heroSlides = productGroups.slice(0, 3);
 const HERO_SLIDE_INTERVAL_MS = 9_000;
+
+/**
+ * "ready" once the photo has loaded and decoded, "failed" if it is broken.
+ * decode() can also reject for an image that did load (a decode abandoned
+ * under memory pressure), so only a zero-width completed image is a failure.
+ * Where decode() is missing (jsdom), the load and error events decide.
+ */
+function whenPhotoSettles(img: HTMLImageElement): Promise<"ready" | "failed"> {
+  const outcome = () =>
+    img.complete && img.naturalWidth === 0 ? "failed" : "ready";
+  if (typeof img.decode === "function") {
+    return img.decode().then(() => "ready" as const, outcome);
+  }
+  if (img.complete) return Promise.resolve(outcome());
+  return new Promise((resolve) => {
+    img.addEventListener("load", () => resolve("ready"), { once: true });
+    img.addEventListener("error", () => resolve("failed"), { once: true });
+  });
+}
+
+function subscribeToPageLoad(callback: () => void) {
+  window.addEventListener("load", callback);
+  return () => window.removeEventListener("load", callback);
+}
+
+/** True once the window `load` event has fired; false in the prerender. */
+function usePageLoaded() {
+  return useSyncExternalStore(
+    subscribeToPageLoad,
+    () => document.readyState === "complete",
+    () => false,
+  );
+}
 
 export type SubcategoryHeroInfo = {
   id: string;
@@ -27,7 +72,13 @@ export function HeroCarousel({
   categoryGroup,
   subcategory,
 }: HeroCarouselProps) {
-  const [activeSlide, setActiveSlide] = useState(0);
+  const [carousel, dispatch] = useReducer(
+    carouselReducer,
+    heroSlides.length,
+    initialCarouselState,
+  );
+  const activeSlide = carousel.active;
+  const pageLoaded = usePageLoaded();
   /*
    * Two separate reasons to hold the carousel, because they are not the same
    * promise. Hovering or focusing the hero suspends it for as long as the
@@ -42,13 +93,25 @@ export function HeroCarousel({
 
   const isCategory = Boolean(categoryGroup);
 
+  // One timer per slide shown. While a due slide waits for its photo there is
+  // nothing to count down; showing it starts the next interval.
+  const isWaiting = carousel.queued !== null;
   useEffect(() => {
-    if (isCategory || reduceMotion || carouselPaused) return undefined;
-    const timer = window.setInterval(() => {
-      setActiveSlide((current) => (current + 1) % heroSlides.length);
-    }, HERO_SLIDE_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [carouselPaused, isCategory, reduceMotion]);
+    if (isCategory || reduceMotion || carouselPaused || isWaiting) {
+      return undefined;
+    }
+    const timer = window.setTimeout(
+      () => dispatch({ type: "advance" }),
+      HERO_SLIDE_INTERVAL_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [activeSlide, carouselPaused, isCategory, isWaiting, reduceMotion]);
+
+  // Holding the carousel also drops a slide that was waiting to rotate in.
+  const pauseWith = (setPaused: (paused: boolean) => void) => {
+    setPaused(true);
+    dispatch({ type: "cancelQueue" });
+  };
 
   if (categoryGroup) {
     const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
@@ -129,9 +192,9 @@ export function HeroCarousel({
         className="hero"
         aria-roledescription="carousel"
         aria-label="محصولات منتخب بنیان فولاد داریا"
-        onMouseEnter={() => setHoverPaused(true)}
+        onMouseEnter={() => pauseWith(setHoverPaused)}
         onMouseLeave={() => setHoverPaused(false)}
-        onFocus={() => setHoverPaused(true)}
+        onFocus={() => pauseWith(setHoverPaused)}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) {
             setHoverPaused(false);
@@ -141,33 +204,39 @@ export function HeroCarousel({
         {heroSlides.map((item, index) => {
           const heroSources = getHeroImageSources(item.heroImage ?? item.image);
           const isCurrentActive = index === activeSlide;
-          const isInitialEager = index === 0;
+          const isFirstSlide = index === 0;
+          const hasPhoto =
+            isFirstSlide || pageLoaded || carousel.requested[index];
           return (
             <picture
               key={item.id}
               className={`hero-image${isCurrentActive ? " is-active" : ""}`}
             >
-              <source
-                type="image/avif"
-                srcSet={heroSources.avifSrcSet}
-                sizes={heroSources.sizes}
-              />
-              <source
-                type="image/webp"
-                srcSet={heroSources.webpSrcSet}
-                sizes={heroSources.sizes}
-              />
-              <img
-                src={heroSources.fallbackSrc}
-                srcSet={heroSources.jpgSrcSet}
-                sizes={heroSources.sizes}
-                alt={item.label}
-                width={heroSources.width}
-                height={heroSources.height}
-                decoding="async"
-                loading={isInitialEager ? "eager" : "lazy"}
-                fetchPriority={isInitialEager ? "high" : "low"}
-              />
+              {hasPhoto ? (
+                <>
+                  <source
+                    type="image/avif"
+                    srcSet={heroSources.avifSrcSet}
+                    sizes={heroSources.sizes}
+                  />
+                  <source
+                    type="image/webp"
+                    srcSet={heroSources.webpSrcSet}
+                    sizes={heroSources.sizes}
+                  />
+                  <SlidePhoto
+                    index={index}
+                    dispatch={dispatch}
+                    isLcpImage={isFirstSlide}
+                    src={heroSources.fallbackSrc}
+                    srcSet={heroSources.jpgSrcSet}
+                    sizes={heroSources.sizes}
+                    alt={item.label}
+                    width={heroSources.width}
+                    height={heroSources.height}
+                  />
+                </>
+              ) : null}
             </picture>
           );
         })}
@@ -212,10 +281,10 @@ export function HeroCarousel({
             type="button"
             aria-label="اسلاید قبلی"
             onClick={() =>
-              setActiveSlide(
-                (current) =>
-                  (current - 1 + heroSlides.length) % heroSlides.length,
-              )
+              dispatch({
+                type: "show",
+                index: (activeSlide - 1 + heroSlides.length) % heroSlides.length,
+              })
             }
           >
             <ArrowIcon className="carousel-arrow is-previous" />
@@ -228,7 +297,7 @@ export function HeroCarousel({
                 className={index === activeSlide ? "is-active" : ""}
                 aria-label={`اسلاید ${(index + 1).toLocaleString("fa-IR")}: ${item.label}`}
                 aria-current={index === activeSlide ? "true" : undefined}
-                onClick={() => setActiveSlide(index)}
+                onClick={() => dispatch({ type: "show", index })}
               />
             ))}
           </div>
@@ -236,7 +305,10 @@ export function HeroCarousel({
             type="button"
             aria-label="اسلاید بعدی"
             onClick={() =>
-              setActiveSlide((current) => (current + 1) % heroSlides.length)
+              dispatch({
+                type: "show",
+                index: (activeSlide + 1) % heroSlides.length,
+              })
             }
           >
             <ArrowIcon className="carousel-arrow is-next" />
@@ -249,7 +321,10 @@ export function HeroCarousel({
                 userPaused ? "ادامه پخش اسلایدها" : "توقف اسلایدها"
               }
               aria-pressed={userPaused}
-              onClick={() => setUserPaused((paused) => !paused)}
+              onClick={() => {
+                if (userPaused) setUserPaused(false);
+                else pauseWith(setUserPaused);
+              }}
             >
               {userPaused ? "پخش" : "توقف"}
             </button>
@@ -257,5 +332,51 @@ export function HeroCarousel({
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * A slide photo that reports once it has loaded and decoded. `decode()`
+ * settles only then, so a slide never fades in half-painted. The first slide
+ * is the LCP image and keeps its prerendered high-priority load; the others
+ * are only rendered after the page load, when an ordinary fetch is right.
+ */
+function SlidePhoto({
+  index,
+  dispatch,
+  isLcpImage,
+  ...image
+}: {
+  index: number;
+  dispatch: Dispatch<CarouselAction>;
+  isLcpImage: boolean;
+  src: string;
+  srcSet: string;
+  sizes: string;
+  alt: string;
+  width: number;
+  height: number;
+}) {
+  const ref = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const img = ref.current;
+    if (!img) return undefined;
+    let current = true;
+    void whenPhotoSettles(img).then((status) => {
+      if (current) dispatch({ type: "settled", index, status });
+    });
+    return () => {
+      current = false;
+    };
+  }, [dispatch, index]);
+
+  return (
+    <img
+      ref={ref}
+      {...image}
+      decoding="async"
+      loading="eager"
+      fetchPriority={isLcpImage ? "high" : undefined}
+    />
   );
 }
