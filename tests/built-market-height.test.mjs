@@ -62,7 +62,7 @@ test("built market ready content matches its reserved footprint", { timeout: 120
   try {
     browser = await chromium.launch({ channel: "chrome" });
     const base = `http://127.0.0.1:${server.httpServer.address().port}`;
-    for (const width of [390, 768, 1440]) {
+    for (const width of [320, 390, 768, 1440]) {
       await t.test(`${width}px: ready, stale, and surplus cards`, async () => {
         const page = await browser.newPage({ viewport: { width, height: 844 }, deviceScaleFactor: 2 });
         let payload = fixture;
@@ -95,7 +95,7 @@ test("built market ready content matches its reserved footprint", { timeout: 120
   }
 });
 
-test("homepage keeps steel prices ahead of compact market failures and usable mobile controls", { timeout: 120_000 }, async t => {
+test("homepage places market rates under the hero, keeps recovery from shifting prices, and usable mobile controls", { timeout: 120_000 }, async t => {
   const fixture = await marketFixture();
   const server = await preview({ preview: { host: "127.0.0.1", port: 0 } });
   const browser = await chromium.launch({ channel: "chrome" });
@@ -117,13 +117,16 @@ test("homepage keeps steel prices ahead of compact market failures and usable mo
           const market = document.querySelector("#market-prices").getBoundingClientRect();
           const prices = document.querySelector("#price-workspace").getBoundingClientRect();
           const rail = document.querySelector(".market-status-rail")?.getBoundingClientRect();
+          const reserved = parseFloat(getComputedStyle(document.querySelector("#market-prices"))
+            .getPropertyValue("--market-ready-min-height"));
           return { marketTop: market.top + scrollY, priceTop: prices.top + scrollY,
-            height: market.height, railWidth: rail?.width, width: innerWidth,
+            height: market.height, reserved, railWidth: rail?.width, width: innerWidth,
             scrollWidth: document.documentElement.scrollWidth };
         });
         const before = await measure();
-        assert.ok(before.marketTop > before.priceTop, "Supplementary rates follow steel prices");
-        assert.ok(before.height < 250, "Failure must not reserve an empty card grid");
+        assert.ok(before.marketTop < before.priceTop, "Market rates sit directly below the hero, ahead of steel prices");
+        assert.ok(Math.abs(before.height - before.reserved) <= 2,
+          "Failure holds the ready footprint so recovery cannot shift the price workspace");
         assert.ok(before.railWidth >= Math.min(width - 40, 1200), "Status uses the full shell");
         assert.equal(before.scrollWidth, width);
         if (width <= 900) {

@@ -71,7 +71,7 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
   );
 }
 
-export function MarketPrices({ compactStatus = false }: { compactStatus?: boolean }) {
+export function MarketPrices() {
   const state = useMarketPrices();
   const isStatusOnly = state.status !== "ready";
   const visibleItems = state.status === "ready"
@@ -80,7 +80,7 @@ export function MarketPrices({ compactStatus = false }: { compactStatus?: boolea
 
   return (
     <section
-      className={`market-prices market-context section${isStatusOnly ? " is-status-only" : ""}${compactStatus ? " market-context-secondary" : ""}`}
+      className={`market-prices market-context section${isStatusOnly ? " is-status-only" : ""}`}
       id="market-prices"
       aria-labelledby="market-prices-title"
     >

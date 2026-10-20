@@ -98,7 +98,7 @@ export default function App({
           subcategory={workspace.hero.subcategory}
         />
 
-        {workspace.isCategoryRoute ? <MarketPrices /> : null}
+        <MarketPrices />
 
         <section className="prices section" id="prices">
           <div className="shell">
@@ -230,8 +230,6 @@ export default function App({
             {workspace.viewMode === "home-overview" ? <CategoryGrid /> : null}
           </div>
         </section>
-
-        {!workspace.isCategoryRoute ? <MarketPrices compactStatus /> : null}
 
         <KnowledgeSection />
 

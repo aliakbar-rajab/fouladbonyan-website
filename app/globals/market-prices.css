@@ -245,6 +245,14 @@
   }
 }
 
+@media (max-width: 360px) {
+  .market-prices {
+    /* Stale caption wraps further on the narrowest phones: measured
+       1152.172px at 320-360px. */
+    --market-ready-min-height: 1153px;
+  }
+}
+
 @media (max-width: 480px) {
   .market-status-rail {
     grid-template-columns: auto minmax(0, 1fr);

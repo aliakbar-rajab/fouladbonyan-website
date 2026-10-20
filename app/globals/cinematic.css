@@ -849,13 +849,6 @@ body {
   align-items: center;
 }
 
-/* Homepage context follows the price workspace, so it needs no reservation
-   to protect category-route auto-scrolling above the price tables. */
-.market-context-secondary.is-status-only,
-.market-context-secondary.is-status-only .shell {
-  min-block-size: 0;
-}
-
 .market-context.is-status-only {
   padding-block: 0.8rem;
 }
