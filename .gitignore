@@ -15,6 +15,9 @@
 # Test output
 /coverage/
 
+# Local performance measurements (Lighthouse reports, traces, scripts)
+/perf-reports/
+
 # Local environment files
 .env
 .env.*
