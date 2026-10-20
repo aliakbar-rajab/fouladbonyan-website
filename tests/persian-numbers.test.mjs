@@ -91,6 +91,20 @@ test("formatPersianNumber formats numbers with Persian numerals and fraction pre
   assert.equal(formatPersianNumber(Number.NaN), "");
 });
 
+test("formatPersianNumber matches toLocaleString('fa-IR') exactly at every precision", () => {
+  const values = [0, -0, 1, -1, 7.5, 0.125, 999.995, 1234.5678, -98765.4321, 35400000, 1e15, 2 ** 53];
+  for (let i = 0; i < 200; i += 1) values.push((i * 7919.37) % 1e9, -(i * 13.0071));
+  for (const digits of [0, 1, 2, 3]) {
+    for (const value of values) {
+      assert.equal(
+        formatPersianNumber(value, digits),
+        value.toLocaleString("fa-IR", { maximumFractionDigits: digits }),
+        `${value} at ${digits} fraction digits`,
+      );
+    }
+  }
+});
+
 test("rialToWords converts Rial amounts to Persian words accurately", () => {
   assert.equal(rialToWords(0), "صفر ریال");
   assert.equal(rialToWords(-100), "صفر ریال");

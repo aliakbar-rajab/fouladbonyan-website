@@ -77,7 +77,24 @@ export function parsePersianNumber(value) {
  */
 export function formatPersianNumber(value, maximumFractionDigits = 0) {
   if (typeof value !== "number" || !Number.isFinite(value)) return "";
-  return value.toLocaleString("fa-IR", { maximumFractionDigits });
+  return persianNumberFormat(maximumFractionDigits).format(value);
+}
+
+/*
+ * One formatter per precision, built on first use. `toLocaleString` builds a
+ * fresh Intl.NumberFormat on every call -- about 50x slower -- and a price page
+ * formats thousands of figures while it hydrates. Same locale and options, so
+ * the output is identical.
+ */
+const persianNumberFormats = new Map();
+
+function persianNumberFormat(maximumFractionDigits) {
+  let format = persianNumberFormats.get(maximumFractionDigits);
+  if (!format) {
+    format = new Intl.NumberFormat("fa-IR", { maximumFractionDigits });
+    persianNumberFormats.set(maximumFractionDigits, format);
+  }
+  return format;
 }
 
 const ones = [
