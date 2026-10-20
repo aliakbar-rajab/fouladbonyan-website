@@ -3,6 +3,7 @@ import type { CatalogCategory, GroupCatalog } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
 import { localizeCatalogValue } from "./catalog-presentation";
 import { PhoneIcon } from "./icons";
+import { ContactLink } from "./ContactLink";
 
 const fetchedDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   dateStyle: "short",
@@ -16,7 +17,6 @@ export function CatalogFilterSidebar({
   factoryFilter,
   sizeFilter,
   activeFilterCount,
-  phoneHref,
   sidebarExtra,
   onFactoryFilterChange,
   onSizeFilterChange,
@@ -27,7 +27,6 @@ export function CatalogFilterSidebar({
   factoryFilter: string;
   sizeFilter: string;
   activeFilterCount: number;
-  phoneHref: string;
   sidebarExtra?: ReactNode;
   onFactoryFilterChange: (value: string) => void;
   onSizeFilterChange: (value: string) => void;
@@ -108,7 +107,7 @@ export function CatalogFilterSidebar({
         <PhoneIcon className="rebar-contact-icon" />
         <strong>قیمت قطعی و موجودی</strong>
         <p>برای تأیید قیمت، تناژ و زمان تحویل با واحد فروش تماس بگیرید.</p>
-        <a href={phoneHref}>تماس با واحد فروش</a>
+        <ContactLink>تماس با واحد فروش</ContactLink>
       </section>
     </aside>
   );

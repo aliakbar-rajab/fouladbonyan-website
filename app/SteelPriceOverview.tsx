@@ -14,6 +14,7 @@ import {
   presentPriceRange,
 } from "./catalog-presentation";
 import { getThumbnailSources } from "./image-utils";
+import { ContactLink } from "./ContactLink";
 
 function formatStatusText(status: string, percent: number): string {
   const trend = getTrendPresentation(status, percent);
@@ -33,7 +34,7 @@ function emptyPriceText(loaded: boolean) {
   return loaded ? PRICE_UNAVAILABLE_TEXT : PRICE_PENDING_TEXT;
 }
 
-export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
+export function SteelPriceOverview() {
   const initialSummaries = loadOverviewSummaries.getCached();
   const [summaries, setSummaries] = useState<CategoryPriceOverview[]>(
     () => initialSummaries ?? buildFallbackOverviews(),
@@ -239,9 +240,9 @@ export function SteelPriceOverview({ phoneHref }: { phoneHref: string }) {
           <a href={QUOTE_FORM_HREF} className="overview-quote-btn">
             درخواست پیش‌فاکتور
           </a>
-          <a href={phoneHref} className="overview-call-btn">
+          <ContactLink className="overview-call-btn">
             تماس با واحد فروش
-          </a>
+          </ContactLink>
         </div>
       </div>
     </div>

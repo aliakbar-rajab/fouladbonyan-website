@@ -40,12 +40,10 @@ const tabClassNames: Partial<Record<ProductGroupId, string>> = {
  */
 export function PriceCatalog({
   catalog,
-  phoneHref,
   requestedView,
   sidebarExtra,
 }: {
   catalog: GroupCatalog;
-  phoneHref: string;
   requestedView?: CatalogViewRequest;
   sidebarExtra?: ReactNode;
 }) {
@@ -189,7 +187,6 @@ export function PriceCatalog({
             factoryFilter={factoryFilter}
             sizeFilter={sizeFilter}
             activeFilterCount={activeFilterCount}
-            phoneHref={phoneHref}
             sidebarExtra={sidebarExtra}
             onFactoryFilterChange={(val) => {
               setFactoryFilter(val);
@@ -230,11 +227,9 @@ const sidebarExtras: Partial<Record<ProductGroupId, ReactNode>> = {
 
 export default function CatalogPrices({
   groupId,
-  phoneHref,
   requestedView,
 }: {
   groupId: ProductGroupId;
-  phoneHref: string;
   requestedView?: CatalogViewRequest;
 }) {
   const state = useCatalogData(loadGroupCatalog, groupId);
@@ -251,7 +246,6 @@ export default function CatalogPrices({
   return (
     <PriceCatalog
       catalog={state.data}
-      phoneHref={phoneHref}
       requestedView={requestedView}
       sidebarExtra={sidebarExtras[groupId]}
     />

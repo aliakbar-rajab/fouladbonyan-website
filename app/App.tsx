@@ -10,6 +10,7 @@ import { CategoryOverview } from "./CategoryOverview";
 import { SteelPriceOverview } from "./SteelPriceOverview";
 import { productGroups, type ProductGroupId, subcategoryHref } from "./category-meta";
 import { siteConfig } from "./site-config";
+import { ContactLink } from "./ContactLink";
 import { SiteFooter } from "./SiteFooter";
 import { SectionTitle } from "./site-ui";
 import { CategoryGrid } from "./CategoryGrid";
@@ -44,13 +45,7 @@ export default function App({
 
   const [searchInput, setSearchInput] = useState("");
 
-  const isDirectCallDevice = useMediaQuery(
-    "(max-width: 900px) and (hover: none) and (pointer: coarse)",
-  );
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const contactHref = isDirectCallDevice
-    ? siteConfig.contact.phones[0].href
-    : "#phone-numbers";
   const didAutoScrollCategoryRoute = useRef(false);
 
   useEffect(() => {
@@ -196,7 +191,7 @@ export default function App({
               </div>
 
               {workspace.viewMode === "home-overview" && (
-                <SteelPriceOverview phoneHref={contactHref} />
+                <SteelPriceOverview />
               )}
 
               {workspace.viewMode === "category-overview" && workspace.visibleGroup && (
@@ -210,7 +205,6 @@ export default function App({
                   <CatalogPrices
                     key={`${workspace.visibleGroup.id}-${workspace.activeViewRequest.requestId}`}
                     groupId={workspace.visibleGroup.id}
-                    phoneHref={contactHref}
                     requestedView={workspace.activeViewRequest}
                   />
                 </div>
@@ -239,10 +233,10 @@ export default function App({
       <SiteFooter />
 
       <div className="mobile-actions" role="group" aria-label="اقدام‌های سریع">
-        <a href={contactHref}>
+        <ContactLink>
           <PhoneIcon className="mobile-action-icon" />
           تماس
-        </a>
+        </ContactLink>
         <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
       </div>
     </div>
