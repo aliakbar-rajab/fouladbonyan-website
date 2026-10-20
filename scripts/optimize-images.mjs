@@ -82,7 +82,33 @@ async function processCategoryImage(file) {
   }
 }
 
+/*
+ * The header monogram. The 571x603 original stays the source; the header
+ * loads one of two copies at 3x its display width (see Brand in site-ui.tsx).
+ */
+const brandDir = resolve(import.meta.dirname, "..", "public", "brand");
+const BRAND_MARK_SOURCE = "bonyan-foulad-daria-mark.webp";
+const BRAND_MARK_WIDTHS = [120, 330];
+
+async function processBrandMark() {
+  console.log(`Processing brand mark: ${BRAND_MARK_SOURCE}`);
+  const source = resolve(brandDir, BRAND_MARK_SOURCE);
+  for (const width of BRAND_MARK_WIDTHS) {
+    await sharp(source)
+      .resize(width, null, { withoutEnlargement: true, kernel: "lanczos3" })
+      .webp({ quality: 90, alphaQuality: 100, effort: 6, smartSubsample: true })
+      .toFile(resolve(brandDir, `bonyan-foulad-daria-mark-${width}.webp`));
+  }
+}
+
 async function main() {
+  // `npm run images:optimize -- brand` regenerates only the brand mark, without
+  // re-encoding every category photo.
+  if (process.argv[2] === "brand") {
+    await processBrandMark();
+    return;
+  }
+
   console.log("Optimizing images in public/categories/...");
   const files = await readdir(categoriesDir);
   const sourceFiles = await readdir(heroSourcesDir).catch((error) => {
@@ -112,6 +138,8 @@ async function main() {
       await processCategoryImage(file);
     }
   }
+
+  await processBrandMark();
 
   console.log("Image optimization complete!");
 }

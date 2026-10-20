@@ -54,14 +54,22 @@ export function Brand({
       aria-label="بنیان فولاد داریا، صفحه اصلی"
     >
       {headerLogo ? (
+        /*
+         * Two copies at 3x their display width (scripts/optimize-images.mjs):
+         * the bar shows the mark about 40 CSS px wide up to 900px and about
+         * 110 px above it (--header-mark-h in header.css). No raised fetch
+         * priority: the hero photo is the page's LCP and this should not
+         * compete with it for the first bytes.
+         */
         <img
           className="brand-mark-img"
-          src="/brand/bonyan-foulad-daria-mark.webp"
+          src="/brand/bonyan-foulad-daria-mark-330.webp"
+          srcSet="/brand/bonyan-foulad-daria-mark-120.webp 120w, /brand/bonyan-foulad-daria-mark-330.webp 330w"
+          sizes="(max-width: 900px) 40px, 110px"
           alt=""
           width="571"
           height="603"
           decoding="async"
-          fetchPriority="high"
         />
       ) : (
         <span className="brand-mark" aria-hidden="true">
