@@ -13,18 +13,61 @@ const QUALITY_TIERS = {
   high: { iterations: 80, waveIterations: 4, pixelRatio: 0, precision: "highp", stepMultiplier: "1.0", fps: 60 },
 } as const;
 
+type QualityTier = (typeof QUALITY_TIERS)[keyof typeof QUALITY_TIERS];
+
 /*
- * Touch-primary devices get the cheap tier. Asked as a media query rather than
- * matched against navigator.userAgent: the platform answers "is this a coarse
- * pointer" directly, an iPad reporting a desktop UA still answers it honestly,
- * and it is the same question App.tsx already asks to decide its call button.
+ * The tier follows the GPU, because the GPU is what pays for this shader:
+ * every pixel of every strip runs the whole ray-march loop, every frame. The
+ * old rule only asked the CPU (`hardwareConcurrency`), which says nothing
+ * about that -- a 12-thread laptop on Intel UHD integrated graphics scored
+ * "high", got the 80-step full-resolution shader, and stuttered whenever the
+ * footer (by far the largest strip) was on screen. The renderer string is read
+ * once per page from a throwaway context and shared by every strip.
+ *
+ * Touch-primary devices still get the cheap tier. Asked as a media query
+ * rather than matched against navigator.userAgent: the platform answers "is
+ * this a coarse pointer" directly, an iPad reporting a desktop UA still
+ * answers it honestly, and it is the same question App.tsx already asks to
+ * decide its call button.
  */
-function pickQuality() {
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+const INTEGRATED_GPU =
+  /intel|\buhd\b|iris|hd graphics|radeon\(tm\) graphics|radeon graphics|vega \d|mali|adreno|powervr/i;
+
+function readGpuRenderer(): string | null {
+  try {
+    const probe = document.createElement("canvas");
+    // Same preference the high tier asks for, so a dual-GPU laptop reports
+    // the discrete card it would actually render on.
+    const gl = probe.getContext("webgl2", { powerPreference: "high-performance" });
+    if (!gl) return null;
+    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer: unknown = gl.getParameter(
+      debugInfo ? debugInfo.UNMASKED_RENDERER_WEBGL : gl.RENDERER,
+    );
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return typeof renderer === "string" ? renderer : null;
+  } catch {
+    return null;
+  }
+}
+
+function detectQuality(): QualityTier {
   if (window.matchMedia("(pointer: coarse)").matches) return QUALITY_TIERS.low;
+  const renderer = readGpuRenderer();
+  if (renderer && SOFTWARE_RENDERER.test(renderer)) return QUALITY_TIERS.low;
+  if (renderer && INTEGRATED_GPU.test(renderer)) return QUALITY_TIERS.medium;
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) {
     return QUALITY_TIERS.medium;
   }
   return QUALITY_TIERS.high;
+}
+
+let detectedTier: QualityTier | null = null;
+
+function pickQuality(): QualityTier {
+  detectedTier ??= detectQuality();
+  return detectedTier;
 }
 
 const VERTEX_SHADER = `#version 300 es
@@ -319,19 +362,26 @@ export function LightPillar() {
       startOrStopLoop();
     };
 
+    /*
+     * Only the reduced-motion still frame needs redrawing here: it is on
+     * screen and not looping, so it has to follow the scroll to stay lined up
+     * with its sibling strips. A strip that is off screen draws nothing -- it
+     * used to redraw the full shader on every scroll event while paused, which
+     * meant the footer (once visited) re-rendered at full size for every
+     * scroll tick anywhere on the page. The IntersectionObserver re-reads
+     * geometry and restarts the loop the moment a strip comes back into range.
+     */
     const onResize = () => {
-      if (isInitialized) {
-        resize();
-        readGeometry();
-        if (reducedMotion || !isVisible) render(3.4);
-      }
+      if (!isInitialized) return;
+      resize();
+      readGeometry();
+      if (reducedMotion && isVisible) render(3.4);
     };
 
     const onScroll = () => {
-      if (isInitialized) {
-        readGeometry();
-        if (reducedMotion || !isVisible) render(3.4);
-      }
+      if (!isInitialized || !isVisible) return;
+      readGeometry();
+      if (reducedMotion) render(3.4);
     };
 
     const onMotionChange = (event: MediaQueryListEvent) => {
