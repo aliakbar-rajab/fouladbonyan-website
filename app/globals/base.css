@@ -6,7 +6,9 @@
  */
 @font-face {
   font-family: "B Titr";
-  src: url("/fonts/b-titr-bold.woff") format("woff");
+  src:
+    url("/fonts/b-titr-bold.woff2") format("woff2"),
+    url("/fonts/b-titr-bold.woff") format("woff");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
