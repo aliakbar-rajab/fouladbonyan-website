@@ -92,7 +92,7 @@ test(
       await page.selectOption('[name="itemProduct-1"]', "میلگرد");
       await page.fill('[name="itemQuantity-1"]', "5");
       await page.check('[name="acceptDisclaimer"]');
-      await page.click(".form-submit");
+      await page.click(".quote-submit");
       await page.locator(".inv-pages .print-page").waitFor();
       await page.evaluate(() => document.fonts.ready);
 
@@ -104,7 +104,7 @@ test(
         return {
           viewportWidth: document.documentElement.clientWidth,
           documentScrollWidth: document.documentElement.scrollWidth,
-          form: rect(".request-form"),
+          form: rect(".quote-sheet"),
           frame: rect(".inv-pages-frame"),
           pages: rect(".inv-pages"),
           sheet: rect(".inv-pages .print-page"),

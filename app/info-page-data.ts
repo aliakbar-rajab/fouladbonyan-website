@@ -8,7 +8,7 @@ export type InfoPageKey =
 
 type PageDefinition = {
   title: string;
-  eyebrow: string;
+  eyebrow?: string;
   description: string;
   seoDescription: string;
   lastmod: string;
@@ -44,12 +44,11 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
   },
   "quote-process": {
     title: "فرایند درخواست پیش‌فاکتور",
-    eyebrow: "راهنمای استعلام",
     description:
-      "از آماده‌کردن مشخصات محصول تا دریافت پیش‌فاکتور دارای مدت اعتبار، مراحل را شفاف دنبال کنید.",
+      "کالاها را وارد کنید، برآورد تقریبی را همان لحظه ببینید و پیش‌فاکتور غیرقطعی را آماده چاپ کنید.",
     seoDescription:
       "مراحل درخواست پیش‌فاکتور غیرقطعی محصولات فولادی، مدارک موردنیاز و فرم آماده‌سازی درخواست برای تماس با واحد فروش.",
-    lastmod: "2026-07-29",
+    lastmod: "2026-11-03",
   },
   complaints: {
     title: "ثبت شکایت و پیگیری",

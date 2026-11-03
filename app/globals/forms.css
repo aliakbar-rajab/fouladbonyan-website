@@ -37,8 +37,7 @@
   gap: 1.1rem 1.25rem;
 }
 
-.form-grid label,
-.quote-item-grid label {
+.form-grid label {
   min-width: 0;
   display: grid;
   align-content: start;
@@ -50,8 +49,6 @@
 .form-grid input,
 .form-grid select,
 .form-grid textarea,
-.quote-item-grid input,
-.quote-item-grid select,
 .prepared-request textarea {
   width: 100%;
   min-height: 3rem;
@@ -72,15 +69,12 @@
 .form-grid input:focus,
 .form-grid select:focus,
 .form-grid textarea:focus,
-.quote-item-grid input:focus,
-.quote-item-grid select:focus,
 .prepared-request textarea:focus {
   outline: 3px solid #946d00;
   border-color: #9b7200;
 }
 
-.form-grid [aria-invalid="true"],
-.quote-item-grid [aria-invalid="true"] {
+.form-grid [aria-invalid="true"] {
   border-color: #b3261e;
   background: #fff8f7;
 }
@@ -89,210 +83,10 @@
   grid-column: 1 / -1;
 }
 
-.compound-field {
-  display: grid;
-  grid-template-columns: 1fr 7rem;
-  gap: 0.5rem;
-}
-
-.quote-items {
-  margin-top: 2rem;
-  padding-top: 1.75rem;
-  border-top: 1px solid #d7d7dc;
-}
-
-.quote-items-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.quote-items-heading > div:first-child > span {
-  color: #846200;
-  font-size: 0.8rem;
-  font-weight: 900;
-}
-
-.quote-items-heading h3 {
-  margin: 0.35rem 0 0.45rem;
-  color: var(--ink);
-  font-size: clamp(1.1rem, 2vw, 1.45rem);
-}
-
-.quote-items-heading p {
-  margin: 0;
-  color: #5c5c62;
-  line-height: 1.8;
-}
-
-.add-quote-item,
-.remove-quote-item {
-  min-height: 2.8rem;
-  padding-inline: 1rem;
-  border: 1px solid #343439;
-  border-radius: 8px;
-  background: #343439;
-  color: var(--white);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.quote-items-list {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.quote-item-card {
-  position: relative;
-  min-width: 0;
-  margin: 0;
-  padding: 1.25rem;
-  border: 1px solid #d3d3d8;
-  border-radius: 10px;
-  background: var(--white);
-}
-
-.quote-item-card legend {
-  padding-inline: 0.65rem;
-  color: #765800;
-  font-weight: 900;
-}
-
-.remove-quote-item {
-  position: absolute;
-  inset-inline-end: 1rem;
-  top: 0.75rem;
-  min-height: 2.3rem;
-  border-color: #b9b9bf;
-  background: transparent;
-  color: #6b3030;
-  font-size: 0.78rem;
-}
-
-.remove-quote-item:hover {
-  border-color: #9d211b;
-  color: #9d211b;
-}
-
-.quote-item-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr 1.2fr;
-  gap: 1rem;
-  padding-top: 0.4rem;
-}
-
-.quote-item-rebar-size {
-  grid-column: 1 / -1;
-  max-width: 16rem;
-}
-
-.quote-item-price {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.5rem 1.25rem;
-  margin-top: 1rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid #e3d8b4;
-  border-radius: 8px;
-  background: #fffaf0;
-  color: #55451c;
-  font-size: 0.86rem;
-  line-height: 1.8;
-}
-
-.quote-item-price strong {
-  color: #322600;
-  font-size: 0.94rem;
-}
-
-.add-quote-item {
-  margin-top: 1rem;
-  border-color: #9d7500;
-  background: #fff7dc;
-  color: #5f4800;
-}
-
-.add-quote-item:hover {
-  background: #ffefb8;
-}
-
-.add-quote-item:disabled {
-  border-color: #c8c8cd;
-  background: #ededf0;
-  color: #7b7b81;
-  cursor: not-allowed;
-}
-
-.quote-price-summary {
-  display: grid;
-  gap: 0.45rem;
-  margin-top: 1.5rem;
-  padding: 1.25rem 1.4rem;
-  border: 1px solid #c99800;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fff8dc, #fffdf5);
-  color: #4c3c0c;
-}
-
-.quote-price-summary > span {
-  font-size: 0.85rem;
-  font-weight: 900;
-}
-
-.quote-price-summary > strong {
-  color: #2f2507;
-  font-size: clamp(1.35rem, 3vw, 2rem);
-}
-
-.quote-price-summary p {
-  margin: 0;
-  color: #5c512e;
-  font-size: 0.88rem;
-  line-height: 1.9;
-}
-
 .field-error {
   color: #9d211b;
   font-size: 0.82rem;
   font-weight: 700;
-}
-
-.legal-confirmation {
-  margin-top: 1.5rem;
-  padding: 1.2rem;
-  border: 1px solid #d0a52e;
-  border-radius: 10px;
-  background: #fff8e5;
-}
-
-.legal-confirmation p {
-  margin: 0 0 0.8rem;
-  color: #473b1a;
-  font-weight: 700;
-  line-height: 2;
-}
-
-.legal-confirmation label {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 2.75rem;
-  padding-block: 0.25rem;
-  color: #37312a;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.legal-confirmation input {
-  flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0;
-  accent-color: #8c6800;
 }
 
 .form-submit {
@@ -352,3 +146,787 @@
   font-weight: 800;
 }
 
+
+/* Quote request: an order sheet with a live total ----------------------- */
+
+/*
+ * Two columns from tablet-landscape up: the items on the right (RTL start),
+ * the total, contact fields and submit pinned beside them. One column below,
+ * with the total carried by .quote-dock at the bottom of the screen.
+ */
+.quote-sheet {
+  --qs-line: #e3e5ea;
+  --qs-muted: #6b6e76;
+  --qs-field-border: #cdd0d6;
+  --qs-focus: rgb(246 181 0 / 32%);
+  --qs-dark: #202125;
+  --qs-dark-line: rgb(255 255 255 / 9%);
+
+  /* As on .request-form: the generated sheet's min-width must not leak out. */
+  min-width: 0;
+  display: grid;
+  gap: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.quote-workspace {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21.5rem;
+  align-items: start;
+  gap: 1.25rem;
+}
+
+.quote-panel {
+  min-width: 0;
+  padding: clamp(1rem, 2.4vw, 1.6rem);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 22%);
+}
+
+.quote-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.quote-panel-head h2,
+.quote-summary-body h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.quote-panel-index {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--brand-yellow);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.quote-panel-count {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #f1f2f4;
+  color: var(--qs-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Fields ---------------------------------------------------------------- */
+
+.quote-field {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+
+.quote-field > span:first-child {
+  color: #4a4d55;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quote-sheet input:not([type="checkbox"]),
+.quote-sheet select,
+.quote-sheet textarea {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--qs-field-border);
+  border-radius: 10px;
+  background-color: #fff;
+  color: var(--ink);
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quote-sheet textarea {
+  resize: vertical;
+}
+
+.quote-sheet input::placeholder,
+.quote-sheet textarea::placeholder {
+  color: #9a9da5;
+}
+
+.quote-sheet input:not([type="checkbox"]):focus-visible,
+.quote-sheet select:focus-visible,
+.quote-sheet textarea:focus-visible {
+  outline: none;
+  border-color: #b58400;
+  box-shadow: 0 0 0 3px var(--qs-focus);
+}
+
+.quote-sheet [aria-invalid="true"] {
+  border-color: #b3261e;
+  background-color: #fff8f7;
+}
+
+.quote-qty-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+}
+
+.quote-sheet .quote-qty-control input {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.quote-sheet .quote-qty-control select {
+  margin-inline-start: -1px;
+  padding-inline: 0.55rem;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  background-color: #f6f7f9;
+}
+
+/* Item lines ------------------------------------------------------------ */
+
+/*
+ * Each line lays itself out by the room its list has, not by the viewport:
+ * the list is narrower beside the summary than it is alone on a tablet.
+ */
+.quote-lines {
+  container: quote-lines / inline-size;
+}
+
+.quote-lines-head {
+  display: none;
+}
+
+.quote-line {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "num remove"
+    "product product"
+    "spec spec"
+    "qty qty"
+    "extra extra"
+    "hint hint"
+    "price price";
+  /*
+   * Spacing by margin, not row-gap: the extra-field and hint rows are empty
+   * on most lines, and a gap still opens around an empty track.
+   */
+  gap: 0 0.75rem;
+  margin: 0 0 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--qs-line);
+  border-radius: 12px;
+  background: #fafafb;
+}
+
+.quote-line > :not(legend, .quote-line-number, .quote-line-remove) {
+  margin-top: 0.75rem;
+}
+
+.quote-line-number {
+  grid-area: num;
+  align-self: center;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.quote-line-product { grid-area: product; }
+.quote-line-spec { grid-area: spec; }
+.quote-line-qty { grid-area: qty; }
+
+.quote-line-price {
+  grid-area: price;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.15rem 0.75rem;
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--qs-line);
+}
+
+.quote-line-price .quote-field-label {
+  color: var(--qs-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quote-line-price strong {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.quote-line-price strong small,
+.quote-total strong small,
+.quote-dock-total strong small {
+  font-size: 0.72em;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.quote-line-price > span:not(.quote-field-label) {
+  flex-basis: 100%;
+  color: var(--qs-muted);
+  font-size: 0.75rem;
+  text-align: end;
+}
+
+.quote-line-price--none strong,
+.quote-line-price--loading strong {
+  color: #a3a6ad;
+  font-weight: 600;
+}
+
+.quote-line-remove {
+  grid-area: remove;
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8d95;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.quote-line-remove svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.quote-line-remove:hover {
+  background: #fdecea;
+  color: #b3261e;
+}
+
+.quote-line-extra {
+  grid-area: extra;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: #f3f4f6;
+}
+
+.quote-line-hint {
+  grid-area: hint;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: #7a5b00;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.quote-line-hint::before {
+  content: "";
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--brand-yellow);
+}
+
+/* Medium: product and spec side by side, quantity beside the estimate. */
+@container quote-lines (min-width: 30rem) {
+  .quote-line {
+    grid-template-areas:
+      "num remove"
+      "product spec"
+      "qty price"
+      "extra extra"
+      "hint hint";
+  }
+
+  .quote-line-price {
+    align-self: end;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .quote-line-price .quote-field-label {
+    display: none;
+  }
+
+  .quote-line-price > span:not(.quote-field-label) {
+    flex-basis: auto;
+  }
+}
+
+/*
+ * Wide: one ledger row per item under a shared column header. The per-field
+ * labels stay in the markup -- they name the controls -- but only the header
+ * shows them.
+ */
+@container quote-lines (min-width: 44rem) {
+  .quote-lines-head,
+  .quote-line {
+    grid-template-columns:
+      1.75rem minmax(0, 1.05fr) minmax(0, 1.25fr) 11.5rem 8.75rem 2.25rem;
+    column-gap: 0.7rem;
+  }
+
+  .quote-lines-head {
+    display: grid;
+    padding: 0 0.15rem 0.5rem;
+    border-bottom: 1px solid var(--qs-line);
+    color: var(--qs-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .quote-lines-head span:nth-child(5) {
+    text-align: end;
+  }
+
+  .quote-line {
+    grid-template-areas:
+      "num product spec qty price remove"
+      ". extra extra extra extra ."
+      ". hint hint hint hint .";
+    row-gap: 0;
+    margin: 0;
+    padding: 0.75rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--qs-line);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .quote-line > .quote-field > .quote-field-label,
+  .quote-line-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .quote-line-number {
+    display: grid;
+    place-items: center;
+    align-self: start;
+    width: 1.75rem;
+    height: 2.75rem;
+    color: #8a8d95;
+    font-size: 0.8rem;
+  }
+
+  .quote-line-remove {
+    align-self: start;
+    margin-top: 0.25rem;
+  }
+
+  .quote-line > .quote-line-product,
+  .quote-line > .quote-line-spec,
+  .quote-line > .quote-line-qty,
+  .quote-line > .quote-line-price {
+    margin-top: 0;
+  }
+
+  .quote-line > .quote-line-extra {
+    margin-top: 0.6rem;
+  }
+
+  .quote-line > .quote-line-hint {
+    margin-top: 0.55rem;
+  }
+
+  .quote-line-price {
+    align-self: start;
+    min-height: 2.75rem;
+  }
+}
+
+.quote-add {
+  width: 100%;
+  min-height: 3rem;
+  margin-top: 0.9rem;
+  border: 1.5px dashed #c6c9d0;
+  border-radius: 12px;
+  background: transparent;
+  color: #3b3e45;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.quote-add span {
+  margin-inline-end: 0.25rem;
+  font-size: 1.15em;
+}
+
+.quote-add:hover:not(:disabled) {
+  border-color: #b58400;
+  background: #fffaeb;
+  color: #5f4800;
+}
+
+.quote-add:disabled {
+  color: #8a8d95;
+  cursor: not-allowed;
+}
+
+/* Summary: total, contact and submit ------------------------------------ */
+
+.quote-summary {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--qs-dark-line);
+  border-radius: 16px;
+  background: var(--qs-dark);
+  color: #e9eaed;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 30%);
+  scroll-margin-top: calc(var(--header-nav-h) + 1rem);
+}
+
+.quote-total {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1.25rem 1.35rem 1.1rem;
+  border-top: 3px solid var(--brand-yellow);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgb(246 181 0 / 14%), transparent 60%),
+    #18191c;
+}
+
+.quote-total-label {
+  color: #b4b6bd;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quote-total strong {
+  color: var(--brand-yellow);
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+  font-weight: 900;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.quote-total strong.quote-total-empty {
+  color: #5d6068;
+  font-weight: 700;
+}
+
+.quote-total p {
+  margin: 0.15rem 0 0;
+  color: #a3a6ae;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.quote-method,
+.quote-notes {
+  margin-top: 0.5rem;
+}
+
+.quote-method summary,
+.quote-notes summary {
+  width: fit-content;
+  color: #e2c25c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quote-method p {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.quote-summary-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem 1.35rem 1.35rem;
+}
+
+.quote-summary-body h2 {
+  color: #f4f4f6;
+  font-size: 1rem;
+}
+
+.quote-summary .quote-panel-index {
+  background: var(--brand-yellow);
+  color: var(--ink);
+}
+
+.quote-contact {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.quote-summary .quote-field > span:first-child {
+  color: #c3c5cb;
+}
+
+.quote-summary input:not([type="checkbox"]),
+.quote-summary textarea {
+  border-color: #3d3f45;
+  background-color: #141518;
+  color: #f2f2f4;
+}
+
+.quote-summary input::placeholder {
+  color: #6f727a;
+}
+
+.quote-summary [aria-invalid="true"] {
+  border-color: #ff8a80;
+  background-color: #2a1816;
+}
+
+.quote-summary .field-error {
+  color: #ffb4ab;
+}
+
+.quote-notes summary {
+  color: #c3c5cb;
+}
+
+.quote-notes[open] summary {
+  margin-bottom: 0.45rem;
+}
+
+.quote-consent {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--qs-dark-line);
+}
+
+.quote-consent p {
+  margin: 0;
+  color: #a3a6ae;
+  font-size: 0.78rem;
+  line-height: 1.8;
+}
+
+.quote-consent label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  color: #f2f2f4;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quote-consent input {
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  accent-color: var(--brand-yellow);
+}
+
+.quote-submit {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffc42e 0%, var(--brand-yellow) 55%, #e09f00 100%);
+  box-shadow: 0 8px 24px rgb(246 181 0 / 22%);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.quote-submit:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 30px rgb(246 181 0 / 32%);
+  transform: translateY(-1px);
+}
+
+.quote-submit:active {
+  transform: none;
+}
+
+.quote-privacy {
+  margin: -0.35rem 0 0;
+  color: #8f929a;
+  font-size: 0.74rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.quote-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--qs-dark-line);
+  border-radius: 10px;
+  color: #d9dbe0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.quote-call svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--brand-yellow);
+}
+
+.quote-call span {
+  color: var(--brand-yellow);
+  font-weight: 800;
+}
+
+.quote-call:hover {
+  border-color: rgb(246 181 0 / 45%);
+  color: #fff;
+}
+
+/* The generated document keeps the light surface it was designed on. */
+.quote-result {
+  min-width: 0;
+  padding: clamp(1rem, 2.4vw, 1.6rem);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.quote-result .quote-document {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.quote-dock {
+  display: none;
+}
+
+@media (min-width: 901px) {
+  .quote-summary {
+    position: sticky;
+    top: calc(var(--header-nav-h) + 1.25rem);
+  }
+}
+
+@media (max-width: 900px) {
+  .quote-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * Takes the place of the site's call/quote bar on this page, at the same
+   * height, so the footer's bottom padding already clears it.
+   */
+  .quote-dock {
+    position: fixed;
+    z-index: 90;
+    inset-inline: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: calc(4rem + env(safe-area-inset-bottom));
+    padding: 0.5rem 0.85rem calc(0.5rem + env(safe-area-inset-bottom));
+    border-top: 1px solid rgb(246 181 0 / 22%);
+    background: rgb(17 18 21 / 94%);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 -8px 28px rgb(0 0 0 / 28%);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  .quote-dock--hidden {
+    opacity: 0;
+    transform: translateY(110%);
+    pointer-events: none;
+  }
+
+  .quote-dock-call {
+    display: grid;
+    place-items: center;
+    height: 3rem;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 10px;
+    color: var(--brand-yellow);
+  }
+
+  .quote-dock-call svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .quote-dock-total {
+    min-width: 0;
+    display: grid;
+    line-height: 1.35;
+  }
+
+  .quote-dock-total small {
+    color: #a3a6ae;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .quote-dock-total strong {
+    overflow: hidden;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quote-dock-next {
+    display: grid;
+    place-items: center;
+    min-height: 3rem;
+    padding-inline: 1.5rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ffc42e 0%, var(--brand-yellow) 55%, #e09f00 100%);
+    color: var(--ink);
+    font-weight: 900;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-dock,
+  .quote-submit,
+  .quote-add,
+  .quote-call {
+    transition: none;
+  }
+
+  .quote-submit:hover {
+    transform: none;
+  }
+}

@@ -16,11 +16,21 @@ import { siteRoutePath, type SiteRoute } from "./site-route";
 export type InnerPageLayoutProps = {
   /** The page this frame is for: its <title>, trail and nav mark come from it. */
   route: SiteRoute;
-  eyebrow: string;
+  /** The small label over the title; a page that does not need one omits it. */
+  eyebrow?: string;
   title: string;
   description: string;
   /** Extra class on the content grid, for pages that need their own rules. */
   contentClassName?: string;
+  /** Extra class on the hero band, e.g. the slim variant a tool page uses. */
+  heroClassName?: string;
+  /** Rendered inside the hero band under the description. */
+  heroExtra?: ReactNode;
+  /**
+   * The fixed call/quote bar phones get. A page that brings its own bar (the
+   * quote form shows its live total there) turns this one off.
+   */
+  mobileActions?: boolean;
   children: ReactNode;
 };
 
@@ -30,6 +40,9 @@ export function InnerPageLayout({
   title,
   description,
   contentClassName,
+  heroClassName,
+  heroExtra,
+  mobileActions = true,
   children,
 }: InnerPageLayoutProps) {
   // The same title the build stamps into <head>, so hydration never retitles
@@ -53,12 +66,13 @@ export function InnerPageLayout({
         )}
       />
       <main id="main-content" className="info-main">
-        <section className="info-hero">
+        <section className={heroClassName ? `info-hero ${heroClassName}` : "info-hero"}>
           <div className="shell">
             <Breadcrumb items={pageBreadcrumb(route)} />
-            <span>{eyebrow}</span>
+            {eyebrow ? <span>{eyebrow}</span> : null}
             <h1>{title}</h1>
             <p>{description}</p>
+            {heroExtra}
           </div>
         </section>
         <div
@@ -70,13 +84,15 @@ export function InnerPageLayout({
         </div>
       </main>
       <SiteFooter />
-      <div className="mobile-actions" role="group" aria-label="اقدام‌های سریع">
-        <a href={siteConfig.contact.phones[0].href}>
-          <span aria-hidden="true">☎</span>
-          تماس
-        </a>
-        <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
-      </div>
+      {mobileActions ? (
+        <div className="mobile-actions" role="group" aria-label="اقدام‌های سریع">
+          <a href={siteConfig.contact.phones[0].href}>
+            <span aria-hidden="true">☎</span>
+            تماس
+          </a>
+          <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -368,7 +368,9 @@ test("a quote request grows and shrinks one item at a time", async () => {
   render(React.createElement(QuoteRequestForm));
   await settle();
 
-  const itemCards = () => screen.getAllByRole("group");
+  // Item rows are fieldsets named by their legend; the form's <details> are
+  // groups too, so count by name.
+  const itemCards = () => screen.getAllByRole("group", { name: /^کالای / });
   assert.equal(itemCards().length, 1);
 
   await user.click(screen.getByRole("button", { name: /افزودن کالای جدید/ }));
@@ -687,7 +689,7 @@ test("a fractional شاخه quantity is rejected instead of producing a printed 
   );
 
   await user.click(
-    screen.getByRole("button", { name: "بررسی و آماده‌سازی درخواست" }),
+    screen.getByRole("button", { name: "آماده‌سازی پیش‌فاکتور" }),
   );
 
   assert.match(
@@ -716,7 +718,7 @@ test("editing a still-invalid quantity does not clear its error, and the message
   render(React.createElement(QuoteRequestForm));
   await settle();
 
-  await user.click(screen.getByRole("button", { name: "+ افزودن کالای جدید" }));
+  await user.click(screen.getByRole("button", { name: "افزودن کالای جدید" }));
   await user.selectOptions(
     document.querySelector('[name="itemProduct-2"]'),
     "میلگرد",
@@ -727,7 +729,7 @@ test("editing a still-invalid quantity does not clear its error, and the message
   await user.type(quantity, "2.5");
 
   await user.click(
-    screen.getByRole("button", { name: "بررسی و آماده‌سازی درخواست" }),
+    screen.getByRole("button", { name: "آماده‌سازی پیش‌فاکتور" }),
   );
   const message = "مقدار تقریبی کالای ۲ برای واحد شاخه باید عدد صحیح باشد.";
   assert.ok(screen.getByText(message), "submit must reject a fractional شاخه");

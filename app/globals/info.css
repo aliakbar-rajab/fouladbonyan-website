@@ -32,7 +32,8 @@
   max-width: 78rem;
 }
 
-.info-hero span {
+/* The eyebrow only: a bare `.info-hero span` also caught the breadcrumb. */
+.info-hero .shell > span {
   display: inline-flex;
   margin-bottom: 0.85rem;
   padding: 0.35rem 0.75rem;
@@ -65,9 +66,7 @@
 }
 
 .content-card,
-.request-form,
-.important-notice,
-.process-steps {
+.request-form {
   border: 1px solid #d7d7dc;
   border-radius: var(--radius);
   background: #f8f8fa;
@@ -171,97 +170,132 @@
   font-size: 0.88rem;
 }
 
-.process-steps {
+/*
+ * Quote page: a slim band instead of the full hero. The page is a tool and is
+ * linked as #quote-form, so the band carries the title and the four steps and
+ * gets out of the way. Two classes so quote-print.css's narrow-screen
+ * `.info-hero` padding, which loads later, does not undo it.
+ */
+.info-hero.info-hero--slim {
+  padding-block: clamp(1.4rem, 3vw, 2.1rem) clamp(1.6rem, 3.4vw, 2.4rem);
+}
+
+.info-hero--slim::after {
+  height: 3px;
+}
+
+.info-hero--slim .breadcrumb-nav {
+  margin-bottom: 0.7rem;
+  font-size: 0.8rem;
+}
+
+.info-hero--slim h1 {
+  font-size: clamp(1.45rem, 2.8vw, 2.1rem);
+  line-height: 1.4;
+}
+
+.info-hero--slim .shell > p {
+  margin-top: 0.4rem;
+  color: #c4c6cc;
+  font-size: clamp(0.875rem, 1.3vw, 0.97rem);
+  line-height: 1.8;
+}
+
+.quote-steps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin: 0;
+  gap: 0.6rem;
+  margin: 1.35rem 0 0;
   padding: 0;
-  overflow: hidden;
   list-style: none;
   counter-reset: quote-step;
 }
 
-.process-steps li {
-  position: relative;
-  min-height: 13rem;
-  padding: 2rem 1.5rem;
-  border-inline-end: 1px solid #d7d7dc;
+.quote-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 4%);
   counter-increment: quote-step;
 }
 
-.process-steps li:last-child {
-  border-inline-end: 0;
-}
-
-.process-steps li::before {
-  content: counter(quote-step, decimal-leading-zero);
-  display: block;
-  margin-bottom: 1.2rem;
-  color: #a47700;
-  font-size: 1.55rem;
+.quote-steps li::before {
+  content: counter(quote-step, persian);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border: 1px solid rgb(246 181 0 / 55%);
+  border-radius: 50%;
+  color: var(--brand-yellow);
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
-.process-steps strong,
-.process-steps span {
-  display: block;
+/* The visitor is on step one while they fill the form. */
+.quote-steps li:first-child {
+  border-color: rgb(246 181 0 / 38%);
+  background: rgb(246 181 0 / 8%);
 }
 
-.process-steps strong {
-  margin-bottom: 0.65rem;
-  color: var(--ink);
-  font-size: 1.05rem;
-}
-
-.process-steps span {
-  color: #5b5b61;
-  font-size: 0.92rem;
-  line-height: 1.9;
-}
-
-.important-notice {
-  padding: clamp(1.35rem, 4vw, 2rem);
-  border-color: #c18e00;
-  background: #fff7dc;
-  color: #3d3215;
-}
-
-.important-notice strong {
-  display: block;
-  margin-bottom: 0.45rem;
-  color: #6f5200;
-  font-size: 1.1rem;
-}
-
-.important-notice p {
-  margin: 0;
-  font-weight: 700;
-  line-height: 2;
-}
-
-.important-notice-phones-link {
-  min-height: 2.8rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1rem;
-  padding-inline: 1.25rem;
-  border: 1px solid #c18e00;
-  border-radius: 8px;
+.quote-steps li:first-child::before {
+  border-color: var(--brand-yellow);
   background: var(--brand-yellow);
   color: var(--ink);
-  font-weight: 900;
-  white-space: nowrap;
 }
 
-.important-notice-phones-link:hover {
-  background: #e0a500;
+.quote-steps strong {
+  color: #f4f4f6;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.5;
 }
 
-@media (max-width: 480px) {
-  .important-notice-phones-link {
-    width: 100%;
+.quote-steps small {
+  color: #9fa2aa;
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+.info-content.quote-content {
+  display: block;
+  padding-block: clamp(1.1rem, 2.6vw, 1.75rem) clamp(2.5rem, 5vw, 4rem);
+}
+
+@media (max-width: 900px) {
+  .quote-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+@media (max-width: 640px) {
+  .quote-steps {
+    gap: 0.45rem;
+    margin-top: 1rem;
+  }
+
+  .quote-steps li {
+    column-gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .quote-steps li::before {
+    width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.75rem;
+  }
+
+  .quote-steps strong {
+    font-size: 0.78rem;
+  }
+
+  /* The titles carry the sequence on a phone; the detail stays in the page. */
+  .quote-steps small {
+    display: none;
+  }
+}

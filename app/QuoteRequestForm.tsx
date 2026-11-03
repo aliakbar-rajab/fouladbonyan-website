@@ -1,4 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { CloseIcon, PhoneIcon } from "./icons";
+import { siteConfig } from "./site-config";
 import { formatPersianNumber } from "./persian-numbers.mjs";
 import {
   FieldErrors,
@@ -37,98 +39,65 @@ const createQuoteItem = (id: number): RawQuoteItem => ({
 });
 
 /**
- * Render line item pricing status or estimate details.
+ * What a line shows in its estimate column, and the one-line nudge under it
+ * when the visitor still owes a field before it can be priced. Nothing is said
+ * while a row is simply unfinished: an empty row reads "—", not a sentence.
  */
-function ItemPriceHint({
-  priced,
-  loading,
-  loadError,
-}: {
-  priced: QuoteItemEstimate;
-  loading: boolean;
-  loadError: boolean;
-}) {
-  const {
-    product,
-    quantity,
-    unit,
-    approximateTotalToman,
-    pieceOption,
-    requiresRebarDiameter,
-  } = priced;
+type LineEstimate =
+  | { kind: "loading" }
+  | { kind: "none"; hint?: string }
+  | { kind: "priced"; total: number; rate?: string };
+
+function lineEstimate(
+  priced: QuoteItemEstimate,
+  loading: boolean,
+  loadError: boolean,
+): LineEstimate {
+  const { product, quantity, unit, approximateTotalToman, pieceOption } = priced;
   const byPiece = priced.isPieceUnit;
 
-  if (loading) {
-    return <span>در حال دریافت قیمت تقریبی از داده‌های سایت…</span>;
+  if (loading) return { kind: "loading" };
+  if (loadError || !product) return { kind: "none" };
+  if (byPiece && priced.requiresRebarDiameter && !priced.rebarDiameterMm) {
+    return {
+      kind: "none",
+      hint: `برای محاسبه قیمت بر اساس ${unit}، قطر میلگرد را وارد کنید.`,
+    };
   }
-  if (loadError) {
-    return (
-      <span>
-        دریافت قیمت تقریبی ممکن نشد؛ برای قیمت روز با واحد فروش تماس بگیرید.
-      </span>
-    );
-  }
-  if (!product) {
-    return (
-      <span>
-        پس از انتخاب کالا و واردکردن مقدار، قیمت تقریبی نمایش داده می‌شود.
-      </span>
-    );
-  }
-  if (byPiece && requiresRebarDiameter && !priced.rebarDiameterMm) {
-    return (
-      <span>
-        برای محاسبه قیمت بر اساس {unit}، قطر میلگرد (میلی‌متر) را در فیلد
-        بالا وارد کنید.
-      </span>
-    );
-  }
-  // `pieceOption` is resolved *from* `pieceOptionKey`, so testing it here could
-  // never be true and this advice never reached anyone who needed it -- they
-  // got the "enter a valid amount" line below instead, with a valid amount
-  // already entered. The list is what says whether a pick is owed.
+  // `pieceOption` is resolved *from* `pieceOptionKey`, so the list is what says
+  // whether a pick is still owed -- testing `pieceOption` never fires.
   if (byPiece && priced.pieceOptions.length > 0 && !priced.pieceOptionKey) {
-    return (
-      <span>
-        برای محاسبه قیمت، آیتم دقیق را از فهرست قیمت سایت در فیلد بالا انتخاب
-        کنید.
-      </span>
-    );
+    return {
+      kind: "none",
+      hint: "برای محاسبه قیمت، آیتم دقیق را از فهرست قیمت سایت انتخاب کنید.",
+    };
   }
-  if (approximateTotalToman === null || !quantity.trim()) {
-    return <span>برای مشاهده برآورد، مقدار معتبر بزرگ‌تر از صفر وارد کنید.</span>;
+  if (!quantity.trim()) return { kind: "none" };
+  if (approximateTotalToman === null) {
+    return {
+      kind: "none",
+      hint: "برای مشاهده برآورد، مقدار معتبر بزرگ‌تر از صفر وارد کنید.",
+    };
   }
 
+  const rate = pieceOption
+    ? `هر ${pieceOption.unit} ${formatToman(pieceOption.priceToman)}`
+    : priced.unitPriceTomanPerKg
+      ? `هر کیلوگرم ${formatToman(priced.unitPriceTomanPerKg)}`
+      : undefined;
+  return { kind: "priced", total: approximateTotalToman, rate };
+}
+
+function Amount({ value }: { value: number }) {
   return (
     <>
-      {pieceOption ? (
-        <span>
-          قیمت واقعی سایت برای {pieceOption.label}:{" "}
-          <strong>{formatToman(pieceOption.priceToman)}</strong> برای هر{" "}
-          {pieceOption.unit}
-        </span>
-      ) : (
-        <span>
-          {priced.unitPriceTomanPerKg && (
-            <>
-              میانگین داده قیمت سایت:{" "}
-              <strong>
-                {formatToman(priced.unitPriceTomanPerKg)}
-              </strong>{" "}
-              برای هر کیلوگرم
-            </>
-          )}
-          {requiresRebarDiameter && byPiece
-            ? " (بر اساس وزن تقریبی هر شاخه با فرمول استاندارد میلگرد و طول شاخه ۱۲ متر)"
-            : null}
-        </span>
-      )}
-      <span>
-        قیمت تقریبی این کالا: <strong>{formatToman(approximateTotalToman)}</strong>
-      </span>
+      {formatPersianNumber(value)}
+      <small> تومان</small>
     </>
   );
 }
+
+const salesPhone = siteConfig.contact.phones[0];
 
 export function QuoteRequestForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -313,9 +282,36 @@ export function QuoteRequestForm() {
     });
   };
 
+  /*
+   * Phones get a bar pinned to the bottom with the running total, so the
+   * number stays in sight while the item list scrolls. It steps aside while
+   * the summary it repeats is on screen, and once the document exists.
+   */
+  const summaryRef = useRef<HTMLElement>(null);
+  const [summaryInView, setSummaryInView] = useState(false);
+  useEffect(() => {
+    const summary = summaryRef.current;
+    if (!summary || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setSummaryInView(entry.isIntersecting),
+      { threshold: 0.1 },
+    );
+    observer.observe(summary);
+    return () => observer.disconnect();
+  }, []);
+  const dockHidden = summaryInView || generatedQuote !== null;
+
+  const totalStatus = isPriceLoading
+    ? "در حال دریافت قیمت‌های سایت…"
+    : priceLoadError
+      ? "دریافت قیمت تقریبی ممکن نشد؛ برای قیمت روز با واحد فروش تماس بگیرید."
+      : totals.hasAnyPriced
+        ? `${formatPersianNumber(totals.pricedItemCount)} از ${formatPersianNumber(items.length)} کالا محاسبه شد · تقریبی و غیرقطعی`
+        : "با انتخاب کالا و واردکردن مقدار، برآورد اینجا نمایش داده می‌شود.";
+
   return (
     <form
-      className="request-form"
+      className="quote-sheet"
       id="quote-form"
       noValidate
       onSubmit={submit}
@@ -331,102 +327,66 @@ export function QuoteRequestForm() {
         }
       }}
     >
-      <div className="form-heading">
-        <span>فرم محلی</span>
-        <h2>آماده‌سازی درخواست پیش‌فاکتور غیرقطعی</h2>
-        <p>
-          اطلاعات این فرم در مرورگر شما آماده می‌شود و تا زمان تماس یا ارسال
-          از طریق ایمیل رسمی، به واحد فروش تحویل نمی‌شود.
-        </p>
-      </div>
-      <div className="form-grid">
-        <label>
-          نام و نام خانوادگی
-          <input
-            name="fullName"
-            autoComplete="name"
-            aria-invalid={Boolean(errors.fullName)}
-            aria-describedby={errors.fullName ? "quote-name-error" : undefined}
-          />
-          <ErrorMessage id="quote-name-error" message={errors.fullName} />
-        </label>
-        <label>
-          شماره تماس
-          <input
-            name="phone"
-            type="tel"
-            inputMode="tel"
-            dir="ltr"
-            autoComplete="tel"
-            placeholder="۰۹۱۲۱۲۳۴۵۶۷"
-            aria-invalid={Boolean(errors.phone)}
-            aria-describedby={errors.phone ? "quote-phone-error" : undefined}
-          />
-          <ErrorMessage id="quote-phone-error" message={errors.phone} />
-        </label>
-        <label>
-          شهر مقصد
-          <input
-            name="destination"
-            autoComplete="address-level2"
-            aria-invalid={Boolean(errors.destination)}
-            aria-describedby={
-              errors.destination ? "quote-destination-error" : undefined
-            }
-          />
-          <ErrorMessage
-            id="quote-destination-error"
-            message={errors.destination}
-          />
-        </label>
-        <label className="form-wide">
-          توضیحات تکمیلی
-          <textarea name="notes" rows={4} maxLength={1000} />
-        </label>
-      </div>
-      <section className="quote-items" aria-labelledby="quote-items-heading">
-        <div className="quote-items-heading">
-          <div>
-            <span>کالاهای پیش‌فاکتور</span>
-            <h3 id="quote-items-heading">
-              محصولات موردنیاز را در یک درخواست وارد کنید
-            </h3>
-            <p>
-              می‌توانید تا {MAX_QUOTE_ITEMS.toLocaleString("fa-IR")} کالا را
-              داخل همین پیش‌فاکتور وارد کنید.
-            </p>
-          </div>
-        </div>
-        <div className="quote-items-list">
-          {pricedItems.map((priced, index) => {
-            const { product, unit, id, pieceOptionKey, rebarDiameterMm, dimensions } = priced;
-            const number = formatPersianNumber(index + 1);
-            const productField = `itemProduct-${id}`;
-            const quantityField = `itemQuantity-${id}`;
-            const productErrorId = `quote-product-${id}-error`;
-            const quantityErrorId = `quote-quantity-${id}-error`;
-            const priceHintId = `quote-price-${id}-hint`;
+      {/*
+        Its own box so the sticky summary is bounded by the item list: in the
+        form itself it would ride down over the generated document.
+      */}
+      <div className="quote-workspace">
+        <section className="quote-panel" aria-labelledby="quote-items-heading">
+          <header className="quote-panel-head">
+            <h2 id="quote-items-heading">
+              <span className="quote-panel-index" aria-hidden="true">
+                ۱
+              </span>
+              کالاها
+            </h2>
+            <span className="quote-panel-count">
+              {formatPersianNumber(items.length)} قلم
+            </span>
+          </header>
 
-            const pieceOptions = priced.pieceOptions;
-            const requiresRebar = priced.requiresRebarDiameter;
-            const isPiece = priced.isPieceUnit;
+          <div className="quote-lines">
+            <div className="quote-lines-head" aria-hidden="true">
+              <span>#</span>
+              <span>نوع محصول</span>
+              <span>ابعاد، گرید یا استاندارد</span>
+              <span>مقدار</span>
+              <span>برآورد</span>
+            </div>
+            {pricedItems.map((priced, index) => {
+              const { product, unit, id, pieceOptionKey, rebarDiameterMm, dimensions } = priced;
+              const number = formatPersianNumber(index + 1);
+              const productField = `itemProduct-${id}`;
+              const quantityField = `itemQuantity-${id}`;
+              const productErrorId = `quote-product-${id}-error`;
+              const quantityErrorId = `quote-quantity-${id}-error`;
+              const priceHintId = `quote-price-${id}-hint`;
+              const noteId = `quote-price-${id}-note`;
 
-            return (
-              <fieldset className="quote-item-card" key={id}>
-                <legend>کالای {number}</legend>
-                {items.length > 1 ? (
-                  <button
-                    className="remove-quote-item"
-                    type="button"
-                    onClick={() => removeItem(id)}
-                    aria-label={`حذف کالای ${number}`}
-                  >
-                    حذف این کالا
-                  </button>
-                ) : null}
-                <div className="quote-item-grid">
-                  <label>
-                    نوع محصول
+              const pieceOptions = priced.pieceOptions;
+              const requiresRebar = priced.requiresRebarDiameter;
+              const isPiece = priced.isPieceUnit;
+              const estimate = lineEstimate(priced, isPriceLoading, priceLoadError);
+              const hint = estimate.kind === "none" ? estimate.hint : undefined;
+              const describedBy = [
+                errors[quantityField] ? quantityErrorId : "",
+                priceHintId,
+                hint ? noteId : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              const showRebar = requiresRebar && isPiece;
+              const showPieceOptions = pieceOptions.length > 0 && isPiece;
+
+              return (
+                <fieldset className="quote-line" key={id}>
+                  <legend className="sr-only">کالای {number}</legend>
+                  <span className="quote-line-number" aria-hidden="true">
+                    <span className="quote-line-word">کالای </span>
+                    {number}
+                  </span>
+                  <label className="quote-field quote-line-product">
+                    <span className="quote-field-label">نوع محصول</span>
                     <select
                       name={productField}
                       value={product}
@@ -457,15 +417,29 @@ export function QuoteRequestForm() {
                       message={errors[productField]}
                     />
                   </label>
-                  <label>
-                    مقدار تقریبی
-                    <span className="compound-field">
+                  <label className="quote-field quote-line-spec">
+                    <span className="quote-field-label">ابعاد، گرید یا استاندارد</span>
+                    <input
+                      name={`itemDimensions-${id}`}
+                      placeholder="مثلاً A3 سایز ۱۶"
+                      value={dimensions}
+                      onChange={(event) =>
+                        updateItem(id, {
+                          dimensions: event.currentTarget.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="quote-field quote-line-qty">
+                    <span className="quote-field-label">مقدار تقریبی</span>
+                    <span className="quote-qty-control">
                       <input
                         name={quantityField}
                         type="number"
                         min={isPiece ? "1" : "0.01"}
                         step={isPiece ? "1" : "any"}
                         inputMode={isPiece ? "numeric" : "decimal"}
+                        placeholder="۰"
                         value={priced.quantity}
                         onChange={(event) =>
                           updateItem(id, {
@@ -473,11 +447,7 @@ export function QuoteRequestForm() {
                           })
                         }
                         aria-invalid={Boolean(errors[quantityField])}
-                        aria-describedby={
-                          errors[quantityField]
-                            ? `${quantityErrorId} ${priceHintId}`
-                            : priceHintId
-                        }
+                        aria-describedby={describedBy}
                       />
                       <select
                         name={`itemUnit-${id}`}
@@ -494,8 +464,8 @@ export function QuoteRequestForm() {
                         }}
                       >
                         {priced.availableUnits.map((u) => (
-                            <option key={u}>{u}</option>
-                          ))}
+                          <option key={u}>{u}</option>
+                        ))}
                       </select>
                     </span>
                     <ErrorMessage
@@ -503,127 +473,258 @@ export function QuoteRequestForm() {
                       message={errors[quantityField]}
                     />
                   </label>
-                  <label>
-                    ابعاد، گرید یا استاندارد
-                    <input
-                      name={`itemDimensions-${id}`}
-                      placeholder="مثلاً میلگرد A3 سایز ۱۶"
-                      value={dimensions}
-                      onChange={(event) =>
-                        updateItem(id, {
-                          dimensions: event.currentTarget.value,
-                        })
-                      }
-                    />
-                  </label>
-                  {requiresRebar && isPiece ? (
-                    <label className="quote-item-rebar-size">
-                      قطر میلگرد برای محاسبه وزن (میلی‌متر)
-                      <input
-                        name={`itemRebarDiameter-${id}`}
-                        type="number"
-                        min="4"
-                        step="0.5"
-                        inputMode="decimal"
-                        placeholder="مثلاً ۸"
-                        value={rebarDiameterMm}
-                        onChange={(event) =>
-                          updateItem(id, {
-                            rebarDiameterMm: event.currentTarget.value,
-                          })
-                        }
-                      />
-                    </label>
+                  <div
+                    className={`quote-line-price quote-line-price--${estimate.kind}`}
+                    id={priceHintId}
+                  >
+                    <span className="quote-field-label">برآورد</span>
+                    {estimate.kind === "priced" ? (
+                      <>
+                        <strong>
+                          <Amount value={estimate.total} />
+                        </strong>
+                        {estimate.rate ? <span>{estimate.rate}</span> : null}
+                      </>
+                    ) : (
+                      <strong>
+                        <span aria-hidden="true">
+                          {estimate.kind === "loading" ? "…" : "—"}
+                        </span>
+                        <span className="sr-only">هنوز محاسبه نشده</span>
+                      </strong>
+                    )}
+                  </div>
+                  {items.length > 1 ? (
+                    <button
+                      className="quote-line-remove"
+                      type="button"
+                      onClick={() => removeItem(id)}
+                      aria-label={`حذف کالای ${number}`}
+                      title="حذف این کالا"
+                    >
+                      <CloseIcon />
+                    </button>
                   ) : null}
-                  {pieceOptions.length > 0 && isPiece ? (
-                    <label className="quote-item-rebar-size">
-                      انتخاب دقیق از فهرست قیمت سایت
-                      <select
-                        name={`itemPieceOption-${id}`}
-                        value={pieceOptionKey}
-                        onChange={(event) =>
-                          updateItem(id, {
-                            pieceOptionKey: event.currentTarget.value,
-                          })
-                        }
-                      >
-                        <option value="">انتخاب کنید</option>
-                        {pieceOptions.map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                  {showRebar || showPieceOptions ? (
+                    <div className="quote-line-extra">
+                      {showRebar ? (
+                        <label className="quote-field">
+                          <span>قطر میلگرد برای محاسبه وزن (میلی‌متر)</span>
+                          <input
+                            name={`itemRebarDiameter-${id}`}
+                            type="number"
+                            min="4"
+                            step="0.5"
+                            inputMode="decimal"
+                            placeholder="مثلاً ۸"
+                            value={rebarDiameterMm}
+                            onChange={(event) =>
+                              updateItem(id, {
+                                rebarDiameterMm: event.currentTarget.value,
+                              })
+                            }
+                          />
+                        </label>
+                      ) : null}
+                      {showPieceOptions ? (
+                        <label className="quote-field">
+                          <span>انتخاب دقیق از فهرست قیمت سایت</span>
+                          <select
+                            name={`itemPieceOption-${id}`}
+                            value={pieceOptionKey}
+                            onChange={(event) =>
+                              updateItem(id, {
+                                pieceOptionKey: event.currentTarget.value,
+                              })
+                            }
+                          >
+                            <option value="">انتخاب کنید</option>
+                            {pieceOptions.map((option) => (
+                              <option key={option.key} value={option.key}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : null}
+                    </div>
                   ) : null}
-                </div>
-                <div className="quote-item-price" id={priceHintId}>
-                  <ItemPriceHint
-                    priced={priced}
-                    loading={isPriceLoading}
-                    loadError={priceLoadError}
-                  />
-                </div>
-              </fieldset>
-            );
-          })}
-        </div>
-        <button
-          className="add-quote-item"
-          type="button"
-          onClick={addItem}
-          disabled={items.length >= MAX_QUOTE_ITEMS}
+                  {hint ? (
+                    <p className="quote-line-hint" id={noteId}>
+                      {hint}
+                    </p>
+                  ) : null}
+                </fieldset>
+              );
+            })}
+          </div>
+
+          <button
+            className="quote-add"
+            type="button"
+            onClick={addItem}
+            disabled={items.length >= MAX_QUOTE_ITEMS}
+          >
+            {items.length >= MAX_QUOTE_ITEMS ? (
+              `حداکثر ${formatPersianNumber(MAX_QUOTE_ITEMS)} کالا در یک پیش‌فاکتور`
+            ) : (
+              <>
+                <span aria-hidden="true">+</span> افزودن کالای جدید
+              </>
+            )}
+          </button>
+        </section>
+
+        <aside
+          className="quote-summary"
+          id="quote-summary"
+          ref={summaryRef}
+          aria-labelledby="quote-contact-heading"
         >
-          + افزودن کالای جدید
-        </button>
-      </section>
-      <section className="quote-price-summary" aria-live="polite">
-        <span>جمع تقریبی پیش‌فاکتور</span>
-        <strong>
-          {totals.hasAnyPriced
-            ? formatToman(totals.totalToman)
-            : "هنوز قابل محاسبه نیست"}
-        </strong>
-        <p>
-          {totals.hasAnyPriced
-            ? `جمع ${totals.pricedItemCount.toLocaleString("fa-IR")} از ${items.length.toLocaleString("fa-IR")} کالا محاسبه شده است. `
-            : ""}
-          این مبلغ از داده‌های قیمت فعلی سایت محاسبه می‌شود (برای واحد تن و
-          کیلوگرم مستقیم، برای شاخه/عدد میلگرد بر اساس وزن تقریبی، و برای
-          تیرآهن، لوله فولادی و مفتول و سیم بر اساس آیتم دقیق انتخابی از فهرست
-          قیمت سایت)، نهایی نیست و برای تأیید قیمت و موجودی باید با واحد فروش
-          تماس بگیرید.
-        </p>
-      </section>
-      <div className="legal-confirmation">
-        <p>{quoteDisclaimer}</p>
-        <label>
-          <input
-            name="acceptDisclaimer"
-            type="checkbox"
-            aria-invalid={Boolean(errors.acceptDisclaimer)}
-            aria-describedby={
-              errors.acceptDisclaimer ? "quote-disclaimer-error" : undefined
-            }
-          />
-          متن بالا را خواندم و می‌پذیرم.
-        </label>
-        <ErrorMessage
-          id="quote-disclaimer-error"
-          message={errors.acceptDisclaimer}
-        />
+          <div className="quote-total">
+            <span className="quote-total-label">جمع تقریبی پیش‌فاکتور</span>
+            <strong
+              className={totals.hasAnyPriced ? undefined : "quote-total-empty"}
+              aria-live="polite"
+            >
+              {totals.hasAnyPriced ? <Amount value={totals.totalToman} /> : "—"}
+            </strong>
+            <p>{totalStatus}</p>
+            <details className="quote-method">
+              <summary>این برآورد چطور محاسبه می‌شود؟</summary>
+              <p>
+                از داده‌های قیمت فعلی سایت: برای تن و کیلوگرم مستقیم، برای
+                شاخه/عدد میلگرد بر اساس وزن تقریبی هر شاخه با فرمول استاندارد و
+                طول ۱۲ متر، و برای تیرآهن، لوله فولادی و مفتول و سیم بر اساس آیتم
+                دقیق انتخابی از فهرست قیمت سایت. این مبلغ نهایی نیست و قیمت و
+                موجودی را واحد فروش تأیید می‌کند.
+              </p>
+            </details>
+          </div>
+
+          <div className="quote-summary-body">
+            <h2 id="quote-contact-heading">
+              <span className="quote-panel-index" aria-hidden="true">
+                ۲
+              </span>
+              اطلاعات تماس
+            </h2>
+            <div className="quote-contact">
+              <label className="quote-field">
+                <span className="quote-field-label">نام و نام خانوادگی</span>
+                <input
+                  name="fullName"
+                  autoComplete="name"
+                  aria-invalid={Boolean(errors.fullName)}
+                  aria-describedby={errors.fullName ? "quote-name-error" : undefined}
+                />
+                <ErrorMessage id="quote-name-error" message={errors.fullName} />
+              </label>
+              <label className="quote-field">
+                <span className="quote-field-label">شماره تماس</span>
+                <input
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  autoComplete="tel"
+                  placeholder="۰۹۱۲۱۲۳۴۵۶۷"
+                  aria-invalid={Boolean(errors.phone)}
+                  aria-describedby={errors.phone ? "quote-phone-error" : undefined}
+                />
+                <ErrorMessage id="quote-phone-error" message={errors.phone} />
+              </label>
+              <label className="quote-field">
+                <span className="quote-field-label">شهر مقصد</span>
+                <input
+                  name="destination"
+                  autoComplete="address-level2"
+                  aria-invalid={Boolean(errors.destination)}
+                  aria-describedby={
+                    errors.destination ? "quote-destination-error" : undefined
+                  }
+                />
+                <ErrorMessage
+                  id="quote-destination-error"
+                  message={errors.destination}
+                />
+              </label>
+              {/* Closed, the textarea is still a form control: FormData reads it. */}
+              <details className="quote-notes">
+                <summary>افزودن توضیح تکمیلی (اختیاری)</summary>
+                <label className="quote-field">
+                  <span className="sr-only">توضیحات تکمیلی</span>
+                  <textarea name="notes" rows={3} maxLength={1000} />
+                </label>
+              </details>
+            </div>
+
+            <div className="quote-consent">
+              <p>{quoteDisclaimer}</p>
+              <label>
+                <input
+                  name="acceptDisclaimer"
+                  type="checkbox"
+                  aria-invalid={Boolean(errors.acceptDisclaimer)}
+                  aria-describedby={
+                    errors.acceptDisclaimer ? "quote-disclaimer-error" : undefined
+                  }
+                />
+                متن بالا را خواندم و می‌پذیرم.
+              </label>
+              <ErrorMessage
+                id="quote-disclaimer-error"
+                message={errors.acceptDisclaimer}
+              />
+            </div>
+
+            <button className="quote-submit" type="submit">
+              آماده‌سازی پیش‌فاکتور
+            </button>
+            <p className="quote-privacy">
+              اطلاعات این فرم فقط در مرورگر شما آماده می‌شود و به جایی ارسال
+              نمی‌شود.
+            </p>
+            <a className="quote-call" href={salesPhone.href}>
+              <PhoneIcon />
+              سؤال دارید؟ واحد فروش
+              <span dir="ltr">{salesPhone.label}</span>
+            </a>
+          </div>
+        </aside>
       </div>
-      <button className="form-submit" type="submit">
-        بررسی و آماده‌سازی درخواست
-      </button>
+
       {generatedQuote ? (
-        <QuoteDocument
-          quote={generatedQuote}
-          preparedText={prepared.preparedText}
-          onCopy={prepared.copy}
-          copyMessage={prepared.copyMessage}
-        />
+        <div className="quote-result">
+          <QuoteDocument
+            quote={generatedQuote}
+            preparedText={prepared.preparedText}
+            onCopy={prepared.copy}
+            copyMessage={prepared.copyMessage}
+          />
+        </div>
       ) : null}
+
+      <div
+        className={dockHidden ? "quote-dock quote-dock--hidden" : "quote-dock"}
+        role="group"
+        aria-label="جمع و ادامه"
+        aria-hidden={dockHidden}
+        inert={dockHidden}
+      >
+        <a className="quote-dock-call" href={salesPhone.href} aria-label="تماس با واحد فروش">
+          <PhoneIcon />
+        </a>
+        <span className="quote-dock-total">
+          <small>جمع تقریبی</small>
+          <strong>
+            {totals.hasAnyPriced ? <Amount value={totals.totalToman} /> : "—"}
+          </strong>
+        </span>
+        <a className="quote-dock-next" href="#quote-summary">
+          ادامه
+        </a>
+      </div>
     </form>
   );
 }

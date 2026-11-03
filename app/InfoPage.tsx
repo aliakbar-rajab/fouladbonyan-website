@@ -151,44 +151,28 @@ function PrivacyContent() {
   );
 }
 
-function QuoteProcessContent() {
+/*
+ * The four steps from request to a priced pre-invoice. They sit in the hero as
+ * a slim stepper rather than as a block of cards above the form: the page is
+ * linked as #quote-form, and the cards pushed the form a full screen down.
+ */
+const quoteSteps = [
+  { title: "مشخصات کالا", text: "نوع، ابعاد، مقدار و شهر مقصد" },
+  { title: "ارسال برای بررسی", text: "از طریق شماره‌های رسمی واحد فروش" },
+  { title: "بررسی واحد فروش", text: "موجودی، قیمت، مالیات و هزینه حمل" },
+  { title: "اعلام پیش‌فاکتور", text: "قیمت و شرایط نهایی با مدت اعتبار" },
+];
+
+function QuoteSteps() {
   return (
-    <>
-      <ol className="process-steps">
-        <li>
-          <strong>آماده‌کردن مشخصات</strong>
-          <span>نوع محصول، گرید، ابعاد، مقدار تقریبی و شهر مقصد را مشخص کنید.</span>
+    <ol className="quote-steps" aria-label="مراحل درخواست پیش‌فاکتور">
+      {quoteSteps.map((step) => (
+        <li key={step.title}>
+          <strong>{step.title}</strong>
+          <small>{step.text}</small>
         </li>
-        <li>
-          <strong>ارسال برای بررسی</strong>
-          <span>
-            متن درخواست را آماده کنید و از طریق شماره‌های رسمی با واحد فروش در
-            میان بگذارید.
-          </span>
-        </li>
-        <li>
-          <strong>بررسی واحد فروش</strong>
-          <span>
-            موجودی، منبع تأمین، قیمت، مالیات، هزینه حمل و زمان احتمالی تحویل
-            بررسی می‌شود.
-          </span>
-        </li>
-        <li>
-          <strong>اعلام پیش‌فاکتور</strong>
-          <span>
-            قیمت و شرایط نهایی در پیش‌فاکتور دارای مدت اعتبار اعلام می‌شود.
-          </span>
-        </li>
-      </ol>
-      <aside className="important-notice">
-        <strong>توجه مهم</strong>
-        <p>قیمت و شرایط نهایی پس از تماس با واحد فروش اعلام می‌شود.</p>
-        <a className="important-notice-phones-link" href="#phone-numbers">
-          مشاهده شماره‌های تماس
-        </a>
-      </aside>
-      <QuoteRequestForm />
-    </>
+      ))}
+    </ol>
   );
 }
 
@@ -260,13 +244,16 @@ function PageContent({ page }: { page: InfoPageKey }) {
   if (page === "about") return <AboutContent />;
   if (page === "terms") return <TermsContent />;
   if (page === "privacy") return <PrivacyContent />;
-  if (page === "quote-process") return <QuoteProcessContent />;
+  if (page === "quote-process") return <QuoteRequestForm />;
   if (page === "complaints") return <ComplaintsContent />;
   return <ShippingContent />;
 }
 
 export default function InfoPage({ page }: { page: InfoPageKey }) {
   const definition = infoPageDefinitions[page];
+  // The quote page is a tool, not a document: a slim band with the steps in
+  // it, and the form's own phone bar in place of the generic one.
+  const isQuote = page === "quote-process";
 
   return (
     <InnerPageLayout
@@ -274,6 +261,10 @@ export default function InfoPage({ page }: { page: InfoPageKey }) {
       eyebrow={definition.eyebrow}
       title={definition.title}
       description={definition.description}
+      heroClassName={isQuote ? "info-hero--slim" : undefined}
+      heroExtra={isQuote ? <QuoteSteps /> : undefined}
+      contentClassName={isQuote ? "quote-content" : undefined}
+      mobileActions={!isQuote}
     >
       <PageContent page={page} />
     </InnerPageLayout>
