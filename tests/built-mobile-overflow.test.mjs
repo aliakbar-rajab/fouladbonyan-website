@@ -7,14 +7,15 @@ import { preview } from "vite";
  * Two layout regressions that only a real engine can catch, because both come
  * from CSS the DOM alone cannot predict:
  *
- * 1. `.quote-print-sheet` carries `min-width: 42rem` below 640px so the
- *    generated pre-invoice can be swiped. `.request-form` is a grid item, and
- *    a grid item's automatic minimum size is its content's min-content width,
- *    so that floor propagated out and pushed the whole form to ~725px inside a
- *    375px viewport. `.inner-page` clips overflow and the document itself
- *    never gained a scrollbar, so the form -- summary, disclaimer, submit
- *    button and the sheet alike -- was cut off with no way to reach it. The
- *    sheet's own `overflow-x: auto` scroller was useless: it had grown too.
+ * 1. The generated pre-invoice is a fixed 277mm landscape sheet (~1047px).
+ *    On a phone it is scaled down to the width of its frame rather than
+ *    swiped. An earlier version swiped it inside a scroller, and its
+ *    `min-width` propagated out through `.request-form` (a grid item takes
+ *    its content's min-content width as its automatic minimum), pushing the
+ *    whole form to ~725px inside a 375px viewport where `.inner-page` clipped
+ *    it with no way to reach the submit button. A transform does not affect
+ *    layout, so the frame has to be given the scaled height by script; if
+ *    that ever breaks, the sheet overlaps whatever follows it.
  *
  * 2. `.footer-link-list--contacts a` is a flex row holding a name and an
  *    eleven-digit number in a ~134px column. Held on one nowrap line, the
@@ -52,6 +53,9 @@ function findClippedElements(page) {
       .filter((element) => {
         const box = element.getBoundingClientRect();
         if (box.width <= 0 || box.height <= 0) return false;
+        // Hidden measuring copies (the pre-invoice lays its pages out off
+        // screen) cannot be seen, so they cannot be cut off either.
+        if (!element.checkVisibility({ visibilityProperty: true })) return false;
         if (box.right <= viewportWidth + 2 && box.left >= -2) return false;
         if (element.closest(".hero-image")) return false;
         return !reachableByScrolling(element);
@@ -89,25 +93,29 @@ test(
       await page.fill('[name="itemQuantity-1"]', "5");
       await page.check('[name="acceptDisclaimer"]');
       await page.click(".form-submit");
-      await page.locator(".quote-print-sheet").waitFor();
+      await page.locator(".inv-pages .print-page").waitFor();
       await page.evaluate(() => document.fonts.ready);
 
       const layout = await page.evaluate(() => {
-        const form = document.querySelector(".request-form");
-        const scroller = document.querySelector(".quote-print-scroll");
+        const rect = (selector) => {
+          const box = document.querySelector(selector).getBoundingClientRect();
+          return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height };
+        };
         return {
           viewportWidth: document.documentElement.clientWidth,
           documentScrollWidth: document.documentElement.scrollWidth,
-          formWidth: Math.round(form.getBoundingClientRect().width),
-          scrollerClientWidth: scroller.clientWidth,
-          scrollerScrollWidth: scroller.scrollWidth,
-          scrollerTabIndex: scroller.getAttribute("tabindex"),
+          form: rect(".request-form"),
+          frame: rect(".inv-pages-frame"),
+          pages: rect(".inv-pages"),
+          sheet: rect(".inv-pages .print-page"),
+          sheetLayoutWidth: document.querySelector(".inv-pages .print-page").offsetWidth,
+          pagesTabIndex: document.querySelector(".inv-pages").getAttribute("tabindex"),
         };
       });
 
       assert.ok(
-        layout.formWidth <= layout.viewportWidth,
-        `the form is ${layout.formWidth}px inside a ${layout.viewportWidth}px viewport; a grid item needs min-width: 0 to stop inheriting the sheet's min-width`,
+        layout.form.width <= layout.viewportWidth,
+        `the form is ${Math.round(layout.form.width)}px inside a ${layout.viewportWidth}px viewport`,
       );
       assert.equal(
         layout.documentScrollWidth,
@@ -115,13 +123,21 @@ test(
         "the page must not overflow horizontally",
       );
       assert.ok(
-        layout.scrollerClientWidth < layout.scrollerScrollWidth,
-        "the sheet has to stay wider than its scroller, or the scroller is not containing it",
+        layout.sheet.width < layout.sheetLayoutWidth / 2,
+        `the ${layout.sheetLayoutWidth}px sheet should be scaled down on a phone, not shown at ${Math.round(layout.sheet.width)}px`,
+      );
+      assert.ok(
+        layout.sheet.left >= layout.frame.left - 1 && layout.sheet.right <= layout.frame.right + 1,
+        `the scaled sheet [${Math.round(layout.sheet.left)},${Math.round(layout.sheet.right)}] must sit inside its frame [${Math.round(layout.frame.left)},${Math.round(layout.frame.right)}]`,
+      );
+      assert.ok(
+        Math.abs(layout.frame.height - layout.pages.height) <= 2,
+        `the frame (${Math.round(layout.frame.height)}px) must be as tall as the scaled sheets (${Math.round(layout.pages.height)}px), or they overlap what follows`,
       );
       assert.equal(
-        layout.scrollerTabIndex,
+        layout.pagesTabIndex,
         "0",
-        "a keyboard reader must be able to focus the scroller and pan the sheet",
+        "a keyboard reader must be able to reach the generated document",
       );
       assert.deepEqual(await findClippedElements(page), []);
       await page.close();

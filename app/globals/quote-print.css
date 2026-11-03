@@ -1,12 +1,18 @@
 /*
- * A4 pro forma, restyled to match the print stationery of the standalone
- * پیش‌فاکتور desktop app: monochrome (white/black/gray only — a filled dark
- * band streaks on a black-and-white office laser, a bordered white box
- * doesn't), thin rules instead of shaded panels, a light-filled "hero" line
- * for the one number that matters, and a seller/buyer card pair instead of a
- * single mixed strip. The request FORM (QuoteRequestForm.tsx) and the data
- * this document is built from are unchanged — only this printed output.
+ * The generated pre-invoice on /quote-process/.
+ *
+ * The sheet is a port of the standalone پیش‌فاکتور app's own stylesheet
+ * (css/invoice.css in that project): the same class names, the same values
+ * and the same cascade order, so the page it prints is the page that app
+ * prints. Only the editor's controls are gone -- the site never edits the
+ * sheet, it renders the app's print clone directly (static text in place of
+ * every input; see QuoteDocument.tsx). Where a rule here differs from the
+ * app's, the comment beside it says why.
+ *
+ * The request FORM above it is the site's own and keeps its own look; the
+ * responsive block at the foot of this file is that form's.
  */
+
 .quote-document {
   margin-top: 2rem;
   padding-top: 1.25rem;
@@ -56,348 +62,992 @@
   margin: -0.5rem 0 0;
 }
 
-.quote-print-viewport {
-  position: relative;
+/*
+ * The desk the sheets lie on: the app's own page colour and padding. The
+ * sheets inside are real-size A4 (277mm wide); QuoteDocument scales the stack
+ * down to this box's width, as the app's fitSheetScale does to its window.
+ *
+ * A transform, not the app's `zoom`: zoom lays the text out again at the
+ * scaled size, and its rounding made a solved page measure ~8px taller than
+ * its A4 box, clipping the footer. A transform scales the very layout that
+ * was measured. The frame carries the scaled height the transform cannot.
+ */
+.inv-preview {
+  padding: 16px;
+  border-radius: 8px;
+  background: #e8e6e1;
 }
 
-.quote-print-sheet {
-  --line: #9aa0a3;
-  --line-soft: #b9bec1;
+.inv-pages-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.inv-pages {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: max-content;
+  transform: translateX(-50%) scale(var(--inv-scale, 1));
+  transform-origin: top center;
+}
+
+.inv-pages:focus-visible {
+  outline: 2px solid #1c1d21;
+  outline-offset: 4px;
+}
+
+/* The building yard: one sheet with every row, and the scratch mount pages
+   are measured in. Laid out (it has to be, to be measured) but never seen. */
+.inv-measure {
+  position: absolute;
+  top: 0;
+  inset-inline-start: -20000px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---------- Sheet base ---------- */
+
+.invoice-sheet {
+  --paper: #ffffff;
+  --ink: #000000;
   --muted: #5c5f61;
   --muted-strong: #303335;
-  --surface: #e6e6e6;
+  --line: #9aa0a3;
+  --line-soft: #b9bec1;
+  --surface: #e0e0e0;
+
+  --band-ink: var(--ink);
+  --band-muted: var(--muted);
+  --band-line: var(--line);
+  --band-grad: var(--paper);
+
+  --edge: 0.6mm;
+  --band-fill: #e0e0e0;
+
+  --accent-ink: #000000;
+  --accent-2: var(--muted);
+  --accent-soft: var(--line);
+  --accent-grad: var(--ink);
   --pay-fill: #ededed;
-  width: min(100%, 210mm);
-  min-height: 297mm;
-  margin: auto;
-  padding: 10mm 10mm 8mm;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: #000;
-  font-size: 9pt;
+
+  --col-del: 3%;
+
+  /*
+   * The app sets this to 1/0.97 only inside @media print, because its editor
+   * shows a delete column that print hides. These sheets never show it, so
+   * the print value holds on screen too and the totals box meets its column
+   * rule in both.
+   */
+  --col-scale: 1.0309;
+  --totals-span: calc((var(--col-total) + var(--col-price)) * var(--col-scale));
+
+  --sig-w: 46mm;
+
+  --doc-font-scale: 1;
+  --print-density: 1;
+  --print-row-extra: 0mm;
+  --print-block-extra: 0mm;
+
+  --rhythm-pad-block: calc(2mm + 5mm * var(--print-density));
+  --rhythm-head-pad: calc(1.1mm + 1.5mm * var(--print-density));
+  --rhythm-brand-gap: calc(0.7mm + 1.7mm * var(--print-density));
+  --rhythm-logo: calc(11mm + 6mm * var(--print-density));
+  --rhythm-parties-gap: calc(0.9mm + 1.6mm * var(--print-density));
+  --rhythm-card-head: calc(0.55mm + 0.75mm * var(--print-density));
+  --rhythm-card-pad: calc(0.5mm + 0.9mm * var(--print-density));
+  --rhythm-card-rowgap: calc(0.15mm + 0.75mm * var(--print-density));
+  --rhythm-th-pad: calc(0.65mm + 0.75mm * var(--print-density));
+  --rhythm-td-pad: calc(0.28mm + 0.5mm * var(--print-density));
+  --rhythm-cell-line: calc(1.35em + 0.2em * var(--print-density));
+  --rhythm-field-line: calc(1.24 + 0.21 * var(--print-density));
+  --rhythm-meta-gap: calc(0.5mm + 0.5mm * var(--print-density));
+  --rhythm-meta-pad: calc(0.45mm + 0.35mm * var(--print-density));
+  --rhythm-row-h: calc(4.6mm + 2.4mm * var(--print-density) + var(--print-row-extra));
+  --rhythm-summary-gap: calc(1.2mm + 1.6mm * var(--print-density));
+  --rhythm-totals-row: calc(3.4mm + 2.6mm * var(--print-density));
+  --rhythm-payable: calc(8.4mm + 3.4mm * var(--print-density));
+  --rhythm-words: calc(5.6mm + 2.4mm * var(--print-density));
+  --rhythm-footer-gap: calc(1mm + 1.4mm * var(--print-density));
+  --rhythm-footer-pad: calc(0.85mm + 1.05mm * var(--print-density));
+  --sig-h: calc(33mm + 15mm * var(--print-density) + var(--print-block-extra));
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--paper);
+  color: var(--ink);
   line-height: 1.5;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 6px 18px rgb(0 0 0 / 10%);
+
+  /* The app's <body> font. Declared on the sheet because here the sheet
+     lives inside the site's page, and the inherited text properties below
+     are reset for the same reason: none of the site's may reach the paper. */
+  font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "ss01" 1, "tnum" 1;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-align: start;
+  text-transform: none;
+  text-shadow: none;
+  white-space: normal;
+  /* The site sets both on <html>; optimizeLegibility kerns differently and
+     moved a line break in «مبلغ به حروف». */
+  text-rendering: auto;
+  font-synthesis: initial;
 }
 
-.quote-print-header {
+.invoice-sheet *,
+.invoice-sheet *::before,
+.invoice-sheet *::after {
+  box-sizing: border-box;
+}
+
+.invoice-sheet,
+.invoice-sheet * {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.invoice-sheet h1,
+.invoice-sheet h2,
+.invoice-sheet p,
+.invoice-sheet span,
+.invoice-sheet dt,
+.invoice-sheet dd {
+  margin: 0;
+}
+
+/* Landscape: sheet 277mm x 190mm on A4 297x210 paper */
+.invoice-sheet.orientation-landscape {
+  --page-w: 277mm;
+  --page-h: 190mm;
+  width: var(--page-w);
+  min-height: var(--page-h);
+  padding: var(--rhythm-pad-block) 2mm;
+  font-size: calc(8.7pt * var(--doc-font-scale));
+
+  --col-row: 4%;
+  --col-desc: 47%;
+  --col-qty: 7%;
+  --col-unit: 6%;
+  --col-price: 16%;
+  --col-total: 17%;
+}
+
+.invoice-sheet > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- Header band ---------- */
+
+.inv-head {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 4mm;
-  padding: 2.2mm 4.2mm;
-  border: 0.5mm solid #000;
-  border-radius: 1mm;
+  padding: var(--rhythm-head-pad) 4.5mm;
+  background: var(--band-fill);
+  color: var(--band-ink);
+  border: var(--edge) solid var(--ink);
+  border-radius: 2.5mm;
   break-inside: avoid;
 }
 
-.quote-print-doc-title {
-  justify-self: start;
-  margin: 0;
-  font-size: 12.5pt;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+.invoice-sheet.header-gray .inv-head,
+.invoice-sheet.header-gray .inv-footer {
+  background: #e4e4e4;
 }
 
-.quote-print-brand {
+.inv-doc-title {
+  justify-self: start;
+  min-width: 34mm;
+  max-width: 100%;
+  padding: 0.5mm 1mm;
+  font-size: calc(16.5pt * var(--doc-font-scale));
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--band-ink);
+}
+
+.inv-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.6mm;
+  gap: var(--rhythm-brand-gap);
+  min-width: 0;
+}
+
+.inv-logo-chip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1mm;
+}
+
+.inv-logo {
+  filter: grayscale(1);
+  display: block;
+  max-width: none;
+  object-fit: contain;
+}
+
+.orientation-landscape .inv-logo {
+  width: var(--rhythm-logo);
+  height: var(--rhythm-logo);
+}
+
+.inv-brand-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6mm;
   text-align: center;
 }
 
-.quote-print-brand img {
-  width: 15mm;
-  height: 15mm;
-  object-fit: contain;
-  filter: grayscale(1);
-}
-
-.quote-print-company h2 {
-  margin: 0;
-  font-size: 12.5pt;
+/* The app's company name is an <h1>. Here the page already has one, so the
+   name is a <p> carrying the same rule. */
+.inv-brand-text .inv-company-name-display {
+  font-size: calc(12.5pt * var(--doc-font-scale));
   line-height: 1.25;
   font-weight: 800;
+  color: var(--band-ink);
+  letter-spacing: 0.01em;
 }
 
-.quote-print-company span {
-  display: block;
-  margin-top: 0.4mm;
-  color: var(--muted);
-  font-size: 7.4pt;
-}
-
-.quote-print-meta {
+.inv-meta {
   justify-self: end;
   display: flex;
   flex-direction: column;
-  gap: 1mm;
-  width: 42mm;
-  margin: 0;
+  gap: var(--rhythm-meta-gap);
+  width: 68mm;
 }
 
-.quote-print-meta div {
+.inv-meta > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 2mm;
   background: var(--pay-fill);
   border-radius: 1.6mm;
-  padding: 0.9mm 2.5mm;
+  padding: var(--rhythm-meta-pad) 2.5mm;
 }
 
-.quote-print-meta dt {
-  margin: 0;
+.inv-meta dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2mm;
+  white-space: nowrap;
   color: var(--muted-strong);
-  font-size: 7.4pt;
+  font-size: calc(7.4pt * var(--doc-font-scale));
 }
 
-.quote-print-meta dd {
-  margin: 0;
-  font-weight: 700;
-  font-size: 8.6pt;
+.inv-meta-icon,
+.inv-card-head-icon {
+  flex: none;
+  width: 3.4mm;
+  height: 3.4mm;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.quote-parties {
+.inv-meta .inv-input {
+  width: 34mm;
+  text-align: left;
+  font-size: calc(9.2pt * var(--doc-font-scale));
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.inv-meta-validity dd {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+}
+
+/* ---------- Seller / buyer cards ---------- */
+
+.inv-parties {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4mm;
-  margin-block: 2.2mm 1.8mm;
+  margin-block: var(--rhythm-parties-gap);
   break-inside: avoid;
 }
 
-/*
- * The seller/buyer blocks of the pre-invoice. Named for the party they
- * describe, not "quote-card": the homepage conversion panel in cinematic.css
- * already owns that class, loads after this file, and was turning these into
- * dark 26px-radius flex rows.
- */
-.quote-party-card {
+.inv-card {
   border: 1px solid var(--line);
-  border-radius: 0.75mm;
+  border-radius: 2.5mm;
   overflow: hidden;
-  background: #fff;
+  background: var(--paper);
 }
 
-.quote-party-card-head {
-  padding: 1mm 3mm;
-  border-bottom: 0.3mm solid #000;
-  font-size: 8.6pt;
+.inv-card-head {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  padding: var(--rhythm-card-head) 3mm;
+  background: var(--band-grad);
+  color: var(--band-ink);
+  border-bottom: 0.35mm solid var(--ink);
+  font-size: calc(8.8pt * var(--doc-font-scale));
   font-weight: 800;
+  letter-spacing: 0.01em;
 }
 
-.quote-party-card-grid {
+.inv-card-head-icon { color: var(--accent-2); }
+
+.inv-card-grid {
   display: grid;
-  gap: 1mm;
-  padding: 1.6mm 3mm 1.8mm;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--rhythm-card-rowgap) 6mm;
+  padding: var(--rhythm-card-pad) 3mm;
 }
 
-.quote-field {
+.inv-field {
   display: flex;
   align-items: baseline;
   gap: 1.6mm;
   min-width: 0;
 }
 
-.quote-field-label {
+.inv-field-wide {
+  grid-column: 1 / -1;
+}
+
+.inv-field-postal {
+  padding-block-start: 0.15mm;
+}
+
+.inv-field-label {
   flex: none;
   color: var(--muted);
-  font-size: 7.6pt;
+  font-size: calc(7.4pt * var(--doc-font-scale));
   font-weight: 500;
 }
 
-.quote-field-label::after {
+.inv-field-label::after {
   content: ":";
 }
 
-.quote-field-value {
+.inv-field-value.inv-input {
+  flex: 1 1 auto;
   min-width: 0;
-  font-size: 8.8pt;
+  padding: 0 0 0.4mm;
+  background-image: repeating-linear-gradient(to left, var(--line) 0 1px, transparent 1px 3px);
+  background-repeat: no-repeat;
+  background-position: bottom left;
+  background-size: 100% 1px;
+  font-size: calc(9.2pt * var(--doc-font-scale));
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
-.quote-table-frame {
+/* ---------- Table ---------- */
+
+.inv-table-frame {
   border: 1px solid var(--line);
   border-radius: 2mm;
   overflow: hidden;
   break-inside: avoid;
+  margin-bottom: var(--rhythm-summary-gap);
 }
 
-.quote-print-table {
+.inv-table {
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  margin: 0;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 8pt;
 }
 
-.quote-print-table th,
-.quote-print-table td {
-  padding: 1.6mm 1.25mm;
+.inv-table th,
+.inv-table td {
+  /* The site styles every th/td (guide and price tables); the app's cells
+     simply inherit the sheet's type. */
+  font-size: 1em;
+  color: inherit;
+  padding: var(--rhythm-td-pad) 1.6mm;
   border: none;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: middle;
   text-align: center;
   overflow-wrap: anywhere;
+  line-height: 1.35;
 }
 
-.quote-print-table td + td {
+.inv-table td + td {
   border-inline-start: 1px solid var(--line-soft);
 }
 
-.quote-print-table th + th {
-  border-inline-start: 1px solid var(--line);
+.inv-table th + th {
+  border-inline-start: 1px solid var(--band-line);
 }
 
-.quote-print-table th {
-  padding-block: 1.5mm;
-  border-bottom: 0.5mm solid #000;
+.inv-table th {
+  padding-block: var(--rhythm-th-pad);
+  background: var(--band-grad);
+  border-bottom: 0.5mm solid var(--ink);
   font-weight: 800;
+  font-size: 0.88em;
+  line-height: 1.3;
+  color: var(--band-ink);
 }
 
-.quote-print-table tbody tr:nth-child(even) td {
-  background: var(--surface);
+.inv-table th:nth-child(2) {
+  padding-inline: 0.8mm;
+  white-space: nowrap;
 }
 
-.quote-cell-index {
-  font-weight: 800;
+.inv-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
-.quote-cell-product {
-  text-align: start;
+.inv-table td.inv-no-print,
+.inv-table th.inv-no-print {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.inv-table td:has(.cell-input[data-row-field="description"]) {
+  text-align: center;
   overflow-wrap: break-word;
 }
 
-.quote-col-row { width: 6%; }
-.quote-col-product { width: 25%; }
-.quote-col-qty { width: 9%; }
-.quote-col-unit { width: 9%; }
-.quote-col-unit-price { width: 16%; }
-.quote-col-total { width: 18%; }
-.quote-col-notes { width: 17%; }
+.inv-col-del { width: var(--col-del); }
+.inv-col-row { width: var(--col-row); }
+.inv-col-desc { width: var(--col-desc); }
+.inv-col-qty { width: var(--col-qty); }
+.inv-col-unit { width: var(--col-unit); }
+.inv-col-price { width: var(--col-price); }
+.inv-col-total { width: var(--col-total); }
 
-.quote-print-empty-row td {
-  height: 8.2mm;
-  padding: 0;
-}
-
-.quote-print-table tr {
+.inv-table tr {
   break-inside: avoid;
 }
 
-.quote-print-table thead {
+.inv-table tbody tr {
+  height: var(--rhythm-row-h);
+}
+
+.inv-table thead {
   display: table-header-group;
 }
 
-.quote-print-summary {
-  margin-top: 2.2mm;
-  display: grid;
-  gap: 1.6mm;
+.inv-table tbody tr:nth-child(even) td {
+  background: var(--surface);
+}
+
+.row-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.7mm;
+  color: var(--ink);
+  font-size: 0.86em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cell-computed {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Amount in words ---------- */
+
+.inv-amount-words {
+  display: block;
+  min-width: 0;
+  min-height: var(--rhythm-words);
+  margin: 0;
+  padding: 0.55mm 2.5mm;
+  border: 1px solid var(--ink);
+  border-radius: 1.5mm;
+  font-size: 0.9em;
+  line-height: 1.3;
+  white-space: normal;
   break-inside: avoid;
 }
 
-.quote-total-box {
-  border: 0.5mm solid #000;
-  border-radius: 0.75mm;
-  overflow: hidden;
-}
-
-.quote-total-box > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 3mm;
-  min-height: 7mm;
-  padding: 1.4mm 3mm;
-}
-
-.quote-total-box > div + div {
-  border-top: 1px solid var(--line);
-}
-
-.quote-total-box span {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 8.2pt;
-}
-
-.quote-total-box strong {
-  white-space: nowrap;
-  font-size: 8.6pt;
-}
-
-.quote-total-box .quote-total-final {
-  background: var(--pay-fill);
-  border-top: 0.5mm solid #000 !important;
-}
-
-.quote-total-box .quote-total-final span {
-  color: #000;
-  opacity: 0.82;
+.inv-amount-words-label {
   font-weight: 800;
+  font-size: 0.97em;
 }
 
-.quote-total-box .quote-total-final strong {
-  font-size: 13pt;
-  font-weight: 800;
-}
-
-.quote-amount-words {
-  padding: 1.4mm 3mm;
-  border: 1px solid #000;
-  border-radius: 1.5mm;
-  font-size: 8.6pt;
-  line-height: 1.5;
-}
-
-.quote-amount-words-label {
-  font-weight: 800;
-}
-
-.quote-amount-words-label::after {
+.inv-amount-words-label::after {
   content: "\00a0\2013\00a0";
   color: var(--muted);
   font-weight: 400;
 }
 
-.quote-amount-words-value {
+.inv-amount-words-value {
   color: var(--muted-strong);
 }
 
-.quote-print-notes {
-  padding: 1.4mm 3mm;
-  border: 1px solid var(--line);
-  border-radius: 1.5mm;
+/* ---------- Summary ---------- */
+
+.inv-summary {
+  display: grid;
+  direction: ltr;
+  column-gap: 4mm;
+  row-gap: 1.4mm;
+  align-items: stretch;
+  break-inside: avoid;
+  margin-top: auto;
 }
 
-.quote-print-notes p {
-  margin: 0;
-  padding-block: 0.8mm;
-  font-size: 7.8pt;
-  line-height: 1.7;
+.orientation-landscape .inv-summary {
+  grid-template-columns: var(--totals-span) 1fr var(--sig-w) var(--sig-w);
+  grid-template-areas:
+    "totals notes buyer seller"
+    "words  notes buyer seller";
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
-.quote-print-notes p + p {
-  border-top: 1px dashed var(--line-soft);
+.inv-totals { grid-area: totals; }
+.inv-amount-words { grid-area: words; direction: rtl; }
+.inv-notes { grid-area: notes; }
+.inv-signature-buyer { grid-area: buyer; }
+.inv-signature-seller { grid-area: seller; }
+
+.inv-totals {
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  background: var(--band-grad);
+  color: var(--band-ink);
+  border: var(--edge) solid var(--ink);
+  border-radius: 2.5mm;
+  overflow: hidden;
+  padding-top: 0;
 }
 
-.quote-print-footer {
-  margin-top: 2.2mm;
-  padding: 1.4mm 4.5mm;
-  border: 0.5mm solid #000;
-  border-radius: 0.75mm;
+.inv-totals > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3mm;
+  min-height: var(--rhythm-totals-row);
+  padding: 0.6mm 3mm;
+  font-size: 0.97em;
+  flex: 1 1 auto;
+}
+
+.inv-totals > div + div {
+  border-top: 1px solid var(--band-line);
+}
+
+.inv-totals > div > span {
+  flex: 0 0 auto;
+  color: var(--band-muted);
+  font-weight: 500;
+}
+
+.inv-totals strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--band-ink);
+}
+
+.inv-tax-row {
+  flex-wrap: nowrap;
+}
+
+.inv-tax-row > span {
+  display: flex;
+  align-items: baseline;
+  gap: 1mm;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.inv-tax-percent-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  white-space: nowrap;
+  flex: none;
+}
+
+.inv-tax-percent-wrap .inv-tax-percent.inv-input {
+  min-width: 4.6mm;
+  max-width: 10mm;
+  width: auto;
+  flex: none;
+  padding: 0;
   text-align: center;
-  font-size: 8.6pt;
-  letter-spacing: 0.06em;
-  color: var(--muted-strong);
+}
+
+.inv-totals .inv-total-final {
+  margin-top: auto;
+  flex: 0 0 auto;
+  background: var(--pay-fill);
+  color: var(--accent-ink);
+  min-height: var(--rhythm-payable);
+  padding-block: 1.8mm;
+  border-top: var(--edge) solid var(--ink) !important;
+}
+
+.inv-totals .inv-total-final > span {
+  color: var(--accent-ink);
+  opacity: 0.82;
+  font-weight: 800;
+}
+
+.inv-total-final strong {
+  color: var(--accent-ink);
+  font-size: 1.75em;
+  font-weight: 800;
+}
+
+.inv-notes {
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5mm;
+  border: 1px solid var(--line);
+  border-radius: 2mm;
+  padding: 1.1mm 3mm 1.4mm;
+  min-width: 0;
   break-inside: avoid;
 }
 
-@page {
-  size: A4 portrait;
-  margin: 0;
+.inv-notes-label {
+  flex: none;
+  font-size: 0.86em;
+  font-weight: 700;
+  color: var(--muted-strong);
+}
+
+.inv-textarea {
+  flex: 1 1 auto;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.92em;
+  line-height: 1.55;
+  overflow: hidden;
+}
+
+/* ---------- Signatures ---------- */
+
+.inv-signature-block {
+  direction: rtl;
+  border: 1px solid var(--line);
+  border-radius: 2.5mm;
+  padding: 1.1mm 2.6mm 1.4mm;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8mm;
+  min-height: var(--sig-h);
+}
+
+.inv-signature-label {
+  font-size: 0.86em;
+  font-weight: 700;
+  color: var(--muted-strong);
+  display: flex;
+  align-items: center;
+  gap: 1.6mm;
+}
+
+.inv-signature-label::before {
+  content: "";
+  flex: none;
+  width: 1.8mm;
+  height: 1.8mm;
+  border-radius: 0.5mm;
+  background: var(--ink);
+}
+
+.inv-signature-area {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ---------- Footer band ---------- */
+
+.inv-footer {
+  margin-top: var(--rhythm-footer-gap);
+  padding: var(--rhythm-footer-pad) 4.5mm;
+  background: var(--band-fill);
+  color: var(--band-ink);
+  border: var(--edge) solid var(--ink);
+  border-radius: 2.5mm;
+  font-size: 0.94em;
+  break-inside: avoid;
+  position: relative;
+}
+
+.inv-footer-site {
+  display: block;
+}
+
+.inv-footer-site-input.inv-input {
+  width: 100%;
+  text-align: center;
+  font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif;
+  font-size: calc(12pt * var(--doc-font-scale));
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+/* ---------- Field text ---------- */
+
+/* The app's form-control base rule. Its print clone keeps these classes on
+   the text that replaces each control, so the rule still shapes that text. */
+.inv-input,
+.inv-textarea,
+.cell-input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.5px 1px;
+  width: 100%;
+  min-width: 0;
+  text-align: inherit;
+}
+
+.inv-table .cell-input {
+  text-align: center;
+}
+
+.inv-head .inv-input,
+.inv-totals .inv-input,
+.inv-footer .inv-input {
+  color: var(--ink);
+}
+
+/* ---------- The app's print-first refinement layer ---------- */
+
+.invoice-sheet {
+  --band-fill: #fff;
+  --surface: #d8d8d8;
+  --edge: 0.42mm;
+  --sig-w: 44mm;
+}
+
+.invoice-sheet.orientation-landscape {
+  font-size: calc(8.8pt * var(--doc-font-scale));
+}
+
+.inv-head {
+  padding: var(--rhythm-head-pad) 4.2mm;
+  border-width: var(--edge);
+  border-radius: 1mm;
+  background: #fff;
+}
+
+.invoice-sheet.header-gray .inv-head,
+.invoice-sheet.header-gray .inv-footer { background: #e4e4e4; }
+
+.inv-card,
+.inv-table-frame,
+.inv-amount-words,
+.inv-totals,
+.inv-notes,
+.inv-signature-block,
+.inv-footer {
+  border-radius: 0.75mm;
+}
+
+.inv-card-head {
+  padding-block: var(--rhythm-card-head);
+  background: #fff;
+  border-bottom-width: 0.3mm;
+}
+
+.inv-card-grid { gap: var(--rhythm-card-rowgap) 5mm; padding-block: var(--rhythm-card-pad); }
+.inv-field { align-items: flex-start; }
+.inv-field-label { padding-top: 0.4mm; font-size: calc(7.9pt * var(--doc-font-scale)); }
+.inv-field-value.inv-input { font-size: calc(9pt * var(--doc-font-scale)); line-height: 1.45; }
+
+.inv-autogrow,
+.cell-textarea {
+  display: block;
+  overflow: hidden;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inv-autogrow { min-height: 1.65em; }
+
+.inv-table-frame { border-color: #8e9396; }
+.inv-table th { background: #fff; border-bottom-width: 0.42mm; padding-block: var(--rhythm-th-pad); }
+.inv-table td { padding-block: var(--rhythm-td-pad); }
+.inv-table tbody tr:nth-child(even) td { background: var(--surface); }
+
+.cell-textarea {
+  height: var(--rhythm-cell-line);
+  min-height: var(--rhythm-cell-line);
+  padding-block: 0;
+  font: inherit;
+  text-align: start;
+}
+
+.cell-computed,
+.cell-input-num,
+.inv-tax-percent,
+.inv-totals strong,
+.inv-total-final strong,
+.row-index-badge {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.inv-footer { margin-top: var(--rhythm-footer-gap); background: #fff; border-width: var(--edge); }
+.inv-footer-site-input.inv-input {
+  font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+  font-size: calc(9.5pt * var(--doc-font-scale));
+  font-weight: 500;
+  letter-spacing: 0.035em;
+}
+
+.inv-totals { border-width: var(--edge); }
+.inv-totals .inv-total-final { background: #f1f1f1; }
+.inv-total-final strong { font-size: 1.62em; }
+
+.numeric-overflow { color: #a32732 !important; }
+
+.print-field-value {
+  display: block;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.print-field-value.cell-input-num {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.print-page .inv-no-print { display: none !important; }
+
+.print-page .inv-input,
+.print-page .cell-input,
+.print-page .inv-textarea,
+.print-page .print-field-value {
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.print-page .inv-field-value { font-size: calc(9pt * var(--doc-font-scale)); font-weight: 700; }
+.print-page .inv-field { align-items: flex-start; }
+.print-page .inv-field-label { padding-top: 0; }
+.print-page .cell-input { display: block; width: 100%; }
+.print-page .cell-textarea,
+.print-page .inv-autogrow { height: auto !important; min-height: 0; overflow: visible; }
+
+.invoice-sheet .inv-table .cell-input,
+.invoice-sheet .inv-table .cell-computed {
+  line-height: var(--rhythm-cell-line);
+}
+
+.invoice-sheet,
+.invoice-sheet .inv-field-value,
+.invoice-sheet .inv-field-label,
+.invoice-sheet .inv-input,
+.invoice-sheet .inv-textarea,
+.invoice-sheet .print-field-value {
+  line-height: var(--rhythm-field-line);
+}
+.print-page .inv-footer-site-input { display: block; width: 100%; text-align: center; }
+
+/* ---------- Continuation pages ---------- */
+
+.print-continuation-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 4mm;
+  padding: 2mm 3mm;
+  margin-bottom: 2mm;
+  border-block: 0.4mm solid #000;
+}
+.print-continuation-brand { display: flex; align-items: center; gap: 2.5mm; }
+.print-continuation-brand img { width: 11mm; height: 11mm; max-width: none; object-fit: contain; filter: grayscale(1); }
+.print-continuation-brand strong { font-size: 11pt; }
+.print-continuation-title { text-align: center; font-size: 12pt; font-weight: 850; }
+.print-continuation-meta { text-align: end; color: #35373a; font-size: 8.3pt; line-height: 1.7; }
+.print-page-marker { margin-top: auto; padding-top: 1.5mm; border-top: 1px solid #777; color: #4b4d50; font-size: 8pt; text-align: center; }
+.print-page .print-page-number { position: absolute; inset-inline-end: 10mm; bottom: 2.5mm; color: #555; font-size: 7.5pt; }
+
+/* Natural-height measurement; see fitSheetToPage in quote-invoice-pages.ts. */
+.is-measuring-natural {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+.print-page {
+  overflow: hidden;
+  width: var(--page-w);
+  height: var(--page-h);
+  min-height: var(--page-h);
+  margin-inline: auto;
+}
+.print-page > * { flex-shrink: 0; }
+.print-page .numeric-overflow { color: inherit !important; }
+
+/*
+ * The app's print clones never reach a screen, so its print rules strip them
+ * bare. These do, so on screen they keep the two things its editor shows and
+ * its paper does not: the sheet's lift off the desk, and the dotted rule a
+ * paper form draws under each party field.
+ */
+@media screen {
+  .inv-pages .print-page {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 6px 18px rgb(0 0 0 / 10%) !important;
+  }
+
+  .inv-pages .print-page .inv-field-value.inv-input {
+    background-image: repeating-linear-gradient(to left, var(--line) 0 1px, transparent 1px 3px) !important;
+    background-repeat: no-repeat !important;
+    background-position: bottom left !important;
+    background-size: 100% 1px !important;
+  }
+}
+
+/*
+ * Printing. The landscape @page rule is added by quote-invoice-pages.ts only
+ * while a pre-invoice exists (the CSP refuses an inline one, and the rest of
+ * the site keeps the browser's own page settings), and on `beforeprint` the
+ * sheets move into .inv-print-document, a direct child of <body> -- the app's
+ * own print container. Each sheet sits in a slot one page box tall (100vh in
+ * print is the real page box the dialog left behind) that centres it.
+ */
+.inv-print-document {
+  display: none;
 }
 
 @media print {
@@ -407,47 +1057,57 @@
    * sheet is the last one loaded, so at equal specificity it wins inside this
    * block too, and the pre-invoice prints onto a black page wherever the
    * browser is set to print background graphics.
+   *
+   * Padding is cleared too: base.css reserves room for the mobile bottom bar
+   * under 900px, and Chrome matches print media queries against the dialog's
+   * paper width (A4 or Letter, both narrower), not the @page size. That 4rem
+   * sat after the last sheet and printed as a blank trailing page.
    */
   html body {
+    margin: 0;
+    padding: 0;
     background: #fff;
   }
 
   html #fb-site {
-    display: block;
     background: #fff;
   }
 
-  #fb-site:has(.quote-document) * {
-    visibility: hidden;
+  body.inv-printing > :not(.inv-print-document) {
+    display: none !important;
   }
 
-  #fb-site:has(.quote-document) .quote-document,
-  #fb-site:has(.quote-document) .quote-document * {
-    visibility: visible;
+  body.inv-printing .inv-print-document {
+    display: block;
   }
 
-  #fb-site:has(.quote-document) .quote-document {
-    position: absolute;
-    inset: 0;
+  .inv-print-slot {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    break-after: page;
+  }
+
+  .inv-print-slot:last-child {
+    break-after: auto;
+  }
+
+  .print-page {
+    display: flex;
     margin: 0;
-    padding: 0;
-    border: 0;
+    flex-shrink: 0;
+    box-shadow: none !important;
   }
 
-  .quote-document-actions {
-    display: none;
-  }
-
-  .quote-print-scroll {
-    overflow: visible;
-  }
-
-  .quote-print-sheet {
-    width: 210mm;
-    min-height: 297mm;
-    border: 0;
-    box-shadow: none;
-  }
+  .inv-field-value.inv-input { background-image: none !important; }
+  .inv-head,
+  .inv-footer { background: #fff !important; }
+  .print-page.header-gray .inv-head,
+  .print-page.header-gray .inv-footer { background: #e4e4e4 !important; }
+  .inv-amount-words.is-empty { display: none; }
+  .print-page .inv-footer.is-empty { display: none; }
 }
 
 @media (max-width: 900px) {
@@ -478,36 +1138,8 @@
 }
 
 @media (max-width: 640px) {
-  .quote-print-scroll {
-    /*
-     * The sheet below is wider than any phone on purpose, so this is the box
-     * that has to stay viewport-width for the swipe to work. Without the cap
-     * it takes the sheet's `min-width` as its own and scrolls nothing.
-     */
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
-  }
-
-  .quote-print-scroll::-webkit-scrollbar {
-    display: none;
-  }
-
-  .quote-print-viewport::after {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    inset-block: 0;
-    left: 0;
-    width: 2.5rem;
-    pointer-events: none;
-    background: linear-gradient(to left, rgb(255 255 255 / 0%), #fff 85%);
-  }
-
-  .quote-print-sheet {
-    width: 42rem;
-    min-width: 42rem;
+  .inv-preview {
+    padding: 8px;
   }
 
   .quote-document-actions,

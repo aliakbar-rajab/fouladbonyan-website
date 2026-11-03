@@ -58,19 +58,20 @@ test("all required informational pages are defined and the intended links stay i
   assert.match(megaMenu, /primaryNavLinks/);
 });
 
-test("owner-only legal information remains explicitly unset, except the confirmed official email", async () => {
+test("owner-only legal information remains explicitly unset, except what the owner's own sources confirm", async () => {
   const [config, checklist] = await Promise.all([
     read("../app/site-config.ts"),
     read("../docs/enamad-required-info.md"),
   ]);
 
   assert.match(config, /legalName: null/);
-  assert.match(config, /nationalId: null/);
+  // The national ID is the one in the owner's پیش‌فاکتور app company profile.
+  assert.match(config, /nationalId: "14015483186"/);
   assert.match(config, /registrationNumber: null/);
   assert.match(config, /workingHours: "۹ الی ۱۸"/);
   assert.match(config, /officialEmail: "info@fouladbonyan\.com"/);
   assert.match(checklist, /نام حقوقی/);
-  assert.match(checklist, /شناسه ملی/);
+  assert.match(checklist, /شناسه ملی شرکت: `14015483186`/);
   assert.match(checklist, /شماره ثبت/);
   assert.doesNotMatch(
     checklist,

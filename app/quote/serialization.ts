@@ -67,13 +67,29 @@ export function buildQuoteMessage(
   ].join("\n");
 }
 
+/**
+ * VAT on a rial amount, rounded half-up to the rial -- the standalone invoice
+ * app's rule (computeTotals in its invoice-totals.js). The rate is carried as
+ * basis points and the product taken in BigInt so neither a fractional rate
+ * nor a large total can pick up a floating-point error.
+ */
+export function quoteTaxRial(totalRial: number, taxRate: number | null): number {
+  if (!taxRate || taxRate <= 0 || totalRial <= 0) return 0;
+  const basisPoints = BigInt(Math.round(taxRate * 10_000));
+  const product = BigInt(Math.round(totalRial)) * basisPoints;
+  return Number((product + 5_000n) / 10_000n);
+}
+
 export function buildQuoteDocument(
   contact: RawQuoteContact,
   items: QuoteItemEvaluation[],
   totals: QuoteTotals,
+  taxRate: number | null = null,
 ): GeneratedQuote {
+  const taxRial = quoteTaxRial(totals.totalRial, taxRate);
   return {
     date: persianToday(),
+    number: "",
     fullName: contact.fullName.trim(),
     phone: contact.phone.trim(),
     destination: contact.destination.trim(),
@@ -87,5 +103,9 @@ export function buildQuoteDocument(
       totalRial: priced.approximateTotalRial,
     })),
     totalRial: totals.totalRial,
+    pricedItemCount: totals.pricedItemCount,
+    taxRate,
+    taxRial,
+    payableRial: totals.totalRial + taxRial,
   };
 }

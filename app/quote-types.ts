@@ -119,12 +119,27 @@ export type GeneratedQuoteItem = {
 /** Final printable invoice document model. */
 export type GeneratedQuote = {
   date: string;
+  /**
+   * «شماره پیش‌فاکتور», `YYYYMMDD-NNN` in Persian digits -- the standalone
+   * invoice app's format. Empty until the form assigns one on a successful
+   * submit (quote/document-number.ts), because numbering is a side effect.
+   */
+  number: string;
   fullName: string;
   phone: string;
   destination: string;
   notes: string;
   items: GeneratedQuoteItem[];
+  /** Sum of the priced rows («جمع کل»), before VAT. */
   totalRial: number;
+  /** How many rows `totalRial` covers; the rest await the sales desk. */
+  pricedItemCount: number;
+  /** The price snapshot's VAT rate (0.1 = 10%), or null when it is unknown. */
+  taxRate: number | null;
+  /** «مالیات و عوارض»: `totalRial` at `taxRate`, rounded half-up to the rial. */
+  taxRial: number;
+  /** «مبلغ قابل پرداخت»: `totalRial` plus `taxRial`. */
+  payableRial: number;
 };
 
 /** Complete evaluation output for a quote request. */

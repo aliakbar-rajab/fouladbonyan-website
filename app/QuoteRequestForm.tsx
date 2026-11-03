@@ -19,6 +19,7 @@ import { takeQuoteHandoff } from "./quote-handoff";
 import { validateQuoteField } from "./quote/validation";
 import type { QuoteItemEstimate } from "./quote/evaluator";
 import { QuoteDocument } from "./QuoteDocument";
+import { takeQuoteNumber } from "./quote/document-number";
 import { ErrorMessage } from "./request-form-shared";
 import { usePreparedRequest } from "./use-prepared-request";
 import { useQuoteRequestEstimate } from "./use-quote-request-estimate";
@@ -306,7 +307,10 @@ export function QuoteRequestForm() {
     }
 
     prepared.prepare(evaluation.message);
-    setGeneratedQuote(evaluation.document);
+    setGeneratedQuote({
+      ...evaluation.document,
+      number: takeQuoteNumber(evaluation.document.date),
+    });
   };
 
   return (

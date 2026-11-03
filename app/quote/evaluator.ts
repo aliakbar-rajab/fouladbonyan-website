@@ -77,8 +77,13 @@ export type QuoteEvaluator = {
  */
 export function createQuoteEvaluator(
   source?: QuotePricingBaselines | null,
+  options: {
+    /** The price snapshot's VAT rate, printed as «مالیات و عوارض». */
+    taxRate?: number | null;
+  } = {},
 ): QuoteEvaluator {
   const baselines = source ?? {};
+  const taxRate = options.taxRate ?? null;
 
   const evaluateItems = (
     items: (Partial<RawQuoteItem> | null | undefined)[],
@@ -153,7 +158,12 @@ export function createQuoteEvaluator(
     });
     const { items, totals } = evaluateItems(request.items);
     const message = buildQuoteMessage(normalizedContact, items, totals);
-    const document = buildQuoteDocument(normalizedContact, items, totals);
+    const document = buildQuoteDocument(
+      normalizedContact,
+      items,
+      totals,
+      taxRate,
+    );
 
     return {
       input: {

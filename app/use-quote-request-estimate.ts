@@ -11,10 +11,13 @@ import {
 import { extractQuotePricingBaselines } from "./quote/pricing-source";
 
 const loadQuoteEvaluator = createRetryableLoader<QuoteEvaluator>(
-  async () =>
-    createQuoteEvaluator(
-      extractQuotePricingBaselines(await loadAllGroupCatalogs()),
-    ),
+  async () => {
+    const catalogs = await loadAllGroupCatalogs();
+    // One snapshot, one rate: every group catalog carries the snapshot's own.
+    return createQuoteEvaluator(extractQuotePricingBaselines(catalogs), {
+      taxRate: catalogs[0]?.taxRate ?? null,
+    });
+  },
 );
 
 /*

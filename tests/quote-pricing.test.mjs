@@ -15,7 +15,9 @@ import { extractQuotePricingBaselines } from "../app/quote/pricing-source.ts";
 import {
   buildQuoteDocument,
   buildQuoteMessage,
+  quoteTaxRial,
 } from "../app/quote/serialization.ts";
+import { takeQuoteNumber } from "../app/quote/document-number.ts";
 import {
   validateQuoteField,
   validateQuoteRequestInput,
@@ -721,6 +723,65 @@ test("buildQuoteDocument generates complete printable document structure", () =>
   assert.equal(doc.items[0].product, "میلگرد");
   assert.equal(doc.items[0].unitPriceRial, 600_000_000);
   assert.equal(doc.totalRial, 1_200_000_000);
+  assert.equal(doc.pricedItemCount, 1);
+  assert.equal(doc.number, "", "the form assigns the number when it shows the document");
+  assert.equal(doc.taxRate, null);
+  assert.equal(doc.taxRial, 0);
+  assert.equal(doc.payableRial, 1_200_000_000);
+});
+
+test("the pre-invoice adds the snapshot's VAT as its own row and a payable total", () => {
+  const evaluator = createQuoteEvaluator(allEstimates, { taxRate: 0.1 });
+  const { document } = evaluator.evaluateRequest({
+    contact,
+    items: [
+      {
+        id: 1,
+        product: "میلگرد",
+        quantity: "2",
+        unit: "تن",
+        dimensions: "A3",
+        rebarDiameterMm: "",
+        pieceOptionKey: "",
+      },
+    ],
+    acceptDisclaimer: true,
+  });
+
+  assert.equal(document.taxRate, 0.1);
+  assert.equal(document.totalRial, 1_200_000_000);
+  assert.equal(document.taxRial, 120_000_000);
+  assert.equal(document.payableRial, 1_320_000_000);
+});
+
+test("VAT rounds half up in whole rials and is zero without a rate or a total", () => {
+  assert.equal(quoteTaxRial(15, 0.1), 2);
+  assert.equal(quoteTaxRial(14, 0.1), 1);
+  assert.equal(quoteTaxRial(1_234_567, 0.09), 111_111);
+  assert.equal(quoteTaxRial(1_000, null), 0);
+  assert.equal(quoteTaxRial(1_000, 0), 0);
+  assert.equal(quoteTaxRial(0, 0.1), 0);
+});
+
+test("pre-invoice numbers follow the app's YYYYMMDD-NNN format and restart each day", () => {
+  const store = new Map();
+  globalThis.window = {
+    localStorage: {
+      getItem: (key) => store.get(key) ?? null,
+      setItem: (key, value) => store.set(key, String(value)),
+    },
+  };
+  try {
+    assert.equal(takeQuoteNumber("۱۴۰۵/۰۸/۱۲"), "۱۴۰۵۰۸۱۲-۰۰۱");
+    assert.equal(takeQuoteNumber("۱۴۰۵/۰۸/۱۲"), "۱۴۰۵۰۸۱۲-۰۰۲");
+    assert.equal(takeQuoteNumber("1405/08/13"), "۱۴۰۵۰۸۱۳-۰۰۱");
+    assert.equal(takeQuoteNumber("not a date"), "");
+
+    store.set("fouladbonyan.quoteNumber.v1", "{corrupt");
+    assert.equal(takeQuoteNumber("۱۴۰۵/۰۸/۱۳"), "۱۴۰۵۰۸۱۳-۰۰۱");
+  } finally {
+    delete globalThis.window;
+  }
 });
 
 test("domain product and unit metadata arrays and type guards behave accurately", () => {

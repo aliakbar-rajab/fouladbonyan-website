@@ -51,9 +51,10 @@ export const siteConfig = {
   },
   business: {
     legalName: null as string | null,
-    nationalId: null as string | null,
+    // From the company profile in the standalone پیش‌فاکتور app.
+    nationalId: "14015483186" as string | null,
     registrationNumber: null as string | null,
-    address: "آجودانیه پورابتهاج نبش لشکری ساختمان سرو واحد ۳۰۳",
+    address: "آجودانیه، پورابتهاج، نبش لشکری، ساختمان سرو، واحد ۳۰۳",
     shortAddress: "تهران، آجودانیه، پورابتهاج",
     city: "تهران",
     province: "تهران",
