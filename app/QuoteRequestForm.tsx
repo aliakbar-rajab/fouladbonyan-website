@@ -436,7 +436,10 @@ export function QuoteRequestForm() {
                       <input
                         name={quantityField}
                         type="number"
-                        min={isPiece ? "1" : "0.01"}
+                        // 0, not 0.01: from an empty field the up arrow steps
+                        // to the minimum, so 0.01 made it jump to 0.01 instead
+                        // of 1. Zero itself is still rejected by validation.
+                        min={isPiece ? "1" : "0"}
                         step={isPiece ? "1" : "any"}
                         inputMode={isPiece ? "numeric" : "decimal"}
                         placeholder="۰"
