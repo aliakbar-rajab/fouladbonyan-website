@@ -5,7 +5,7 @@ import {
 import { isInfoPageKey, type InfoPageKey } from "./info-page-data";
 import {
   getSubcategoryLabel,
-  isSingleSubcategoryGroup,
+  isConsolidatedSubcategory,
   productGroups,
   subcategoryHref,
   type ProductGroupId,
@@ -80,9 +80,9 @@ export function interpretSiteRoute({
   const category = dataset.initialCategory || segments[0];
   if (isProductGroupId(category)) {
     const rawSubcategory = dataset.initialSubcategory || segments[1] || undefined;
-    // /angle/angle/ and /channel/channel/ are redirect stubs, not routes: a
-    // single-subcategory group is always the category page itself.
-    const subcategory = isSingleSubcategoryGroup(category)
+    // /beam/beam/, /angle/angle/ and /channel/channel/ are redirect stubs:
+    // consolidated subcategories resolve directly onto their parent group route.
+    const subcategory = isConsolidatedSubcategory(category, rawSubcategory)
       ? undefined
       : rawSubcategory;
     return {

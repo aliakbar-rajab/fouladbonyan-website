@@ -3,8 +3,10 @@ import test from "node:test";
 import { readdir, readFile, stat } from "node:fs/promises";
 import sharp from "sharp";
 import {
+  catalogRedirectRules,
+  isConsolidatedSubcategory,
   productGroups,
-  singleSubcategoryGroupIds,
+  rendersCatalogOnGroupRoute,
   subcategoryHref,
 } from "../app/category-meta.ts";
 import { siteConfig } from "../app/site-config.ts";
@@ -108,9 +110,9 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
 
   const subcategoryList = [];
   for (const catalog of snapshot.catalogs) {
-    if (catalog.id === "angle" || catalog.id === "channel") continue;
     const group = productGroups.find((g) => g.id === catalog.id);
     for (const sub of catalog.categories) {
+      if (isConsolidatedSubcategory(catalog.id, sub.id)) continue;
       subcategoryList.push({
         groupId: catalog.id,
         groupLabel: group?.label ?? catalog.id,
@@ -120,7 +122,7 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     }
   }
 
-  assert.equal(subcategoryList.length, 44, "Expected exactly 44 product subcategories");
+  assert.equal(subcategoryList.length, 43, "Expected exactly 43 product subcategories");
 
   const titles = new Set();
   const h1s = new Set();
@@ -218,14 +220,14 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
   }
 
   // Check pairwise uniqueness
-  assert.equal(titles.size, 44, "All 44 subcategory titles must be distinct");
-  assert.equal(h1s.size, 44, "All 44 subcategory H1s must be distinct");
-  assert.equal(canonicals.size, 44, "All 44 subcategory canonicals must be distinct");
+  assert.equal(titles.size, 43, "All 43 subcategory titles must be distinct");
+  assert.equal(h1s.size, 43, "All 43 subcategory H1s must be distinct");
+  assert.equal(canonicals.size, 43, "All 43 subcategory canonicals must be distinct");
 
-  // Sitemap total: 1 home + 8 category + 44 subcategory + 1 contact + 2 indexable info
-  // (about, quote-process) + 1 guide index + 5 guides = 62 (4 legal/utility pages are noindex)
+  // Sitemap total: 1 home + 8 category + 43 subcategory + 1 contact + 2 indexable info
+  // (about, quote-process) + 1 guide index + 5 guides = 61 (4 legal/utility pages are noindex)
   const allLocs = sitemap.match(/<loc>[^<]+<\/loc>/g) ?? [];
-  assert.equal(allLocs.length, 62, "Sitemap must contain exactly 62 indexable URLs");
+  assert.equal(allLocs.length, 61, "Sitemap must contain exactly 61 indexable URLs");
 
   const homeHtmlForFooter = await readDist("index.html");
   for (const noindexInfo of ["terms", "privacy", "complaints", "shipping-delivery"]) {
@@ -260,28 +262,31 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     );
   }
 
-  // Verify permanent redirect stubs for single subcategories
-  for (const group of ["angle", "channel"]) {
-    const redirectHtml = await readDist(`${group}/${group}/index.html`);
+  // Verify permanent redirect stubs for consolidated / renamed routes
+  for (const rule of catalogRedirectRules) {
+    const from = `/${rule.fromPath.join("/")}/`;
+    const to = rule.toPath;
+    const stubRel = `${rule.fromPath.join("/")}/index.html`;
+    const redirectHtml = await readDist(stubRel);
     assert.match(
       redirectHtml,
-      new RegExp(`<meta http-equiv="refresh" content="0; url=https://fouladbonyan\\.com/${group}/"`),
-      `${group}/${group} must have meta refresh redirect to parent /${group}/`,
+      new RegExp(`<meta http-equiv="refresh" content="0; url=https://fouladbonyan\\.com${to}"`),
+      `${from} must have meta refresh redirect to ${to}`,
     );
     assert.match(
       redirectHtml,
-      new RegExp(`<link rel="canonical" href="https://fouladbonyan\\.com/${group}/"`),
-      `${group}/${group} must have canonical pointing to parent /${group}/`,
+      new RegExp(`<link rel="canonical" href="https://fouladbonyan\\.com${to}"`),
+      `${from} must have canonical pointing to ${to}`,
     );
     assert.match(
       redirectHtml,
       /<meta name="robots" content="noindex, follow"/,
-      `${group}/${group} redirect stub must be noindex, follow`,
+      `${from} redirect stub must be noindex, follow`,
     );
     assert.doesNotMatch(
       sitemap,
-      new RegExp(`<loc>https://fouladbonyan\\.com/${group}/${group}/</loc>`),
-      `${group}/${group} must not be present in sitemap.xml`,
+      new RegExp(`<loc>https://fouladbonyan\\.com${from}</loc>`),
+      `${from} must not be present in sitemap.xml`,
     );
   }
 
@@ -293,11 +298,11 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     (f) => f.endsWith("index.html") || f.endsWith(".html"),
   );
   // Expected html files: index.html (1) + 404.html (1) + 8 categories
-  // + 44 subcategories + 2 redirect stubs + contact (1) + 6 info + guide index (1) + 5 guides = 69
+  // + 43 subcategories + 4 redirect stubs + contact (1) + 6 info + guide index (1) + 5 guides = 70
   assert.equal(
     htmlFiles.length,
-    69,
-    `Expected exactly 69 HTML files across dist, found ${htmlFiles.length}`,
+    70,
+    `Expected exactly 70 HTML files across dist, found ${htmlFiles.length}`,
   );
 });
 
@@ -311,13 +316,16 @@ test("every generated page contains only its own content and exactly one H1", as
   const entries = await readdir(new URL("../dist", import.meta.url), {
     recursive: true,
   });
+  const redirectStubPaths = new Set(
+    catalogRedirectRules.map((r) => `${r.fromPath.join("/")}/index.html`),
+  );
   const pages = entries
     .filter((entry) => entry.endsWith("index.html"))
     .map((entry) => entry.split("\\").join("/"))
-    .filter((p) => !p.endsWith("angle/angle/index.html") && !p.endsWith("channel/channel/index.html"));
-  // 1 home + 8 category + 44 subcategory + contact + 6 info + 6 guide = 66
-  // (404.html is the only other HTML file and has no index.html name; angle/angle and channel/channel are redirect stubs).
-  assert.equal(pages.length, 66, `expected the full page set, got ${pages.length}`);
+    .filter((p) => !redirectStubPaths.has(p));
+  // 1 home + 8 category + 43 subcategory + contact + 6 info + 6 guide = 65
+  // (404.html is the only other HTML file and has no index.html name; 4 redirect stubs excluded).
+  assert.equal(pages.length, 65, `expected the full page set, got ${pages.length}`);
 
   for (const page of pages) {
     const html = await readDist(page);
@@ -402,12 +410,14 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
         `MegaMenu on ${group.id} must render button quick-picks for sizes`,
       );
     } else {
-      // Multi-category groups render links for every real subcategory
+      // Multi-category groups render links for every subcategory via subcategoryHref()
+      // (so consolidated subcategories such as beam/beam link directly to /beam/).
       for (const sub of catalog.categories) {
+        const expectedHref = subcategoryHref(group.id, sub.id);
         assert.match(
           groupHtml,
-          new RegExp(`<a href="/${group.id}/${sub.id}/"[^>]*>قیمت ${sub.label}</a>`),
-          `MegaMenu on ${group.id} must contain crawlable link for subcategory ${group.id}/${sub.id}`,
+          new RegExp(`<a href="${expectedHref}"[^>]*>قیمت ${sub.label}</a>`),
+          `MegaMenu on ${group.id} must contain crawlable link ${expectedHref} for subcategory ${group.id}/${sub.id}`,
         );
       }
     }
@@ -472,8 +482,9 @@ test("category landing pages render a distinct overview and link to every subcat
   for (const catalog of catalogs) {
     const html = await readDist(`${catalog.id}/index.html`);
 
-    if (catalog.id === "angle" || catalog.id === "channel") {
-      // Single subcategory families consolidate directly on parent category
+    if (rendersCatalogOnGroupRoute(catalog.id)) {
+      // Consolidated families (angle, channel, beam) render their primary PriceCatalog
+      // directly on the parent route, with /beam/ also linking cleanly to /beam/hash/.
       assert.match(
         html,
         /class="rebar-prices"/,
@@ -484,6 +495,21 @@ test("category landing pages render a distinct overview and link to every subcat
         /class="overview-table"/,
         `${catalog.id}/ must not render CategoryOverview table`,
       );
+      for (const sub of catalog.categories) {
+        if (!isConsolidatedSubcategory(catalog.id, sub.id)) {
+          assert.match(
+            html,
+            new RegExp(`href="/${catalog.id}/${sub.id}/"`),
+            `${catalog.id}/ must link to its non-consolidated subcategory ${catalog.id}/${sub.id}/`,
+          );
+          const subHtml = await readDist(`${catalog.id}/${sub.id}/index.html`);
+          assert.match(
+            subHtml,
+            /class="rebar-prices"/,
+            `${catalog.id}/${sub.id}/ must render the full PriceCatalog table`,
+          );
+        }
+      }
     } else {
       assert.match(
         html,
@@ -593,14 +619,16 @@ test("homepage @graph links WebSite and Organization corroborated by visible add
     "Organization streetAddress must match visible /contact/ text from siteConfig",
   );
 
-  // Verify all 52 catalog pages emit CollectionPage + ItemList + dateModified
+  // Verify all 51 catalog pages emit CollectionPage + ItemList + dateModified
   // and remain strictly free of Product / Offer / AggregateOffer schema.
   const snapshot = await readJson("catalog-prices.json");
   let collectionCount = 0;
   for (const catalog of snapshot.catalogs) {
     const pathsToCheck = [
       `${catalog.id}/index.html`,
-      ...((singleSubcategoryGroupIds.includes(catalog.id) ? [] : catalog.categories.map((c) => `${catalog.id}/${c.id}/index.html`))),
+      ...catalog.categories
+        .filter((c) => !isConsolidatedSubcategory(catalog.id, c.id))
+        .map((c) => `${catalog.id}/${c.id}/index.html`),
     ];
     for (const relPath of pathsToCheck) {
       const catHtml = await readDist(relPath);
@@ -618,7 +646,7 @@ test("homepage @graph links WebSite and Organization corroborated by visible add
       collectionCount += 1;
     }
   }
-  assert.equal(collectionCount, 52, "expected CollectionPage JSON-LD across all 52 catalog pages");
+  assert.equal(collectionCount, 51, "expected CollectionPage JSON-LD across all 51 catalog pages");
 
   // Apple touch icon
   assert.match(
@@ -755,10 +783,13 @@ test("every page's declared og:image dimensions match the image it actually poin
     const image = metaContent(html, "property", "og:image");
     const twitterImage = metaContent(html, "name", "twitter:image");
     if (!image) {
-      // 404.html and the two redirect stubs carry no social card at all.
-      assert.match(
-        file,
-        /^(404\.html|angle\/angle\/index\.html|channel\/channel\/index\.html)$/,
+      // 404.html and the redirect stubs carry no social card at all.
+      const allowedStubOrNotFound = new Set([
+        "404.html",
+        ...catalogRedirectRules.map((r) => `${r.fromPath.join("/")}/index.html`),
+      ]);
+      assert.ok(
+        allowedStubOrNotFound.has(file),
         `${file} is missing og:image`,
       );
       continue;
@@ -791,7 +822,7 @@ test("every page's declared og:image dimensions match the image it actually poin
     checked += 1;
   }
 
-  assert.equal(checked, 66, "every rendered site page must have been checked");
+  assert.equal(checked, 65, "every rendered site page must have been checked");
   // Guards the swap this test exists for: the catalog hero really is a
   // different size from the template's /og.png default.
   assert.deepEqual(measured.get("og.png"), { width: 1730, height: 909 });
@@ -983,7 +1014,7 @@ test("subcategory pages scope initial-page-data payloads cleanly", async () => {
  * places, plus a third time as the `angle`/`channel` literal in three modules.
  * category-meta owns the rule now; this checks the static file still agrees.
  */
-test("public/_redirects covers exactly the collapsed subcategory URLs", async () => {
+test("public/_redirects covers exactly the consolidated and renamed catalog URLs", async () => {
   const redirects = await readDist("_redirects");
   const rules = redirects
     .split("\n")
@@ -992,20 +1023,20 @@ test("public/_redirects covers exactly the collapsed subcategory URLs", async ()
 
   assert.equal(
     rules.length,
-    singleSubcategoryGroupIds.length,
-    `_redirects has ${rules.length} rules for ${singleSubcategoryGroupIds.length} collapsed groups`,
+    catalogRedirectRules.length,
+    `_redirects has ${rules.length} rules for ${catalogRedirectRules.length} redirect routes`,
   );
 
-  for (const groupId of singleSubcategoryGroupIds) {
-    const from = `/${groupId}/${groupId}/`;
-    const to = subcategoryHref(groupId);
+  for (const rule of catalogRedirectRules) {
+    const from = `/${rule.fromPath.join("/")}/`;
+    const to = rule.toPath;
     assert.ok(
       rules.includes(`${from} ${to} 301`),
       `_redirects must contain "${from} ${to} 301"`,
     );
 
-    // The stub itself must still be there, still noindex, still pointing home.
-    const stub = await readDist(`${groupId}/${groupId}/index.html`);
+    const stubRel = `${rule.fromPath.join("/")}/index.html`;
+    const stub = await readDist(stubRel);
     assert.match(stub, /<meta name="robots" content="noindex, follow"/);
     assert.match(
       stub,
@@ -1097,4 +1128,64 @@ test("the template shell quotes the homepage title and description siteConfig ow
       `${matcher} must carry the homepage description siteConfig owns`,
     );
   }
+});
+
+
+test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting, and rounded prices", async () => {
+  const redirectStubPaths = new Set(
+    catalogRedirectRules.map((r) => `${r.fromPath.join("/")}/index.html`),
+  );
+  const files = (await distHtmlFiles()).filter(
+    (f) => f.endsWith("index.html") && !redirectStubPaths.has(f),
+  );
+
+  for (const file of files) {
+    const html = await readDist(file);
+    assert.doesNotMatch(
+      html,
+      /href="\/beam\/beam\/"|href="\/wire\/wire\/"/,
+      `${file} must not link to legacy redirected URLs /beam/beam/ or /wire/wire/`,
+    );
+  }
+
+  const boxHtml = await readDist("profile/box-profile/index.html");
+  assert.match(boxHtml, /قوطی پروفیل آهنی/);
+  assert.doesNotMatch(boxHtml, /"name":"قوطی و پروفیل".*"name":"قوطی و پروفیل"/);
+
+  for (const relPath of ["rebar/ribbed/index.html", "beam/index.html"]) {
+    const html = await readDist(relPath);
+    assert.match(html, /استاندارد \/ گرید/, `${relPath} must use استاندارد / گرید column header`);
+  }
+
+  const thickHtml = await readDist("pipe/thick-wall-pipe/index.html");
+  assert.match(thickHtml, /ضخامت جداره \(میلی‌متر\)/);
+  assert.match(thickHtml, /<bdi dir="ltr">[^<]*×[^<]*<\/bdi>/);
+  assert.match(thickHtml, /<td data-label="ضخامت جداره \(میلی‌متر\)">۲۰<\/td>/);
+  assert.doesNotMatch(
+    thickHtml,
+    /<td data-label="ضخامت جداره \(میلی‌متر\)">—<\/td>/,
+    "thick-wall-pipe rows should display computed wall thickness instead of placeholder dashes",
+  );
+
+  const scaffoldHtml = await readDist("pipe/scaffold-pipe/index.html");
+  assert.match(scaffoldHtml, /وزن تقریبی شاخه/);
+  assert.match(scaffoldHtml, /۱٫۵ اینچ \(نمره ۵\)/);
+  assert.doesNotMatch(
+    scaffoldHtml,
+    /[۰-۹]\.[۰-۹]\s*تومان|[۰-۹]٫[۰-۹]+\s*تومان/,
+    "scaffold-pipe prices must be rounded to whole toman",
+  );
+
+  const a516Html = await readDist("sheet/sheet-a516/index.html");
+  const firstCardHtml =
+    a516Html.match(/<section class="factory-price-card[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.ok(
+    firstCardHtml.includes('<td data-label="ضخامت">۴</td>') &&
+      firstCardHtml.includes('<td data-label="ضخامت">۱۵</td>'),
+  );
+  assert.ok(
+    firstCardHtml.indexOf('<td data-label="ضخامت">۴</td>') <
+      firstCardHtml.indexOf('<td data-label="ضخامت">۱۵</td>'),
+    "A516 rows must be numerically sorted so ۴ precedes ۱۵",
+  );
 });

@@ -251,7 +251,11 @@ test("profiles describe the rebar and beam sub-catalogs the guides compare", () 
   }
 
   for (const profile of reference.profiles) {
-    assert.equal(profile.href, `/${profile.groupId}/${profile.id}/`);
+    const expectedHref =
+      profile.groupId === "beam" && profile.id === "beam"
+        ? "/beam/"
+        : `/${profile.groupId}/${profile.id}/`;
+    assert.equal(profile.href, expectedHref);
     assert.equal(profile.groupHref, `/${profile.groupId}/`);
     assert.ok(profile.rowCount > 0);
     assert.ok(profile.sizes.length > 0);

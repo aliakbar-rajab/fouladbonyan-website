@@ -248,7 +248,7 @@ function buildBeamTable(beam: {
     return {
       id: "beam",
       label: "تیرآهن",
-      href: "/beam/beam/",
+      href: subcategoryHref("beam", "beam"),
       rows: [],
       missingWeightLabels,
     };
@@ -390,7 +390,7 @@ export function buildGuideReference(
       : {
           id: "beam",
           label: "تیرآهن",
-          href: "/beam/beam/",
+          href: subcategoryHref("beam", "beam"),
           rows: [],
           missingWeightLabels: [],
         },

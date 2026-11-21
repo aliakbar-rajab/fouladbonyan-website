@@ -177,6 +177,25 @@ export function isSingleSubcategoryGroup(groupId: string): boolean {
 }
 
 /**
+ * Default subcategories consolidated directly onto `/<group>/` rather than
+ * serving a redundant `/<group>/<subId>/` URL. `/beam/` directly hosts IPE
+ * (`beam`) while `/beam/hash/` keeps its dedicated H-beam route.
+ */
+export function isConsolidatedSubcategory(
+  groupId: string,
+  subcategoryId?: string,
+): boolean {
+  if (!subcategoryId) return false;
+  if (isSingleSubcategoryGroup(groupId)) return true;
+  return groupId === "beam" && subcategoryId === "beam";
+}
+
+/** Groups whose root `/<group>/` URL directly renders their primary price table. */
+export function rendersCatalogOnGroupRoute(groupId: string): boolean {
+  return isSingleSubcategoryGroup(groupId) || groupId === "beam";
+}
+
+/**
  * The one canonical, indexable URL for a (group, subcategory) pair. Every href
  * pointing at a subcategory must come from here.
  */
@@ -184,11 +203,41 @@ export function subcategoryHref(
   groupId: string,
   subcategoryId?: string,
 ): string {
-  if (!subcategoryId || isSingleSubcategoryGroup(groupId)) {
+  if (!subcategoryId || isConsolidatedSubcategory(groupId, subcategoryId)) {
     return `/${groupId}/`;
   }
   return `/${groupId}/${subcategoryId}/`;
 }
+
+export type CatalogRedirectRule = {
+  fromPath: string[];
+  toPath: string;
+  targetLabel: string;
+};
+
+/**
+ * Single source of truth for legacy 301 catalog redirects (`public/_redirects`
+ * and built static redirect stubs).
+ */
+export const catalogRedirectRules: readonly CatalogRedirectRule[] = [
+  ...singleSubcategoryGroupIds.map((groupId) => ({
+    fromPath: [groupId, groupId],
+    toPath: `/${groupId}/`,
+    targetLabel:
+      productGroups.find((group) => group.id === groupId)?.label ?? groupId,
+  })),
+  {
+    fromPath: ["beam", "beam"],
+    toPath: "/beam/",
+    targetLabel:
+      productGroups.find((group) => group.id === "beam")?.label ?? "تیرآهن",
+  },
+  {
+    fromPath: ["wire", "wire"],
+    toPath: "/wire/steel-wire/",
+    targetLabel: subcategoryLabel("steel-wire") ?? "سیم مفتول",
+  },
+];
 
 export function getSubcategoryLabel(subcategoryId?: string): string | undefined {
   return subcategoryId ? subcategoryLabel(subcategoryId) : undefined;

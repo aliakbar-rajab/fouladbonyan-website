@@ -3,7 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   calculateRebarWeight,
+  deriveWallThicknessFromSize,
+  effectiveRowSpecification,
+  effectiveSpecificationLabel,
   getTrendPresentation,
+  sortFactoryRows,
 } from "../app/catalog-behavior.mjs";
 import {
   categoriesCrediblePricedRows,
@@ -555,4 +559,35 @@ test("catalog-reader: loadCatalogSnapshot upgrades a trimmed subcategory cache t
   assert.equal(upgraded.catalogs.length, full.catalogs.length);
   const upgradedSheet = upgraded.catalogs.find((c) => c.id === "sheet");
   assert.ok(upgradedSheet.categories.every((c) => c.factories.length > 0));
+});
+
+test("catalog-behavior: computes thick-wall pipe wall thickness, semantic spec labels, and numeric sorting", () => {
+  assert.equal(deriveWallThicknessFromSize("83*43"), "20");
+  assert.equal(deriveWallThicknessFromSize("140×80"), "30");
+  assert.equal(deriveWallThicknessFromSize("220*80"), "70");
+  assert.equal(effectiveSpecificationLabel({ id: "ribbed", specificationLabel: "ضخامت" }), "استاندارد / گرید");
+  assert.equal(effectiveSpecificationLabel({ id: "thick-wall-pipe", specificationLabel: "ضخامت" }), "ضخامت جداره (میلی‌متر)");
+  assert.equal(effectiveRowSpecification({ size: "83*43", specification: "", standard: "", grade: "" }, "thick-wall-pipe"), "20");
+
+  const sortedPipes = sortFactoryRows(
+    [{ size: "220*80" }, { size: "83*43" }, { size: "140*80" }, { size: "140*70" }],
+    { groupId: "pipe", categoryId: "thick-wall-pipe" },
+  );
+  assert.deepEqual(
+    sortedPipes.map((r) => r.size),
+    ["83*43", "140*70", "140*80", "220*80"],
+  );
+
+  const sortedA516 = sortFactoryRows(
+    [
+      { size: "6*1.5", specification: "12" },
+      { size: "6*1.5", specification: "4" },
+      { size: "6*1.5", specification: "8" },
+    ],
+    { groupId: "sheet", categoryId: "sheet-a516" },
+  );
+  assert.deepEqual(
+    sortedA516.map((r) => r.specification),
+    ["4", "8", "12"],
+  );
 });

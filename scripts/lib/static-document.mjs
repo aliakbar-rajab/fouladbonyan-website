@@ -1,8 +1,6 @@
 import { renderToString } from "react-dom/server";
 import {
-  productGroups,
-  singleSubcategoryGroupIds,
-  subcategoryHref,
+  catalogRedirectRules,
 } from "../../app/category-meta.ts";
 import { siteConfig } from "../../app/site-config.ts";
 import { siteRouteDataset, siteRoutePath } from "../../app/site-route.ts";
@@ -444,16 +442,13 @@ export function buildSitemapXml({ siteUrl, rootLastmod, pages }) {
 }
 
 /*
- * The noindex stubs standing at the collapsed subcategory URLs. Derived from
- * singleSubcategoryGroupIds rather than written out, so a group that gains or
- * loses its collapse cannot leave a stub behind or go without one. Keep
- * public/_redirects in step -- built-seo.test.mjs asserts the two agree.
+ * The noindex stubs standing at legacy or collapsed subcategory URLs. Derived from
+ * catalogRedirectRules so public/_redirects and static stubs stay in lockstep.
  */
-export const REDIRECT_ROUTES = singleSubcategoryGroupIds.map((groupId) => ({
-  fromPath: [groupId, groupId],
-  toUrl: `${siteConfig.siteUrl}${subcategoryHref(groupId)}`,
-  targetLabel:
-    productGroups.find((group) => group.id === groupId)?.label ?? groupId,
+export const REDIRECT_ROUTES = catalogRedirectRules.map((rule) => ({
+  fromPath: rule.fromPath,
+  toUrl: `${siteConfig.siteUrl}${rule.toPath}`,
+  targetLabel: rule.targetLabel,
 }));
 
 export function buildRedirectHtml({ toUrl, targetLabel }) {

@@ -19,7 +19,11 @@
  * still choose their own markup; they no longer choose the rule.
  */
 import { isPricedRow } from "./catalog-pricing.mjs";
-import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
+import {
+  formatPersianNumber,
+  toAsciiDigits,
+  toPersianDigits,
+} from "./persian-numbers.mjs";
 
 /** CONTEXT.md `Price unavailable`: what a row with no upstream price reads. */
 export const PRICE_UNAVAILABLE_TEXT = "تماس بگیرید";
@@ -67,9 +71,11 @@ const UNAVAILABLE: PresentedPrice = {
   suffix: null,
 };
 
-/** Rounds a VAT-inclusive figure to the nearest hundred toman, as the table does. */
+/** Rounds a VAT-inclusive figure to the nearest hundred toman and removes sub-toman fractions. */
 function withTax(price: number, taxIncluded: boolean, taxRate: number) {
-  return taxIncluded ? Math.round((price * (1 + taxRate)) / 100) * 100 : price;
+  return taxIncluded
+    ? Math.round((price * (1 + taxRate)) / 100) * 100
+    : Math.round(price);
 }
 
 function suffixFor(unit: string | null | undefined) {
@@ -125,6 +131,40 @@ export function presentPriceRange(
 export function localizeCatalogValue(value: string | null | undefined) {
   if (!value) return "—";
   return toPersianDigits(value);
+}
+
+const PERSIAN_LETTERS_PATTERN = /[\u0621-\u064A\u067E\u0686\u0698\u06AF\u06A9\u06CC]/;
+
+/**
+ * Human-readable catalog dimension formatting:
+ * - Converts `"1,1/2"` scaffold pipe nominal sizing into `"۱٫۵ اینچ (نمره ۵)"`.
+ * - Replaces `*` with `×` and flags pure numeric/Latin dimension pairs (`83 × 43`)
+ *   for `<bdi dir="ltr">` so BIDI ordering never flips OD and ID.
+ */
+export function formatCatalogSize(
+  size: string | null | undefined,
+  categoryId?: string,
+): { text: string; ltr: boolean } {
+  if (!size) return { text: "—", ltr: false };
+  const trimmed = size.trim();
+  if (!trimmed) return { text: "—", ltr: false };
+
+  if (
+    categoryId === "scaffold-pipe" &&
+    /^\s*1\s*[,/]\s*1\/2\s*$/.test(toAsciiDigits(trimmed))
+  ) {
+    return { text: "۱٫۵ اینچ (نمره ۵)", ltr: false };
+  }
+
+  if (/[*×]/.test(trimmed)) {
+    const normalized = toPersianDigits(trimmed.replace(/\s*[*×]\s*/g, " × "));
+    return {
+      text: normalized,
+      ltr: !PERSIAN_LETTERS_PATTERN.test(trimmed),
+    };
+  }
+
+  return { text: toPersianDigits(trimmed), ltr: false };
 }
 
 /**

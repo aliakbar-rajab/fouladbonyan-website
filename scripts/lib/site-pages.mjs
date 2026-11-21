@@ -1,4 +1,5 @@
 import {
+  isConsolidatedSubcategory,
   isSingleSubcategoryGroup,
   productGroups,
   subcategoryHref,
@@ -124,14 +125,28 @@ export async function collectSitePageDescriptors({
 
     const singleGroup = isSingleSubcategoryGroup(group.id);
     const onlySubcategory = singleGroup ? catalog.categories[0] : null;
+    const primaryBeam =
+      group.id === "beam"
+        ? catalog.categories.find((c) => c.id === "beam") ?? catalog.categories[0]
+        : null;
     const overviewItems = singleGroup
       ? (onlySubcategory?.factories ?? []).map((factory) => ({
           name: `قیمت ${onlySubcategory.label} ${factory.name}`,
         }))
-      : catalog.categories.map((sub) => ({
-          name: `قیمت ${sub.label}`,
-          url: `${siteUrl}${subcategoryHref(group.id, sub.id)}`,
-        }));
+      : group.id === "beam" && primaryBeam
+        ? [
+            {
+              name: "قیمت تیرآهن هاش",
+              url: `${siteUrl}${subcategoryHref("beam", "hash")}`,
+            },
+            ...primaryBeam.factories.map((factory) => ({
+              name: `قیمت ${primaryBeam.label} ${factory.name}`,
+            })),
+          ]
+        : catalog.categories.map((sub) => ({
+            name: `قیمت ${sub.label}`,
+            url: `${siteUrl}${subcategoryHref(group.id, sub.id)}`,
+          }));
 
     // Category landing page
     const describedGroup = await describe({
@@ -157,10 +172,11 @@ export async function collectSitePageDescriptors({
       }),
     });
 
-    // Subcategory pages: single-subcategory families (angle, channel)
-    // are consolidated onto their parent category page.
+    // Subcategory pages: consolidated routes (angle, channel, and beam IPE)
+    // live on their parent group URL rather than a duplicated subcategory slug.
     if (!singleGroup) {
       for (const sub of catalog.categories) {
+        if (isConsolidatedSubcategory(group.id, sub.id)) continue;
         // Scope initial-page-data to the active subcategory's rows while
         // keeping lightweight category stubs so tab navigation renders identically
         // during SSR/hydration.

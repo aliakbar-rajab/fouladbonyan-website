@@ -82,7 +82,6 @@ export function BeamTypesGuide({ reference }: { reference: GuideReference }) {
         <div className="inline-actions">
           {beam ? <a href={beam.href}>{`قیمت روز ${beam.label}`}</a> : null}
           {hash ? <a href={hash.href}>{`قیمت روز ${hash.label}`}</a> : null}
-          <a href="/beam/">همه گروه تیرآهن</a>
         </div>
       </section>
 

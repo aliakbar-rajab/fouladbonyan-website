@@ -8,6 +8,7 @@
 // app/catalog-taxonomy.mjs (the single source of truth shared with
 // app/category-meta.ts and app/catalog-reader.ts); this file only adds the
 // scrape-specific fields on top, keyed by the same subcategory ids.
+import { deriveWallThicknessFromSize } from "../app/catalog-behavior.mjs";
 import { catalogGroups } from "../app/catalog-taxonomy.mjs";
 
 // Ribbed and simple rebar publish the size inside the title rather than in a
@@ -41,11 +42,15 @@ const scrapeConfigById = {
   ribbed: {
     slug: "میلگرد-آجدار",
     minimumItems: 100,
+    specificationKey: "استاندارد",
+    specificationLabel: "استاندارد / گرید",
     deriveSize: sizeFromTitle(/میلگرد\s+(\d+(?:[./]\d+)?)/),
   },
   simple: {
     slug: "میلگرد-ساده",
     minimumItems: 20,
+    specificationKey: "استاندارد",
+    specificationLabel: "استاندارد / گرید",
     deriveSize: sizeFromTitle(/میلگرد\s+ساده\s+(\d+(?:[./]\d+)?)/),
   },
   stainless: {
@@ -61,8 +66,18 @@ const scrapeConfigById = {
   },
 
   // beam
-  beam: { slug: "تیرآهن", minimumItems: 30 },
-  hash: { slug: "تیرآهن-هاش", minimumItems: 5 },
+  beam: {
+    slug: "تیرآهن",
+    minimumItems: 30,
+    specificationKey: "استاندارد",
+    specificationLabel: "استاندارد / گرید",
+  },
+  hash: {
+    slug: "تیرآهن-هاش",
+    minimumItems: 5,
+    specificationKey: "استاندارد",
+    specificationLabel: "استاندارد / گرید",
+  },
 
   // sheet
   "black-sheet": { slug: "ورق-سیاه" },
@@ -124,7 +139,11 @@ const scrapeConfigById = {
   "gas-pipe": { slug: "لوله-گاز-خانگی" },
   "well-casing-pipe": { slug: "لوله-جدار-چاه" },
   "seamless-pipe": { slug: "لوله-مانیسمان", specificationKey: "رده" },
-  "thick-wall-pipe": { slug: "لوله-گوشتدار" },
+  "thick-wall-pipe": {
+    slug: "لوله-گوشتدار",
+    specificationLabel: "ضخامت جداره (میلی‌متر)",
+    deriveSpecification: ({ size }) => deriveWallThicknessFromSize(size),
+  },
 
   // angle
   angle: { slug: "نبشی" },
@@ -133,7 +152,11 @@ const scrapeConfigById = {
   channel: { slug: "ناودانی", specificationKey: "طول شاخه" },
 
   // wire
-  wire: { slug: "سیم-مفتول", specificationKey: "حالت", groupingLabel: "گروه" },
+  "steel-wire": {
+    slug: "سیم-مفتول",
+    specificationKey: "حالت",
+    groupingLabel: "گروه",
+  },
   "rib-lath": {
     slug: "رابیتس",
     specificationKey: "ستون",

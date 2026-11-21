@@ -153,9 +153,9 @@ test("every guide table sits in a named scroll region a keyboard can reach", () 
 test("guides link out to the catalog pages they describe", () => {
   const expectations = {
     "rebar-weight-chart": ["/rebar/", "/rebar/ribbed/", "/rebar/simple/"],
-    "beam-weight-chart": ["/beam/beam/", "/beam/hash/"],
+    "beam-weight-chart": ["/beam/", "/beam/hash/"],
     "ribbed-vs-plain-rebar": ["/rebar/", "/rebar/ribbed/", "/rebar/simple/"],
-    "ipe-vs-hash-beam": ["/beam/", "/beam/beam/", "/beam/hash/"],
+    "ipe-vs-hash-beam": ["/beam/", "/beam/hash/"],
     "units-and-quote-specs": ["/quote-process/#quote-form"],
   };
 

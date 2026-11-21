@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   PRICE_PENDING_TEXT,
   PRICE_UNAVAILABLE_TEXT,
+  formatCatalogSize,
   localizeCatalogValue,
   presentPrice,
   presentPriceRange,
@@ -116,4 +117,16 @@ test("an undated row gets no machine-readable date", () => {
     unixSecondsToIso(1_700_000_000),
     new Date(1_700_000_000_000).toISOString(),
   );
+});
+
+test("fractional toman prices round cleanly and special sizes format cleanly", () => {
+  assert.equal(presentPrice(117_272.7, { unit: "کیلوگرم" }).text, "۱۱۷٬۲۷۳");
+  assert.deepEqual(formatCatalogSize("1,1/2", "scaffold-pipe"), {
+    text: "۱٫۵ اینچ (نمره ۵)",
+    ltr: false,
+  });
+  assert.deepEqual(formatCatalogSize("83*43", "thick-wall-pipe"), {
+    text: "۸۳ × ۴۳",
+    ltr: true,
+  });
 });

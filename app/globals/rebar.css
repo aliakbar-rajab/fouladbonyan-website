@@ -160,6 +160,45 @@
  * switch used to sit in every factory card header while driving a single
  * shared state; it belongs here, once, beside the count it re-prices.
  */
+.mill-quick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid #dedfe5;
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.mill-quick-bar button {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #d7dbe2;
+  border-radius: 8px;
+  background: #f6f7f9;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.mill-quick-bar button:hover {
+  border-color: #b78d3f;
+  background: #fffaf0;
+}
+
+.mill-quick-bar button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--brand-yellow);
+}
+
 .rebar-result-bar {
   min-height: 2.5rem;
   display: flex;
@@ -181,16 +220,6 @@
 .factory-price-list {
   display: grid;
   gap: 1rem;
-}
-
-/*
- * The overflow past the first six factory cards is rendered and then hidden,
- * not left unrendered -- see INITIAL_FACTORY_COUNT in app/catalog-types.ts,
- * applied in FactoryPriceCardList.tsx. The rows have to exist in the
- * prerendered HTML; only their visibility is conditional.
- */
-.factory-price-card.is-collapsed {
-  display: none;
 }
 
 /*
@@ -339,6 +368,38 @@
 }
 
 .rebar-price-table thead th:nth-child(7) {
+  width: 8.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(1) {
+  width: 3rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(2) {
+  width: 7.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(3) {
+  width: 4.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(4) {
+  width: 7rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(5) {
+  width: 5.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(6) {
+  width: 8.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(7) {
+  width: 5.5rem;
+}
+
+.rebar-price-table.has-weight-col thead th:nth-child(8) {
   width: 8.5rem;
 }
 
@@ -516,27 +577,6 @@
   color: #3f4049;
   font-size: 0.8rem;
   font-weight: 800;
-}
-
-.show-more-factories {
-  min-height: 3.1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  margin: 1rem auto 0;
-  padding-inline: 1.25rem;
-  border: 1px solid #b9bac2;
-  border-radius: 8px;
-  background: var(--white);
-  color: #4a4b54;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.show-more-factories:hover {
-  border-color: var(--brand-yellow);
-  background: #fffaf0;
 }
 
 .rebar-empty {
@@ -1102,6 +1142,28 @@
   .rebar-row-group td:nth-of-type(7) {
     grid-column: 3;
     grid-row: 3;
+    border: 0;
+  }
+
+  .rebar-price-table.has-weight-col .rebar-row-group .row-expand-cell {
+    grid-row: 1 / 5;
+  }
+
+  .rebar-price-table.has-weight-col .rebar-row-group td:nth-of-type(6) {
+    grid-column: 2;
+    grid-row: 3;
+    border-bottom: 1px solid #e5e5e9;
+  }
+
+  .rebar-price-table.has-weight-col .rebar-row-group td:nth-of-type(7) {
+    grid-column: 3;
+    grid-row: 3;
+    border-bottom: 1px solid #e5e5e9;
+  }
+
+  .rebar-price-table.has-weight-col .rebar-row-group td:nth-of-type(8) {
+    grid-column: 2 / 4;
+    grid-row: 4;
     border: 0;
   }
 

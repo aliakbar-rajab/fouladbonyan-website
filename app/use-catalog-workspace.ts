@@ -2,8 +2,8 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   getCategoryById,
   getSubcategoryLabel,
-  isSingleSubcategoryGroup,
   productGroups,
+  rendersCatalogOnGroupRoute,
   type ProductGroup,
   type ProductGroupId,
 } from "./category-meta";
@@ -118,11 +118,11 @@ export function useCatalogWorkspace({
   );
 
   const isCategoryRoute = Boolean(route.category);
-  const isSingleCategoryGroup = Boolean(
-    route.category && isSingleSubcategoryGroup(route.category),
+  const isDirectCatalogRoute = Boolean(
+    route.category && rendersCatalogOnGroupRoute(route.category),
   );
   const isCategoryOverviewRoute =
-    isCategoryRoute && !route.subcategory && !isSingleCategoryGroup;
+    isCategoryRoute && !route.subcategory && !isDirectCatalogRoute;
 
   const [activeGroup, setActiveGroup] = useState<ProductGroupId>(
     () => route.category ?? productGroups[0].id,
@@ -168,7 +168,7 @@ export function useCatalogWorkspace({
   const subcategoryInfo = useMemo(() => {
     const sub =
       route.subcategory ??
-      (isSingleCategoryGroup && route.category
+      (isDirectCatalogRoute && route.category
         ? initialCategoryIdOf(route.category)
         : undefined);
     if (!sub) return null;
@@ -184,7 +184,7 @@ export function useCatalogWorkspace({
     route.subcategory,
     route.subcategoryLabel,
     route.category,
-    isSingleCategoryGroup,
+    isDirectCatalogRoute,
   ]);
 
   const filteredGroups: ProductGroup[] = useMemo(
@@ -350,7 +350,7 @@ export function useCatalogWorkspace({
     brandHref: isCategoryRoute ? "/" : "#top",
     hero: {
       categoryGroup,
-      subcategory: isSingleCategoryGroup ? null : subcategoryInfo,
+      subcategory: route.subcategory ? subcategoryInfo : null,
     },
     search: {
       query: committedQuery,

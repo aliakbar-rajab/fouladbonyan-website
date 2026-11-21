@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readdir } from "node:fs/promises";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
-import { productGroups } from "../app/category-meta.ts";
+import {
+  catalogRedirectRules,
+  isConsolidatedSubcategory,
+  productGroups,
+  rendersCatalogOnGroupRoute,
+} from "../app/category-meta.ts";
 import { loadGroupCatalogs, readDist } from "./helpers/dist.mjs";
 
 /*
@@ -126,16 +131,17 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
 
 test("F14: every row of a subcategory reaches the prerendered HTML", async () => {
   const groups = await loadCatalogSubcategories();
-  let truncatedBefore = 0;
+  let multiFactoryGroups = 0;
 
   for (const { groupId, categories } of groups) {
-    const isSingleCategoryGroup = groupId === "angle" || groupId === "channel";
+    const consolidatedOnGroup = rendersCatalogOnGroupRoute(groupId);
     for (const sub of categories) {
-      const pagePath = isSingleCategoryGroup
+      const isConsolidated = isConsolidatedSubcategory(groupId, sub.id);
+      const pagePath = isConsolidated
         ? `${groupId}/index.html`
         : `${groupId}/${sub.id}/index.html`;
       const html = await readDist(pagePath);
-      const page = isSingleCategoryGroup ? groupId : `${groupId}/${sub.id}`;
+      const page = isConsolidated ? groupId : `${groupId}/${sub.id}`;
 
       assert.equal(
         countRows(html),
@@ -148,34 +154,25 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
         `${page} must prerender all ${sub.factories} factory groups`,
       );
 
-      // The rows the old slice(0, 6) dropped. Any of these still missing means
-      // the truncation came back.
       if (sub.factories > 6) {
-        truncatedBefore += 1;
+        multiFactoryGroups += 1;
         assert.ok(
           countRows(html) > 0,
           `${page} renders no rows at all`,
         );
-        assert.match(
-          html,
-          /class="factory-price-card is-collapsed"/,
-          `${page} overflow must be rendered-and-hidden, not unrendered`,
-        );
-      } else {
-        assert.doesNotMatch(
-          html,
-          /is-collapsed/,
-          `${page} fits on screen and must not collapse anything`,
-        );
       }
+      assert.doesNotMatch(
+        html,
+        /is-collapsed/,
+        `${page} must render all factory cards visibly without CSS display:none hiding`,
+      );
     }
 
     // A category landing page for multi-category families must render CategoryOverview
-    // -- one summary row per subcategory -- never a subcategory's own PriceCatalog rows.
-    // Single-subcategory families (angle, channel) consolidate their full catalog
-    // directly onto the parent landing page as the primary price page.
+    // -- one summary row per subcategory -- unless it consolidates its primary table
+    // directly onto the parent route (angle, channel, beam).
     const landingHtml = await readDist(`${groupId}/index.html`);
-    if (isSingleCategoryGroup) {
+    if (consolidatedOnGroup) {
       assert.equal(
         countRows(landingHtml),
         categories[0].rows,
@@ -186,6 +183,15 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
         categories[0].factories,
         `${groupId}/ must prerender all ${categories[0].factories} factory cards, found ${countFactoryCards(landingHtml)}`,
       );
+      for (const sub of categories) {
+        if (!isConsolidatedSubcategory(groupId, sub.id)) {
+          assert.match(
+            landingHtml,
+            new RegExp(`href="/${groupId}/${sub.id}/"`),
+            `${groupId}/ must link to its secondary ${sub.id} subcategory`,
+          );
+        }
+      }
     } else {
       assert.equal(
         countRows(landingHtml),
@@ -214,16 +220,12 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
   }
 
   assert.ok(
-    truncatedBefore >= 1,
-    "expected at least one subcategory with more factory groups than fit on screen",
+    multiFactoryGroups >= 1,
+    "expected at least one subcategory with more than six factory groups",
   );
 });
 
-test("F14: collapsed factory groups carry their rows and need no click to exist", async () => {
-  // /rebar/ribbed/ is the case the audit measured: 27 factory groups, 265 rows,
-  // 61 of which used to be the entire page. Row counts move with every price
-  // refresh, so read the expected shape from the snapshot rather than pinning
-  // the numbers the audit happened to see.
+test("F14: all mill cards on /rebar/ribbed/ render visibly with Quick Mill Filter Bar", async () => {
   const ribbed = (
     await loadCatalogSubcategories()
   )
@@ -243,32 +245,28 @@ test("F14: collapsed factory groups carry their rows and need no click to exist"
     `all ${ribbed.factories} factory groups must be present`,
   );
 
-  const collapsed = cards.filter((card) => card.startsWith(' is-collapsed"'));
-  assert.equal(
-    collapsed.length,
-    ribbed.factories - 6,
-    "every group past the six visible ones must be rendered-then-hidden",
+  assert.doesNotMatch(
+    html,
+    /is-collapsed|show-more-factories/,
+    "factory groups must never be hidden behind display:none or expand toggles",
   );
-  for (const card of collapsed) {
+  for (const card of cards.slice(1)) {
     assert.match(
       card,
       /class="rebar-row-group/,
-      "a collapsed factory group must still contain its price rows",
+      "each factory group must contain its price rows",
     );
     assert.match(card, /تومان|تماس بگیرید/, "and their prices");
   }
 
   assert.equal(countRows(html), ribbed.rows);
 
-  // The control is a visibility toggle over content that is already here.
-  assert.match(html, /class="show-more-factories"[^>]*aria-expanded="false"/);
-  const listId = html.match(/class="factory-price-list" id="([^"]+)"/)?.[1];
-  assert.ok(listId, "the factory list must be addressable");
-  assert.match(
-    html,
-    new RegExp(`aria-controls="${listId}"`),
-    "the toggle must point at the list it expands",
-  );
+  // Quick Mill Filter Bar uses buttons (no crawlable ?factory= links)
+  assert.match(html, /<nav class="mill-quick-bar"/);
+  const quickBarHtml =
+    html.match(/<nav class="mill-quick-bar"[\s\S]*?<\/nav>/)?.[0] ?? "";
+  assert.match(quickBarHtml, /<button type="button"/);
+  assert.doesNotMatch(quickBarHtml, /<a\b/i);
 
   // No JavaScript-only escape hatch: nothing in the served markup defers rows.
   assert.doesNotMatch(html, /data-rows-pending|<template/);
@@ -290,8 +288,21 @@ test("F14: widening row coverage creates no factory or size URLs", async () => {
         .at(-1),
     );
 
+  const redirectDirsByGroup = new Map();
+  for (const rule of catalogRedirectRules) {
+    if (rule.fromPath.length === 2) {
+      const [groupId, subId] = rule.fromPath;
+      const set = redirectDirsByGroup.get(groupId) ?? new Set();
+      set.add(subId);
+      redirectDirsByGroup.set(groupId, set);
+    }
+  }
+
   for (const { groupId, categories } of groups) {
-    const allowed = new Set(categories.map((sub) => sub.id));
+    const allowed = new Set([
+      ...categories.map((sub) => sub.id),
+      ...(redirectDirsByGroup.get(groupId) ?? []),
+    ]);
     const under = directories.filter((dir) => dir.startsWith(`${groupId}/`));
     for (const dir of under) {
       const segments = dir.split("/");
@@ -312,7 +323,7 @@ test("F14: widening row coverage creates no factory or size URLs", async () => {
   const locs = (sitemap.match(/<loc>([^<]+)<\/loc>/g) ?? []).map((loc) =>
     loc.replace(/<\/?loc>/g, ""),
   );
-  assert.equal(locs.length, 62, "the sitemap must contain the 62 indexable URLs and not grow");
+  assert.equal(locs.length, 61, "the sitemap must contain the 61 indexable URLs and not grow");
   for (const loc of locs) {
     const depth = loc
       .replace("https://fouladbonyan.com/", "")

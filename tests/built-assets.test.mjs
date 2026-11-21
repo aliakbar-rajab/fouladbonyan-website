@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { access, readdir, stat } from "node:fs/promises";
-import { productGroups } from "../app/category-meta.ts";
+import { catalogRedirectRules, productGroups } from "../app/category-meta.ts";
 import { siteConfig } from "../app/site-config.ts";
 import { parseBreadcrumbLd, readDist } from "./helpers/dist.mjs";
 
@@ -51,6 +51,9 @@ test("every product family ships a dedicated responsive hero set", async () => {
 });
 
 test("every category and subcategory page renders its family hero", async () => {
+  const redirectStubPaths = new Set(
+    catalogRedirectRules.map((rule) => `${rule.fromPath.join("/")}/index.html`),
+  );
   for (const group of productGroups) {
     assert.ok(group.heroImage, `${group.id} must define a dedicated hero image`);
     const heroBase = group.heroImage.replace(/-1680\.jpg$/, "");
@@ -63,7 +66,8 @@ test("every category and subcategory page renders its family hero", async () => 
           withFileTypes: true,
         }))
           .filter((entry) => entry.isDirectory())
-          .map((entry) => `${group.id}/${entry.name}/index.html`);
+          .map((entry) => `${group.id}/${entry.name}/index.html`)
+          .filter((relPath) => !redirectStubPaths.has(relPath));
     const pagePaths = [`${group.id}/index.html`, ...subcategoryDirectories];
 
     for (const pagePath of pagePaths) {

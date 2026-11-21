@@ -168,9 +168,9 @@ test("F10: guide content is real reference material linked into the product tree
   // Every guide links into the catalog it describes.
   const outboundLinks = [
     ["rebar-weight-chart", rebarChart, ["/rebar/", "/rebar/ribbed/", "/rebar/simple/"]],
-    ["beam-weight-chart", beamChart, ["/beam/beam/", "/beam/hash/"]],
+    ["beam-weight-chart", beamChart, ["/beam/", "/beam/hash/"]],
     ["ribbed-vs-plain-rebar", ribbedVsPlain, ["/rebar/", "/rebar/ribbed/", "/rebar/simple/"]],
-    ["ipe-vs-hash-beam", beamTypes, ["/beam/", "/beam/beam/", "/beam/hash/"]],
+    ["ipe-vs-hash-beam", beamTypes, ["/beam/", "/beam/hash/"]],
     ["units-and-quote-specs", units, ["/quote-process/#quote-form"]],
   ];
   for (const [name, html, hrefs] of outboundLinks) {

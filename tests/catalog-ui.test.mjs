@@ -117,52 +117,30 @@ const renderWide = () =>
     }),
   );
 
-test("F14: every row is in the DOM before anything is clicked", () => {
-  renderWide();
-
-  // All nine factory groups render, not the six that stay visible.
-  const cards = document.querySelectorAll(".factory-price-card");
-  assert.equal(cards.length, 9);
-  assert.equal(document.querySelectorAll("tbody tr.rebar-row-group").length, 9);
-
-  // The overflow is present but marked collapsed, and still carries its rows.
-  const collapsed = document.querySelectorAll(".factory-price-card.is-collapsed");
-  assert.equal(collapsed.length, 3);
-  for (const card of collapsed) {
-    assert.equal(card.querySelectorAll("tbody tr.rebar-row-group").length, 1);
-  }
-  for (const card of [...cards].slice(0, 6)) {
-    assert.equal(card.classList.contains("is-collapsed"), false);
-  }
-});
-
-test("F14: the show-more control toggles visibility, it does not create rows", async () => {
+test("F14: every factory card and row renders visibly without collapsing mills behind display:none", async () => {
   const user = userEvent.setup({ document });
   renderWide();
 
-  const rowCount = () =>
-    document.querySelectorAll("tbody tr.rebar-row-group").length;
-  const collapsedCount = () =>
-    document.querySelectorAll(".factory-price-card.is-collapsed").length;
+  // All nine factory groups render visibly without .is-collapsed hiding.
+  const cards = document.querySelectorAll(".factory-price-card");
+  assert.equal(cards.length, 9);
+  assert.equal(document.querySelectorAll("tbody tr.rebar-row-group").length, 9);
+  assert.equal(document.querySelectorAll(".factory-price-card.is-collapsed").length, 0);
 
-  assert.equal(rowCount(), 9);
-  const toggle = screen.getByRole("button", { name: /کارخانه دیگر/ });
-  assert.equal(toggle.getAttribute("aria-expanded"), "false");
-  assert.equal(
-    toggle.getAttribute("aria-controls"),
-    document.querySelector(".factory-price-list").id,
-  );
+  // Quick mill filter bar exposes accessible buttons (never ?factory= links).
+  const quickBar = document.querySelector(".mill-quick-bar");
+  assert.ok(quickBar, "wide category should render a quick mill filter bar");
+  assert.equal(quickBar.querySelectorAll("a").length, 0);
 
-  await user.click(toggle);
-  // Same rows, now all visible.
-  assert.equal(rowCount(), 9);
-  assert.equal(collapsedCount(), 0);
-  const collapse = screen.getByRole("button", { name: /نمایش کمتر/ });
-  assert.equal(collapse.getAttribute("aria-expanded"), "true");
+  const millTwoBtn = within(quickBar).getByRole("button", { name: "کارخانه 2" });
+  await user.click(millTwoBtn);
+  assert.equal(millTwoBtn.getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelectorAll(".factory-price-card").length, 1);
 
-  await user.click(collapse);
-  assert.equal(rowCount(), 9);
-  assert.equal(collapsedCount(), 3);
+  const allBtn = within(quickBar).getByRole("button", { name: /^همه/ });
+  await user.click(allBtn);
+  assert.equal(allBtn.getAttribute("aria-pressed"), "true");
+  assert.equal(document.querySelectorAll(".factory-price-card").length, 9);
 });
 
 test("catalog category pages use truthful navigation-link semantics", () => {

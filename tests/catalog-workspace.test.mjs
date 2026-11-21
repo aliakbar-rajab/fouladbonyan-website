@@ -116,28 +116,36 @@ test("useCatalogWorkspace initializes default home workspace state with compact 
   assert.equal(result.current.hero.subcategory, null);
 });
 
-test("useCatalogWorkspace derives category overview view mode for overview routes", () => {
-  const { result } = renderHook(() =>
+test("useCatalogWorkspace derives category overview for overview hubs and catalog directly for consolidated /beam/", () => {
+  const { result: rebarOverview } = renderHook(() =>
+    useCatalogWorkspace({
+      initialCategory: "rebar",
+    }),
+  );
+
+  assert.equal(rebarOverview.current.viewMode, "category-overview");
+  assert.equal(rebarOverview.current.isCategoryRoute, true);
+  assert.equal(rebarOverview.current.brandHref, "/");
+  assert.equal(rebarOverview.current.activeGroup, "rebar");
+  assert.equal(rebarOverview.current.hero.categoryGroup?.label, "میلگرد");
+  assert.equal(rebarOverview.current.hero.subcategory, null);
+
+  const { result: beamCatalog } = renderHook(() =>
     useCatalogWorkspace({
       initialCategory: "beam",
     }),
   );
-
-  assert.equal(result.current.viewMode, "category-overview");
-  assert.equal(result.current.isCategoryRoute, true);
-  assert.equal(result.current.brandHref, "/");
-  assert.equal(result.current.activeGroup, "beam");
-  assert.equal(result.current.hero.categoryGroup?.label, "تیرآهن");
-  assert.equal(result.current.hero.subcategory, null);
+  assert.equal(beamCatalog.current.viewMode, "catalog");
+  assert.equal(beamCatalog.current.activeViewRequest.categoryId, "beam");
+  assert.equal(beamCatalog.current.hero.categoryGroup?.label, "تیرآهن");
+  assert.equal(beamCatalog.current.hero.subcategory, null);
 });
 
-test("useCatalogWorkspace derives catalog view mode and preserves query params for subcategory routes", () => {
-  window.history.replaceState({}, "", "/beam/beam/?factory=فایکو&size=18");
+test("useCatalogWorkspace derives catalog view mode and preserves query params for catalog routes", () => {
+  window.history.replaceState({}, "", "/beam/?factory=فایکو&size=18");
   const { result } = renderHook(() =>
     useCatalogWorkspace({
       initialCategory: "beam",
-      initialSubcategory: "beam",
-      initialSubcategoryLabel: "تیرآهن IPE",
     }),
   );
 
@@ -148,7 +156,7 @@ test("useCatalogWorkspace derives catalog view mode and preserves query params f
   assert.equal(result.current.activeViewRequest.categoryId, "beam");
   assert.equal(result.current.activeViewRequest.factory, "فایکو");
   assert.equal(result.current.activeViewRequest.size, "18");
-  assert.equal(result.current.hero.subcategory?.label, "تیرآهن IPE");
+  assert.equal(result.current.hero.subcategory, null);
 });
 
 test("useCatalogWorkspace search submission coordinates async loading, race tokens, and view derivation", async () => {

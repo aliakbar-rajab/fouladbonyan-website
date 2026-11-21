@@ -1,7 +1,10 @@
 import { Fragment } from "react";
-import { getTrendPresentation } from "./catalog-behavior.mjs";
 import {
-  INITIAL_FACTORY_COUNT,
+  effectiveRowSpecification,
+  effectiveSpecificationLabel,
+  getTrendPresentation,
+} from "./catalog-behavior.mjs";
+import {
   type CatalogCategory,
   type CatalogFactory,
   type CatalogRow,
@@ -9,6 +12,7 @@ import {
 import type { ProductGroupId } from "./category-meta";
 import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
 import {
+  formatCatalogSize,
   localizeCatalogValue,
   presentPrice,
   unixSecondsToIso,
@@ -153,37 +157,107 @@ function getRowDetails(
   ];
 }
 
+const PREFERRED_QUICK_MILLS = [
+  "ذوب آهن",
+  "کویر کاشان",
+  "نیشابور",
+  "میانه",
+  "فایکو",
+  "شاهین بناب",
+  "ظفر بناب",
+  "آناهیتا گیلان",
+  "راد همدان",
+  "بافق یزد",
+  "کاوه تیکمه داش",
+  "امیرکبیر",
+];
+
+const MAX_QUICK_MILLS = 10;
+
+function pickQuickFilterMills(
+  factories: readonly string[],
+  activeFactory: string,
+): string[] {
+  const available = new Set(factories);
+  const picked: string[] = [];
+  for (const preferred of PREFERRED_QUICK_MILLS) {
+    if (available.has(preferred)) picked.push(preferred);
+  }
+  for (const name of factories) {
+    if (picked.length >= MAX_QUICK_MILLS) break;
+    if (!picked.includes(name)) picked.push(name);
+  }
+  const limited = picked.slice(0, MAX_QUICK_MILLS);
+  if (activeFactory && available.has(activeFactory) && !limited.includes(activeFactory)) {
+    limited[limited.length - 1] = activeFactory;
+  }
+  return limited;
+}
+
 export function FactoryPriceCardList({
   catalogId,
   category,
   filteredFactories,
-  collapsedFactories,
-  showAllFactories,
+  factoryFilter,
   factoryListId,
   taxIncluded,
   taxRate,
   expandedRows,
   onToggleTax,
   onToggleRow,
-  onToggleShowAllFactories,
+  onFactoryFilterChange,
   onClearFilters,
 }: {
   catalogId: ProductGroupId;
   category: CatalogCategory;
   filteredFactories: CatalogFactory[];
-  collapsedFactories: number;
-  showAllFactories: boolean;
+  factoryFilter: string;
   factoryListId: string;
   taxIncluded: boolean;
   taxRate: number;
   expandedRows: Set<number>;
   onToggleTax: () => void;
   onToggleRow: (rowId: number) => void;
-  onToggleShowAllFactories: () => void;
+  onFactoryFilterChange: (factory: string) => void;
   onClearFilters: () => void;
 }) {
+  const showQuickMillBar = category.filters.factories.length >= 6;
+  const quickMills = showQuickMillBar
+    ? pickQuickFilterMills(category.filters.factories, factoryFilter)
+    : [];
+  const specLabel = effectiveSpecificationLabel(category);
+  const showApproxWeight = category.id === "scaffold-pipe";
+  const tableColSpan = showApproxWeight ? 8 : 7;
+
   return (
     <>
+      {showQuickMillBar ? (
+        <nav
+          className="mill-quick-bar"
+          aria-label={`فیلتر سریع ${category.groupingLabel}`}
+        >
+          <button
+            type="button"
+            aria-pressed={factoryFilter === ""}
+            onClick={() => onFactoryFilterChange("")}
+          >
+            همه ({formatPersianNumber(category.filters.factories.length)})
+          </button>
+          {quickMills.map((mill) => (
+            <button
+              type="button"
+              key={mill}
+              aria-pressed={factoryFilter === mill}
+              onClick={() =>
+                onFactoryFilterChange(factoryFilter === mill ? "" : mill)
+              }
+            >
+              {mill}
+            </button>
+          ))}
+        </nav>
+      ) : null}
+
       <div className="rebar-result-bar">
         <p className="rebar-result-status" role="status" aria-live="polite">
           {filteredFactories.length
@@ -207,15 +281,8 @@ export function FactoryPriceCardList({
       </div>
 
       <div className="factory-price-list" id={factoryListId}>
-        {filteredFactories.map((factory, factoryIndex) => (
-          <section
-            className={
-              !showAllFactories && factoryIndex >= INITIAL_FACTORY_COUNT
-                ? "factory-price-card is-collapsed"
-                : "factory-price-card"
-            }
-            key={factory.name}
-          >
+        {filteredFactories.map((factory) => (
+          <section className="factory-price-card" key={factory.name}>
             <header>
               <h4>
                 قیمت {category.label} {factory.name}
@@ -232,7 +299,13 @@ export function FactoryPriceCardList({
             </header>
 
             <div className="table-scroll">
-              <table className="rebar-price-table">
+              <table
+                className={
+                  showApproxWeight
+                    ? "rebar-price-table has-weight-col"
+                    : "rebar-price-table"
+                }
+              >
                 <caption className="sr-only">
                   قیمت {category.label} {category.groupingLabel} {factory.name}
                 </caption>
@@ -240,7 +313,10 @@ export function FactoryPriceCardList({
                   <tr>
                     <th scope="col" aria-label="جزئیات" />
                     <th scope="col">سایز</th>
-                    <th scope="col">{category.specificationLabel}</th>
+                    <th scope="col">{specLabel}</th>
+                    {showApproxWeight ? (
+                      <th scope="col">وزن تقریبی شاخه</th>
+                    ) : null}
                     <th scope="col">محل تحویل</th>
                     <th scope="col">قیمت</th>
                     <th scope="col">نوسان</th>
@@ -259,6 +335,8 @@ export function FactoryPriceCardList({
                       taxIncluded,
                       taxRate,
                     });
+                    const sizeDisplay = formatCatalogSize(row.size, category.id);
+                    const specValue = effectiveRowSpecification(row, category.id);
                     return (
                       <Fragment key={row.id}>
                         <tr
@@ -280,16 +358,22 @@ export function FactoryPriceCardList({
                             </button>
                           </td>
                           <td data-label="سایز">
-                            {localizeCatalogValue(row.size)}
-                          </td>
-                          <td data-label={category.specificationLabel}>
-                            {localizeCatalogValue(
-                              row.specification ||
-                                row.standard ||
-                                row.grade ||
-                                "",
+                            {sizeDisplay.ltr ? (
+                              <bdi dir="ltr">{sizeDisplay.text}</bdi>
+                            ) : (
+                              sizeDisplay.text
                             )}
                           </td>
+                          <td data-label={specLabel}>
+                            {localizeCatalogValue(specValue)}
+                          </td>
+                          {showApproxWeight ? (
+                            <td data-label="وزن تقریبی شاخه">
+                              {row.approximateWeight
+                                ? `${localizeCatalogValue(row.approximateWeight)} کیلوگرم`
+                                : "—"}
+                            </td>
+                          ) : null}
                           <td data-label="محل تحویل">
                             {row.delivery || "—"}
                           </td>
@@ -339,7 +423,7 @@ export function FactoryPriceCardList({
                             <td
                               className="rebar-row-detail"
                               id={`row-detail-${row.id}`}
-                              colSpan={7}
+                              colSpan={tableColSpan}
                             >
                               <dl>
                                 {getRowDetails(
@@ -375,23 +459,6 @@ export function FactoryPriceCardList({
           </section>
         ))}
       </div>
-
-      {collapsedFactories > 0 ? (
-        <button
-          className="show-more-factories"
-          type="button"
-          aria-expanded={showAllFactories}
-          aria-controls={factoryListId}
-          onClick={onToggleShowAllFactories}
-        >
-          {showAllFactories
-            ? "نمایش کمتر"
-            : `نمایش ${formatPersianNumber(collapsedFactories)} ${category.groupingLabel} دیگر`}
-          <ChevronDownIcon
-            className={showAllFactories ? "is-expanded" : undefined}
-          />
-        </button>
-      ) : null}
 
       {!filteredFactories.length ? (
         <div className="rebar-empty">

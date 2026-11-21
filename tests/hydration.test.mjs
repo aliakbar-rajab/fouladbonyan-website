@@ -21,9 +21,12 @@ const ROUTES = [
   "", // homepage — ships no price snapshot at all
   "rebar", // category whose snapshot IS embedded
   "sheet", // category whose snapshot is NOT the menu's default group
-  "beam",
-  "rebar/ribbed", // subcategory, menu default group — 27 collapsed factory groups
-  "profile/box-profile", // largest collapsed set in the product catalog
+  "beam", // consolidated IPE catalog rendered directly on /beam/
+  "rebar/ribbed", // subcategory, menu default group — 27 factory groups rendered visibly
+  "pipe/scaffold-pipe", // 8-column table with branch weight column
+  "pipe/thick-wall-pipe", // computed wall thickness + bdi OD*ID
+  "profile/box-profile", // largest factory group in the product catalog
+  "wire/steel-wire", // renamed wire route
   "wire/chicken-mesh", // subcategory, different catalog
   "contact",
   "about",

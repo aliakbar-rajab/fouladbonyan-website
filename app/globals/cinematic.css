@@ -793,15 +793,13 @@ body {
   color: #525860;
 }
 
-.row-expand-cell button svg,
-.show-more-factories svg {
+.row-expand-cell button svg {
   width: 1rem;
   height: 1rem;
   transition: transform 180ms ease;
 }
 
-.row-expand-cell button svg.is-expanded,
-.show-more-factories svg.is-expanded {
+.row-expand-cell button svg.is-expanded {
   transform: rotate(180deg);
 }
 

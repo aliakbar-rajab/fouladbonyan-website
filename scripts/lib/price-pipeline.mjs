@@ -2,7 +2,10 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
-  parsePersianNumber,
+  compareNumericSizeValues,
+  sortFactoryRows,
+} from "../../app/catalog-behavior.mjs";
+import {
   toPersianDigits,
 } from "../../app/persian-numbers.mjs";
 import { validateCatalogSnapshot } from "../../app/catalog-validation.mjs";
@@ -73,24 +76,16 @@ function formatPersianDate(unixTimestamp) {
     .replace(/\p{Cf}/gu, "");
 }
 
-/** Numeric where both sides are numeric, Persian collation otherwise. */
-function compareSizeValues(first, second) {
-  const firstNumber = parsePersianNumber(first);
-  const secondNumber = parsePersianNumber(second);
-  if (firstNumber !== null && secondNumber !== null) {
-    return firstNumber - secondNumber;
-  }
-  return String(first ?? "").localeCompare(String(second ?? ""), "fa");
-}
-
-function resolveSource(raw) {
+function resolveSource(groupId, raw) {
   return {
+    groupId,
     id: raw.id,
     label: raw.label,
     slug: raw.slug,
     url: sourceUrl(raw.slug),
     minimumItems: raw.minimumItems,
     deriveSize: raw.deriveSize,
+    deriveSpecification: raw.deriveSpecification,
     specificationKey:
       raw.specificationKey ??
       (raw.groupingLabel === "گرید" ? "گرید" : "ضخامت"),
@@ -128,14 +123,20 @@ function parseCatalogPage(html, source) {
 
   const factories = shopData.products
     .map((factoryGroup) => {
-      const rows = (factoryGroup.productsitem ?? []).map((item) => {
+      const unsortedRows = (factoryGroup.productsitem ?? []).map((item) => {
         const trend = normalizeCatalogTrend(item.status, item.percent);
+        const size = cleanText(source.deriveSize?.(item) ?? metaValue(item, "سایز"));
+        const specification = source.deriveSpecification
+          ? cleanText(source.deriveSpecification({ item, size }))
+          : source.specificationKey
+            ? metaValue(item, source.specificationKey)
+            : "";
         return {
         id: Number(item.id),
         title: cleanText(item.title),
-        size: cleanText(source.deriveSize?.(item) ?? metaValue(item, "سایز")),
-        ...(source.specificationKey
-          ? { specification: metaValue(item, source.specificationKey) }
+        size,
+        ...(source.specificationKey || source.deriveSpecification
+          ? { specification }
           : {}),
         standard: metaValue(item, "استاندارد"),
         grade: metaValue(item, "گرید"),
@@ -162,6 +163,10 @@ function parseCatalogPage(html, source) {
         };
       });
 
+      const rows = sortFactoryRows(unsortedRows, {
+        groupId: source.groupId,
+        categoryId: source.id,
+      });
       const latestUpdate = Math.max(0, ...rows.map((row) => row.updatedAt));
       return {
         name: cleanText(factoryGroup.title) || rows[0]?.factory || "سایر",
@@ -197,7 +202,7 @@ function parseCatalogPage(html, source) {
     },
     filters: {
       sizes: [...new Set(rows.map((row) => row.size).filter(Boolean))].sort(
-        compareSizeValues,
+        compareNumericSizeValues,
       ),
       factories: factories.map((factory) => factory.name),
     },
@@ -288,7 +293,10 @@ async function fetchCategoriesWithDiagnostics(sources, options = {}) {
   } = options;
 
   const fallbackMap = new Map(
-    (fallbackCategories ?? []).map((category) => [category?.id, category]),
+    (fallbackCategories ?? []).map((category) => [
+      category?.id === "wire" ? "steel-wire" : category?.id,
+      category?.id === "wire" ? { ...category, id: "steel-wire" } : category,
+    ]),
   );
 
   const results = [];
@@ -382,7 +390,7 @@ async function buildCatalogSnapshot(options = {}) {
     id: catalog.id,
     label: catalog.label,
     initialCategoryId: catalog.initialCategoryId,
-    sources: catalog.sources.map(resolveSource),
+    sources: catalog.sources.map((raw) => resolveSource(catalog.id, raw)),
   }));
 
   const allSources = catalogs.flatMap((catalog) => catalog.sources);

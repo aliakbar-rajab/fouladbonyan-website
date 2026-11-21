@@ -78,7 +78,7 @@ export const catalogGroups = [
     label: "قوطی و پروفیل",
     initialCategoryId: "box-profile",
     subcategories: [
-      { id: "box-profile", label: "قوطی و پروفیل" },
+      { id: "box-profile", label: "قوطی پروفیل آهنی" },
       { id: "building-profile", label: "پروفیل ساختمانی" },
       { id: "industrial-profile", label: "پروفیل صنعتی" },
       { id: "stainless-profile", label: "پروفیل استیل" },
@@ -119,9 +119,9 @@ export const catalogGroups = [
   {
     id: "wire",
     label: "مفتول و سیم",
-    initialCategoryId: "wire",
+    initialCategoryId: "steel-wire",
     subcategories: [
-      { id: "wire", label: "سیم مفتول" },
+      { id: "steel-wire", label: "سیم مفتول" },
       { id: "rib-lath", label: "رابیتس" },
       { id: "steel-mesh", label: "مش" },
       { id: "chicken-mesh", label: "توری مرغی" },

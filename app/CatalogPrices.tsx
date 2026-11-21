@@ -4,10 +4,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  INITIAL_FACTORY_COUNT,
-  type CatalogViewRequest,
-} from "./catalog-types";
+import { sortFactoryRows } from "./catalog-behavior.mjs";
+import { type CatalogViewRequest } from "./catalog-types";
 import {
   getCategoryById,
   subcategoryHref,
@@ -97,7 +95,6 @@ export function PriceCatalog({
   const [expandedRows, setExpandedRows] = useState<Set<number>>(
     () => new Set(),
   );
-  const [showAllFactories, setShowAllFactories] = useState(false);
 
   const filteredFactories = useMemo(
     () =>
@@ -105,25 +102,23 @@ export function PriceCatalog({
         .filter((factory) => !factoryFilter || factory.name === factoryFilter)
         .map((factory) => ({
           ...factory,
-          rows: factory.rows.filter(
-            (row) => !sizeFilter || row.size === sizeFilter,
+          rows: sortFactoryRows(
+            factory.rows.filter(
+              (row) => !sizeFilter || row.size === sizeFilter,
+            ),
+            { groupId: catalog.id, categoryId: category.id },
           ),
         }))
         .filter((factory) => factory.rows.length > 0),
-    [category, factoryFilter, sizeFilter],
+    [catalog.id, category, factoryFilter, sizeFilter],
   );
 
-  const collapsedFactories = Math.max(
-    filteredFactories.length - INITIAL_FACTORY_COUNT,
-    0,
-  );
   const activeFilterCount =
     Number(Boolean(factoryFilter)) + Number(Boolean(sizeFilter));
 
   const clearFilters = () => {
     setFactoryFilter("");
     setSizeFilter("");
-    setShowAllFactories(false);
   };
 
   const toggleRow = (rowId: number) => {
@@ -166,17 +161,14 @@ export function PriceCatalog({
               catalogId={catalog.id}
               category={category}
               filteredFactories={filteredFactories}
-              collapsedFactories={collapsedFactories}
-              showAllFactories={showAllFactories}
+              factoryFilter={factoryFilter}
               factoryListId={factoryListId}
               taxIncluded={taxIncluded}
               taxRate={catalog.taxRate}
               expandedRows={expandedRows}
               onToggleTax={() => setTaxIncluded((current) => !current)}
               onToggleRow={toggleRow}
-              onToggleShowAllFactories={() =>
-                setShowAllFactories((current) => !current)
-              }
+              onFactoryFilterChange={setFactoryFilter}
               onClearFilters={clearFilters}
             />
           </div>
@@ -188,14 +180,8 @@ export function PriceCatalog({
             sizeFilter={sizeFilter}
             activeFilterCount={activeFilterCount}
             sidebarExtra={sidebarExtra}
-            onFactoryFilterChange={(val) => {
-              setFactoryFilter(val);
-              setShowAllFactories(false);
-            }}
-            onSizeFilterChange={(val) => {
-              setSizeFilter(val);
-              setShowAllFactories(false);
-            }}
+            onFactoryFilterChange={setFactoryFilter}
+            onSizeFilterChange={setSizeFilter}
             onClearFilters={clearFilters}
           />
         </div>

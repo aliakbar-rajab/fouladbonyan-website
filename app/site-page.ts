@@ -1,7 +1,7 @@
 import {
   getCategoryById,
   getSubcategoryLabel,
-  isSingleSubcategoryGroup,
+  isConsolidatedSubcategory,
 } from "./category-meta";
 import { guideIndex, guidePageDefinitions } from "./guide-page-data";
 import { infoPageDefinitions } from "./info-page-data";
@@ -43,7 +43,8 @@ function catalogPage(route: Extract<SiteRoute, { kind: "catalog" }>) {
   const group = getCategoryById(route.category);
   if (!group) throw new Error(`Unknown catalog group: ${route.category}`);
   const subcategory =
-    route.subcategory && !isSingleSubcategoryGroup(route.category)
+    route.subcategory &&
+    !isConsolidatedSubcategory(route.category, route.subcategory)
       ? {
           id: route.subcategory,
           label:
