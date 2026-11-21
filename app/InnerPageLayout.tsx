@@ -3,7 +3,8 @@ import { useEffect, type ReactNode } from "react";
 import { siteConfig } from "./site-config";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
-import { PrimaryNav } from "./site-ui";
+import { MegaMenu } from "./MegaMenu";
+import { WhatsAppIcon } from "./icons";
 import { Breadcrumb } from "./Breadcrumb";
 import { pageBreadcrumb, pageHead } from "./site-page";
 import { siteRoutePath, type SiteRoute } from "./site-route";
@@ -62,7 +63,7 @@ export function InnerPageLayout({
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <PrimaryNav currentHref={currentHref} onLinkClick={closeMobileNav} />
+          <MegaMenu onMobileClose={closeMobileNav} currentHref={currentHref} />
         )}
       />
       <main id="main-content" className="info-main">
@@ -89,6 +90,14 @@ export function InnerPageLayout({
           <a href={siteConfig.contact.phones[0].href}>
             <span aria-hidden="true">☎</span>
             تماس
+          </a>
+          <a
+            href={siteConfig.contact.whatsappCommunityUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <WhatsAppIcon className="mobile-action-icon" />
+            واتساپ
           </a>
           <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
         </div>

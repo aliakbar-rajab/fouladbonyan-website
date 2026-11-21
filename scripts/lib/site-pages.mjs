@@ -2,6 +2,7 @@ import {
   isConsolidatedSubcategory,
   isSingleSubcategoryGroup,
   productGroups,
+  rendersCatalogOnGroupRoute,
   subcategoryHref,
 } from "../../app/category-meta.ts";
 import {
@@ -157,6 +158,9 @@ export async function collectSitePageDescriptors({
       kind: "catalog",
       category: group.id,
     });
+    const groupContent = rendersCatalogOnGroupRoute(group.id)
+      ? getSubcategoryContent(group.id, group.id)
+      : undefined;
     pages.push({
       ...describedGroup,
       lastmod,
@@ -166,14 +170,14 @@ export async function collectSitePageDescriptors({
       heroPreload,
       payloads: catalogPayloads,
       organizationData: null,
-      extraHeadHtml: buildCatalogCollectionJsonLd({
+      extraHeadHtml: `${buildCatalogCollectionJsonLd({
         title: describedGroup.title,
         description: describedGroup.description,
         pageUrl: describedGroup.pageUrl,
         siteUrl,
         dateModified: catalog.fetchedAt,
         items: overviewItems,
-      }),
+      })}${groupContent?.faqs.length ? buildFaqJsonLd(groupContent.faqs) : ""}`,
     });
 
     // Subcategory pages: consolidated routes (angle, channel, and beam IPE)
@@ -247,7 +251,7 @@ export async function collectSitePageDescriptors({
     ...describedContact,
     lastmod: "2026-08-11",
     heroPreload: null,
-    payloads: [],
+    payloads: [menuPayload],
     organizationData,
     extraHeadHtml: buildContactPageJsonLd({
       title: describedContact.title,
@@ -266,13 +270,13 @@ export async function collectSitePageDescriptors({
       robots: isNoindex ? "noindex, follow" : "index, follow",
       noindex: isNoindex,
       heroPreload: null,
-      payloads: [],
+      payloads: [menuPayload],
       organizationData: null,
     });
   }
 
   // 5. Guide Index & Articles
-  const guidePayloads = [{ id: pagePayloadIds.guide, data: reference }];
+  const guidePayloads = [menuPayload, { id: pagePayloadIds.guide, data: reference }];
   const describeGuide = (route) =>
     describeRoute(route, siteUrl, { guideReference: reference });
 

@@ -1659,33 +1659,26 @@ body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .hero-content h1,
+  .hero-content h1 {
+    opacity: 1;
+    transform: translateY(0);
+    clip-path: none;
+    animation: none;
+  }
+
   .hero-content .hero-lede,
   .hero-content .hero-category-intro,
   .hero-actions {
-    animation: cinematic-reveal 720ms both cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .hero-content .hero-lede,
-  .hero-content .hero-category-intro {
-    animation-delay: 100ms;
-  }
-
-  .hero-actions {
-    animation-delay: 180ms;
+    animation: hero-subtle-settle 360ms both cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 
-@keyframes cinematic-reveal {
+@keyframes hero-subtle-settle {
   from {
-    opacity: 0;
-    transform: translateY(18px);
-    clip-path: inset(0 0 100% 0);
+    transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
-    clip-path: inset(0);
   }
 }
 

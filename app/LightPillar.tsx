@@ -202,6 +202,28 @@ export function LightPillar() {
     const container = containerRef.current;
     if (!container || typeof window === "undefined") return undefined;
 
+    const signalReadyLightweight = () => {
+      const rect = container.getBoundingClientRect();
+      const vHeight = window.innerHeight || 800;
+      if (rect.top < vHeight + 300 && rect.bottom > -300) {
+        (
+          window as unknown as { __fbHeaderPillarReady?: boolean }
+        ).__fbHeaderPillarReady = true;
+        window.dispatchEvent(new CustomEvent("fb:header-pillar-ready"));
+      }
+    };
+
+    const isMobileOrCoarse =
+      typeof window.matchMedia === "function" &&
+      (window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(max-width: 900px)").matches);
+
+    if (isMobileOrCoarse) {
+      // Mobile/coarse-pointer devices use the CSS gradient fallback without WebGL2 shader overhead.
+      signalReadyLightweight();
+      return undefined;
+    }
+
     let isDestroyed = false;
     let gl: WebGL2RenderingContext | null = null;
     let program: WebGLProgram | null = null;

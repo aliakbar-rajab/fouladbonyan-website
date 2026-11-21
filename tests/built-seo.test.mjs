@@ -1239,6 +1239,15 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
     ["sheet/sheet-ck45/index.html", "/rebar/alloy/"],
     ["rebar/ribbed/index.html", "/guide/rebar-weight-chart/"],
     ["sheet/sheet-a516/index.html", "/sheet/sheet-st52/"],
+    ["sheet/black-sheet/index.html", "/sheet/sheet-st52/"],
+    ["sheet/galvanized-sheet/index.html", "/sheet/colored-sheet/"],
+    ["sheet/oily-sheet/index.html", "/profile/furniture-profile/"],
+    ["pipe/seamless-pipe/index.html", "/pipe/thick-wall-pipe/"],
+    ["profile/building-profile/index.html", "/profile/box-profile/"],
+    ["beam/index.html", "/beam/hash/"],
+    ["beam/hash/index.html", "/beam/"],
+    ["angle/index.html", "/channel/"],
+    ["channel/index.html", "/angle/"],
   ];
 
   for (const [relPath, expectedLink] of moneyRoutes) {
@@ -1254,6 +1263,15 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
       /"@type"\s*:\s*"(?:Product|Offer|AggregateOffer)"/,
       `${relPath} must remain free of Product/Offer schemas`,
     );
+  }
+
+  // Unified header/nav & B2B sticky bar checks across both `/` and `/guide/rebar-weight-chart/`
+  for (const routeRel of ["index.html", "guide/rebar-weight-chart/index.html"]) {
+    const html = await readDist(routeRel);
+    assert.match(html, /class="header-sticky-phone"/, `${routeRel} must expose sticky click-to-call pill`);
+    assert.match(html, /href="\/guide\/"[^>]*>راهنمای فنی و جدول وزن<\/a>/, `${routeRel} must link /guide/ in nav`);
+    assert.match(html, /class="product-dropdown rebar-mega-menu"/, `${routeRel} must include MegaMenu`);
+    assert.match(html, /class="mobile-actions"[\s\S]*?https:\/\/chat\.whatsapp\.com\//, `${routeRel} mobile-actions must include WhatsApp`);
   }
 
   const ck45Html = await readDist("sheet/sheet-ck45/index.html");

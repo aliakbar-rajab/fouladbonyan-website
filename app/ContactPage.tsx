@@ -11,7 +11,7 @@ import { pageBreadcrumb, pageHead } from "./site-page";
 import { siteRoutePath } from "./site-route";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
-import { PrimaryNav } from "./site-ui";
+import { MegaMenu } from "./MegaMenu";
 
 const googleMapsUrl = buildGoogleMapsUrl(siteConfig.officeCoordinates);
 const wazeUrl = buildWazeUrl(siteConfig.officeCoordinates);
@@ -47,9 +47,9 @@ export default function ContactPage() {
       <SiteHeader
         brandHref="/"
         renderNav={({ closeMobileNav }) => (
-          <PrimaryNav
+          <MegaMenu
+            onMobileClose={closeMobileNav}
             currentHref={siteRoutePath(route)}
-            onLinkClick={closeMobileNav}
           />
         )}
       />
@@ -247,6 +247,14 @@ export default function ContactPage() {
         <a href={siteConfig.contact.phones[0].href}>
           <span aria-hidden="true">☎</span>
           تماس
+        </a>
+        <a
+          href={siteConfig.contact.whatsappCommunityUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <WhatsAppIcon className="mobile-action-icon" />
+          واتساپ
         </a>
         <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer">
           مسیریابی

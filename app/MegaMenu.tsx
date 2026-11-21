@@ -106,7 +106,8 @@ function MegaMenuSections({
 
 type MegaMenuProps = {
   onMobileClose: () => void;
-  activeGroup: ProductGroupId;
+  activeGroup?: ProductGroupId;
+  currentHref?: string;
 };
 
 /*
@@ -124,7 +125,11 @@ const productsEntryIndex = primaryNavLinks.findIndex(
 const navLinksBeforeProducts = primaryNavLinks.slice(0, productsEntryIndex);
 const navLinksAfterProducts = primaryNavLinks.slice(productsEntryIndex + 1);
 
-export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
+export function MegaMenu({
+  onMobileClose,
+  activeGroup = "rebar",
+  currentHref,
+}: MegaMenuProps) {
   const [productsOpen, setProductsOpen] = useState(false);
   const [megaProduct, setMegaProduct] = useState<ProductGroupId>(
     () => activeGroup ?? "rebar",
@@ -176,7 +181,12 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
   return (
     <nav className="primary-nav" id="primary-navigation" aria-label="فهرست اصلی">
       {navLinksBeforeProducts.map((link) => (
-        <a key={link.href} href={link.href} onClick={onMobileClose}>
+        <a
+          key={link.href}
+          href={link.href}
+          aria-current={currentHref === link.href ? "page" : undefined}
+          onClick={onMobileClose}
+        >
           {link.label}
         </a>
       ))}
@@ -251,7 +261,12 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
 
       </div>
       {navLinksAfterProducts.map((link) => (
-        <a key={link.href} href={link.href} onClick={onMobileClose}>
+        <a
+          key={link.href}
+          href={link.href}
+          aria-current={currentHref === link.href ? "page" : undefined}
+          onClick={onMobileClose}
+        >
           {link.label}
         </a>
       ))}

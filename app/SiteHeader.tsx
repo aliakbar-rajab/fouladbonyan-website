@@ -139,13 +139,25 @@ export function SiteHeader({
         <div className="shell header-nav-inner">
           {renderNav({ mobileOpen: mobileNavOpen, closeMobileNav })}
 
-          <a
-            className="header-quote"
-            href={QUOTE_FORM_HREF}
-            onClick={closeMobileNav}
-          >
-            درخواست پیش‌فاکتور
-          </a>
+          <div className="header-nav-actions">
+            <a
+              className="header-sticky-phone"
+              href={siteConfig.contact.phones[0].href}
+              aria-label={`تماس با واحد فروش ${siteConfig.contact.phones[0].label}`}
+              onClick={closeMobileNav}
+            >
+              <PhoneIcon className="header-sticky-phone-icon" />
+              <b dir="ltr">{siteConfig.contact.phones[0].label}</b>
+            </a>
+
+            <a
+              className="header-quote"
+              href={QUOTE_FORM_HREF}
+              onClick={closeMobileNav}
+            >
+              درخواست پیش‌فاکتور
+            </a>
+          </div>
         </div>
       </div>
     </>

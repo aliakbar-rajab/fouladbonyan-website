@@ -90,6 +90,7 @@ export const primaryNavLinks = [
   { href: "/", label: "صفحه اصلی" },
   { href: "/#products", label: "محصولات فولادی" },
   { href: "/#prices", label: "قیمت روز آهن و فولاد" },
+  { href: "/guide/", label: "راهنمای فنی و جدول وزن" },
   { href: "/about/", label: "درباره ما" },
   { href: "/contact/", label: "تماس با ما" },
 ] as const satisfies readonly NavLink[];

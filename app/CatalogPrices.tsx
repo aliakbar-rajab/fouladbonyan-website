@@ -1,6 +1,8 @@
 import {
+  useEffect,
   useId,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -96,6 +98,21 @@ export function PriceCatalog({
   const [expandedRows, setExpandedRows] = useState<Set<number>>(
     () => new Set(),
   );
+  const kindTabsRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const nav = kindTabsRef.current;
+    if (!nav || nav.scrollWidth <= nav.clientWidth) return;
+    const activeTab = nav.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!activeTab) return;
+    const targetLeft =
+      activeTab.offsetLeft - (nav.clientWidth - activeTab.offsetWidth) / 2;
+    if (typeof nav.scrollTo === "function") {
+      nav.scrollTo({ left: targetLeft, behavior: "smooth" });
+    } else {
+      nav.scrollLeft = targetLeft;
+    }
+  }, [category.id]);
 
   const filteredFactories = useMemo(
     () =>
@@ -134,6 +151,7 @@ export function PriceCatalog({
   return (
     <div className="rebar-prices">
       <nav
+        ref={kindTabsRef}
         className={`rebar-kind-tabs ${tabClassNames[catalog.id] ?? ""}`.trim()}
         aria-label={`نوع ${catalog.label}`}
       >

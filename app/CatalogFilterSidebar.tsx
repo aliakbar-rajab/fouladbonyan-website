@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { CatalogCategory, GroupCatalog } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
 import { localizeCatalogValue } from "./catalog-presentation";
@@ -35,6 +35,8 @@ export function CatalogFilterSidebar({
   const baseId = useId();
   const factorySelectId = `${baseId}-factory-select`;
   const sizeSelectId = `${baseId}-size-select`;
+  const fieldsId = `${baseId}-filter-fields`;
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const fetchedDate = fetchedDateFormatter.format(new Date(catalog.fetchedAt));
 
   return (
@@ -42,14 +44,23 @@ export function CatalogFilterSidebar({
       className="rebar-sidebar"
       aria-label={`فیلترهای قیمت ${catalog.label}`}
     >
-      <section className="filter-card">
+      <section className={mobileFiltersOpen ? "filter-card is-mobile-open" : "filter-card"}>
         <header>
           <h3>فیلترها</h3>
           {activeFilterCount ? (
             <b>{formatPersianNumber(activeFilterCount)}</b>
           ) : null}
+          <button
+            type="button"
+            className="filter-card-toggle"
+            aria-expanded={mobileFiltersOpen}
+            aria-controls={fieldsId}
+            onClick={() => setMobileFiltersOpen((open) => !open)}
+          >
+            {mobileFiltersOpen ? "بستن فیلتر" : "فیلتر کارخانه و سایز"}
+          </button>
         </header>
-        <div className="filter-fields">
+        <div className="filter-fields" id={fieldsId}>
           <label htmlFor={factorySelectId}>{category.groupingLabel}</label>
           <select
             id={factorySelectId}

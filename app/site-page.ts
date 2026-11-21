@@ -2,6 +2,7 @@ import {
   getCategoryById,
   getSubcategoryLabel,
   isConsolidatedSubcategory,
+  rendersCatalogOnGroupRoute,
 } from "./category-meta";
 import { guideIndex, guidePageDefinitions } from "./guide-page-data";
 import { infoPageDefinitions } from "./info-page-data";
@@ -64,6 +65,15 @@ export function pageHead(route: SiteRoute): PageHead {
     case "catalog": {
       const { group, subcategory } = catalogPage(route);
       if (!subcategory) {
+        if (rendersCatalogOnGroupRoute(group.id)) {
+          const consolidated = getSubcategoryContent(group.id, group.id);
+          if (consolidated) {
+            return {
+              title: consolidated.seoTitle,
+              description: consolidated.seoDescription,
+            };
+          }
+        }
         return { title: group.seoTitle, description: group.seoDescription };
       }
       const custom = getSubcategoryContent(group.id, subcategory.id);

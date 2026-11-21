@@ -19,7 +19,7 @@ import { MarketPrices } from "./MarketPrices";
 import { MegaMenu } from "./MegaMenu";
 import { SiteHeader } from "./SiteHeader";
 import { useMediaQuery } from "./use-media-query";
-import { PhoneIcon } from "./icons";
+import { PhoneIcon, WhatsAppIcon } from "./icons";
 import { KnowledgeSection } from "./KnowledgeSection";
 import { QuoteCtaSection } from "./QuoteCtaSection";
 import {
@@ -237,6 +237,14 @@ export default function App({
           <PhoneIcon className="mobile-action-icon" />
           تماس
         </ContactLink>
+        <a
+          href={siteConfig.contact.whatsappCommunityUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <WhatsAppIcon className="mobile-action-icon" />
+          واتساپ
+        </a>
         <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور</a>
       </div>
     </div>

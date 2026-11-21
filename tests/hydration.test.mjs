@@ -74,14 +74,18 @@ test("the mega menu payload ships exactly where <App /> is rendered", async () =
 
   for (const page of pages) {
     const html = await readDist(page.split("\\").join("/"));
-    if (/<meta\s+http-equiv="refresh"/i.test(html)) continue;
-    const rendersApp = !/<div id="root"[^>]*\sdata-page=/.test(html);
+    if (/<meta\s+http-equiv="refresh"/i.test(html)) {
+      assert.equal(
+        html.includes('<script id="initial-menu-data"'),
+        false,
+        `${page} redirect stub must not carry initial-menu-data`,
+      );
+      continue;
+    }
     assert.equal(
       html.includes('<script id="initial-menu-data"'),
-      rendersApp,
-      rendersApp
-        ? `${page} renders <App /> and must embed initial-menu-data`
-        : `${page} does not render <App /> and must not carry initial-menu-data`,
+      true,
+      `${page} renders <MegaMenu /> and must embed initial-menu-data`,
     );
   }
 });
