@@ -1,12 +1,155 @@
+import { QUOTE_FORM_HREF } from "../quote-handoff";
 import { toPersianDigits } from "../persian-numbers.mjs";
-import { guidePageUrl } from "../guide-page-data";
+import { guidePageUrl, REBAR_WEIGHT_FAQS } from "../guide-page-data";
+import { RebarWeightCalculator } from "../RebarWeightCalculator";
 import type { GuideReference } from "../steel-reference";
 import { GuideTableWrap } from "./GuideShared";
 import { fa, faFixed, list } from "./guide-helpers";
 
+const QUICK_ANSWER_SIZES = ["8", "12", "14", "16"] as const;
+
 export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
+  const ribbedStandardRows = new Map(
+    (reference.rebarTables.find((t) => t.id === "ribbed")?.rows ?? []).map(
+      (row) => [row.size, row],
+    ),
+  );
+  const millRowsBySize = new Map(
+    reference.rebarMillTable.rows.map((row) => [row.size, row]),
+  );
+
   return (
     <>
+      <section className="content-card">
+        <h2>وزن سریع میلگردهای پرکاربرد (شاخه ۱۲ متری)</h2>
+        <p>
+          پاسخ سریع بر اساس فرمول اشتال و بازه وزن واقعی کارخانه‌های ایران در
+          کاتالوگ همین سایت:
+        </p>
+        <div className="quick-answer-grid">
+          {QUICK_ANSWER_SIZES.map((size) => {
+            const std = ribbedStandardRows.get(size);
+            const mill = millRowsBySize.get(size);
+            if (!std) return null;
+            return (
+              <article className="quick-answer-card" key={size}>
+                <h3>{`میلگرد ${toPersianDigits(size)} آجدار (۱۲ متری)`}</h3>
+                <strong>
+                  {`${faFixed(std.kgPerBranch ?? 0, 2)} کیلوگرم`}
+                </strong>
+                <span>{`هر متر: ${faFixed(std.kgPerMeter, 3)} کیلوگرم`}</span>
+                {mill?.minMillKg && mill?.maxMillKg ? (
+                  <span>
+                    {`بازه کارخانه‌ها: ${faFixed(mill.minMillKg, 1)} تا ${faFixed(mill.maxMillKg, 1)} کیلو`}
+                  </span>
+                ) : null}
+                <span>
+                  {`حدود ${fa(std.branchesPerTon ?? 0)} شاخه در هر تن`}
+                </span>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <div className="rebar-guide-tools">
+        <section className="content-card">
+          <h2>ماشین‌حساب آنلاین وزن و برآورد قیمت میلگرد</h2>
+          <p>
+            قطر، طول شاخه و تعداد را وارد کنید تا وزن کل و برآورد قیمت تقریبی
+            بر پایه میانگین میلگرد آجدار امروز محاسبه شود.
+          </p>
+          <div className="guide-calculator-mount">
+            <RebarWeightCalculator
+              defaultOpen
+              averagePricePerKg={reference.ribbedPriceBridge?.average ?? null}
+              showGuideLink={false}
+            />
+          </div>
+        </section>
+
+        <section className="content-card rebar-bridge-card">
+          <h2>قیمت روز میلگرد و ثبت سفارش</h2>
+          {reference.ribbedPriceBridge ? (
+            <>
+              <p>
+                {`قیمت روز میلگرد آجدار (${toPersianDigits(reference.ribbedPriceBridge.date)}) از ${fa(reference.ribbedPriceBridge.factoryCount)} کارخانه در بازه `}
+                <b>{fa(reference.ribbedPriceBridge.min)}</b>
+                {" تا "}
+                <b>{fa(reference.ribbedPriceBridge.max)}</b>
+                {" تومان به ازای هر کیلوگرم قرار دارد."}
+              </p>
+              <p>
+                {`میانگین بازار امروز میلگرد آجدار: ${fa(reference.ribbedPriceBridge.average)} تومان/کیلوگرم (بدون ارزش افزوده).`}
+              </p>
+            </>
+          ) : (
+            <p>
+              برای مشاهده قیمت روز تمامی کارخانه‌ها و مقایسه نرخ هر کیلوگرم، به
+              جدول قیمت میلگرد مراجعه کنید.
+            </p>
+          )}
+          <div className="inline-actions">
+            <a href="/rebar/ribbed/">مشاهده قیمت روز میلگرد آجدار</a>
+            <a href="/rebar/simple/">قیمت روز میلگرد ساده</a>
+            <a href={QUOTE_FORM_HREF}>درخواست پیش‌فاکتور میلگرد</a>
+          </div>
+        </section>
+      </div>
+
+      {reference.rebarMillTable.rows.length > 0 ? (
+        <section className="content-card">
+          <h2>مقایسه وزن واقعی شاخه ۱۲ متری کارخانه‌های ایران در برابر جدول اشتال</h2>
+          <p>
+            جدول زیر وزن تقریبی یک شاخه ۱۲ متری میلگرد آجدار کارخانه‌های شاخص
+            ایران را (مستخرج از داده‌های کاتالوگ سایت) در برابر وزن استاندارد
+            اشتال نشان می‌دهد. برای ردیف‌هایی که کارخانه وزن اعلام نکرده، علامت
+            «—» درج شده است.
+          </p>
+          <GuideTableWrap label="جدول مقایسه وزن میلگرد کارخانه‌های ایران و جدول اشتال">
+            <table className="guide-table">
+              <caption>
+                {`مقایسه وزن شاخه ۱۲ متری میلگرد آجدار کارخانه‌ها (کیلوگرم) — ${fa(reference.rebarMillTable.mills.length)} کارخانه`}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">سایز</th>
+                  <th scope="col">اشتال (کیلوگرم)</th>
+                  {reference.rebarMillTable.mills.map((mill) => (
+                    <th scope="col" key={mill}>
+                      {mill}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {reference.rebarMillTable.rows.map((row) => (
+                  <tr key={row.size}>
+                    <th scope="row">{`میلگرد ${toPersianDigits(row.size)}`}</th>
+                    <td>
+                      <b>{faFixed(row.stahlKg, 2)}</b>
+                    </td>
+                    {reference.rebarMillTable.mills.map((mill) => {
+                      const weight = row.weightsByMill[mill];
+                      return (
+                        <td key={`${row.size}-${mill}`}>
+                          {weight === null || weight === undefined
+                            ? "—"
+                            : faFixed(weight, weight % 1 === 0 ? 1 : 2)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </GuideTableWrap>
+          <div className="inline-actions">
+            <a href="/rebar/ribbed/">مقایسه قیمت میلگرد آجدار ۲۷ کارخانه</a>
+          </div>
+        </section>
+      ) : null}
+
       <section className="content-card">
         <h2>فرمول وزن میلگرد</h2>
         <strong className="guide-formula" dir="rtl">
@@ -63,9 +206,7 @@ export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
               <tbody>
                 {table.rows.map((row) => (
                   <tr key={row.size}>
-                    <th scope="row">
-                      {toPersianDigits(row.size)} <bdi dir="ltr">({row.diameterMm})</bdi>
-                    </th>
+                    <th scope="row">{`میلگرد ${toPersianDigits(row.size)}`}</th>
                     <td>{faFixed(row.kgPerMeter, 3)}</td>
                     {table.branchLengthM === null ? null : (
                       <>
@@ -99,8 +240,21 @@ export function RebarWeightGuide({ reference }: { reference: GuideReference }) {
           از این جدول برای برآورد اولیه، تبدیل شاخه به تن و کنترل بار تحویلی
           استفاده کنید؛ برای تسویه، وزن باسکول ملاک است.
         </p>
+      </section>
+
+      <section className="content-card">
+        <h2>سؤالات متداول وزن میلگرد</h2>
+        <div className="guide-faq-list">
+          {REBAR_WEIGHT_FAQS.map((faq) => (
+            <article className="guide-faq-item" key={faq.question}>
+              <h3>{faq.question}</h3>
+              <p>{faq.answer}</p>
+            </article>
+          ))}
+        </div>
         <div className="inline-actions">
-          <a href="/rebar/">قیمت روز میلگرد</a>
+          <a href="/rebar/ribbed/">قیمت روز میلگرد آجدار</a>
+          <a href="/rebar/">همه گروه میلگرد</a>
           <a href={guidePageUrl("ribbed-vs-plain-rebar")}>
             تفاوت میلگرد آجدار و ساده
           </a>

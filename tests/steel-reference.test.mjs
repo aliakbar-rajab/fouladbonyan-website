@@ -300,3 +300,17 @@ test("guide definitions are complete, distinct, and correctly routed", () => {
   assert.ok(!seoTitles.has(guideIndex.seoTitle));
   assert.equal(isGuidePageKey("not-a-guide"), false);
 });
+
+
+test("rebar mill weight table and ribbed price bridge are derived strictly from live snapshot data", () => {
+  assert.ok(reference.rebarMillTable.mills.includes("ذوب آهن"));
+  assert.ok(reference.rebarMillTable.mills.includes("کویر کاشان"));
+  assert.ok(reference.rebarMillTable.mills.includes("میانه"));
+  assert.equal(reference.rebarMillTable.rows.length, 11);
+
+  const size14 = reference.rebarMillTable.rows.find((row) => row.size === "14");
+  assert.ok(size14);
+  assert.equal(size14.stahlKg, 14.52);
+  assert.equal(size14.weightsByMill["ذوب آهن"], 15);
+  assert.ok(reference.ribbedPriceBridge && reference.ribbedPriceBridge.average > 0);
+});

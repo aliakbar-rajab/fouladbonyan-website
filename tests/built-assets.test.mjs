@@ -156,12 +156,17 @@ test("built JavaScript has no external image or fake form dependency", async () 
   const html = await readDist("index.html");
   const asset = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
   assert.ok(asset, "Vite JavaScript asset was not linked");
-  const javascript = await readDist(asset.slice(1));
-  assert.doesNotMatch(javascript, /images\.pexels\.com|submitQuote|VITE_LEAD_ENDPOINT/);
-  assert.match(javascript, /BONYAN FOULAD DARIA/);
+  const jsFiles = (await readdir(new URL("../dist/assets/", import.meta.url))).filter(
+    (file) => file.endsWith(".js"),
+  );
+  const allJavaScript = (
+    await Promise.all(jsFiles.map((file) => readDist(`assets/${file}`)))
+  ).join("\n");
+  assert.doesNotMatch(allJavaScript, /images\.pexels\.com|submitQuote|VITE_LEAD_ENDPOINT/);
+  assert.match(allJavaScript, /BONYAN FOULAD DARIA/);
   // Menu wording ships in the bundle; the product names inside it do not --
   // those are read from the price snapshots at runtime.
-  assert.match(javascript, /قیمت روز محصولات/);
+  assert.match(allJavaScript, /قیمت روز محصولات/);
 });
 
 test("large live catalogs are split out of the initial JavaScript", async () => {

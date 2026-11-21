@@ -15,6 +15,11 @@
  * hydrate against exactly the bytes they were prerendered from.
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
+import {
+  categoryCredibleSummary,
+  categoryPricingState,
+  hasDisplayablePriceRange,
+} from "./catalog-pricing.mjs";
 import { subcategoryHref } from "./category-meta";
 import { parsePersianNumber } from "./persian-numbers.mjs";
 import type {
@@ -40,6 +45,31 @@ export type RebarWeightTable = {
   standards: string[];
   factoryCount: number;
   rows: RebarWeightRow[];
+};
+
+export type RebarMillWeightRow = {
+  size: string;
+  diameterMm: number;
+  stahlKg: number;
+  branchesPerTon: number;
+  minMillKg: number | null;
+  maxMillKg: number | null;
+  weightsByMill: Record<string, number | null>;
+};
+
+export type RebarMillWeightTable = {
+  mills: string[];
+  rows: RebarMillWeightRow[];
+};
+
+export type RebarPriceBridge = {
+  href: string;
+  simpleHref: string;
+  date: string;
+  min: number;
+  max: number;
+  average: number;
+  factoryCount: number;
 };
 
 export type BeamWeightRow = {
@@ -92,6 +122,8 @@ export type GuideReference = {
   /** ISO timestamp for the same snapshot, for `<time dateTime>` markup. */
   sourceDateIso: string;
   rebarTables: RebarWeightTable[];
+  rebarMillTable: RebarMillWeightTable;
+  ribbedPriceBridge: RebarPriceBridge | null;
   beamTable: BeamWeightTable;
   profiles: CatalogProfile[];
   unitUsage: UnitUsage[];
@@ -359,6 +391,113 @@ function buildUnitUsage(
     }));
 }
 
+const TOP_REBAR_MILLS = [
+  "ذوب آهن",
+  "کویر کاشان",
+  "میانه",
+  "نیشابور",
+  "فایکو",
+  "شاهین بناب",
+  "ظفر بناب",
+  "بافق یزد",
+  "راد همدان",
+] as const;
+
+const REBAR_MILL_WEIGHT_SIZES = [
+  "8",
+  "10",
+  "12",
+  "14",
+  "16",
+  "18",
+  "20",
+  "22",
+  "25",
+  "28",
+  "32",
+] as const;
+
+function buildRebarMillWeightTable(rebar?: {
+  categories: CatalogCategory[];
+}): RebarMillWeightTable {
+  const ribbed = rebar?.categories.find((item) => item.id === "ribbed");
+  if (!ribbed) return { mills: [], rows: [] };
+
+  const weightByFactorySize = new Map<string, Map<string, number>>();
+  for (const factory of ribbed.factories) {
+    const map = new Map<string, number>();
+    for (const row of factory.rows) {
+      const parsed = parseCatalogNumber(row.approximateWeight);
+      if (parsed !== null && !map.has(row.size)) {
+        map.set(row.size, parsed);
+      }
+    }
+    if (map.size > 0) {
+      weightByFactorySize.set(factory.name, map);
+    }
+  }
+
+  const mills = TOP_REBAR_MILLS.filter((name) =>
+    weightByFactorySize.has(name),
+  );
+  const rows: RebarMillWeightRow[] = [];
+
+  for (const size of REBAR_MILL_WEIGHT_SIZES) {
+    const diameterMm = parseCatalogNumber(size);
+    if (diameterMm === null) continue;
+    const rawStahl = calculateRebarWeight(diameterMm, 12, 1);
+    if (rawStahl === null) continue;
+    const stahlKg = round(rawStahl, 2);
+
+    const weightsByMill: Record<string, number | null> = {};
+    for (const mill of mills) {
+      weightsByMill[mill] = weightByFactorySize.get(mill)?.get(size) ?? null;
+    }
+
+    const allMillWeightsForSize: number[] = [];
+    for (const millMap of weightByFactorySize.values()) {
+      const value = millMap.get(size);
+      if (value !== undefined) allMillWeightsForSize.push(value);
+    }
+
+    rows.push({
+      size,
+      diameterMm,
+      stahlKg,
+      branchesPerTon: Math.round(1000 / rawStahl),
+      minMillKg: allMillWeightsForSize.length
+        ? Math.min(...allMillWeightsForSize)
+        : null,
+      maxMillKg: allMillWeightsForSize.length
+        ? Math.max(...allMillWeightsForSize)
+        : null,
+      weightsByMill,
+    });
+  }
+
+  return { mills: [...mills], rows };
+}
+
+function buildRebarPriceBridge(rebar?: {
+  categories: CatalogCategory[];
+}): RebarPriceBridge | null {
+  const ribbed = rebar?.categories.find((item) => item.id === "ribbed");
+  if (!ribbed) return null;
+  const state = categoryPricingState(ribbed);
+  const summary = categoryCredibleSummary(ribbed);
+  if (!hasDisplayablePriceRange(state, summary)) return null;
+
+  return {
+    href: subcategoryHref("rebar", "ribbed"),
+    simpleHref: subcategoryHref("rebar", "simple"),
+    date: ribbed.summary.date,
+    min: summary.min,
+    max: summary.max,
+    average: summary.average,
+    factoryCount: ribbed.filters.factories.length,
+  };
+}
+
 export function buildGuideReference(
   snapshot: CatalogSnapshot,
 ): GuideReference {
@@ -385,6 +524,8 @@ export function buildGuideReference(
     sourceDateLabel,
     sourceDateIso,
     rebarTables: rebarCatalog ? buildRebarTables(rebarCatalog) : [],
+    rebarMillTable: buildRebarMillWeightTable(rebarCatalog),
+    ribbedPriceBridge: buildRebarPriceBridge(rebarCatalog),
     beamTable: beamCatalog
       ? buildBeamTable(beamCatalog)
       : {

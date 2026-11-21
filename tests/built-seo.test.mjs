@@ -137,7 +137,7 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     // Title
     const titleMatch = html.match(/<title>([^<]+)<\/title>/)?.[1];
     assert.ok(titleMatch, `${pagePath} must have a title`);
-    assert.match(titleMatch, new RegExp(`قیمت ${sub.label}`));
+    assert.match(titleMatch, new RegExp(`قیمت (?:روز )?${sub.label}`));
     titles.add(titleMatch);
 
     // Canonical
@@ -684,9 +684,13 @@ test("guide pages emit Article structured data with factual publication and modi
       /"datePublished":"2026-08-17"/,
       `${pagePath} must contain the Git-sourced first-publication date`,
     );
+    const expectedLastmod =
+      pagePath === "guide/rebar-weight-chart/index.html"
+        ? "2026-11-21"
+        : "2026-08-17";
     assert.match(
       html,
-      /"dateModified":"2026-08-17"/,
+      new RegExp(`"dateModified":"${expectedLastmod}"`),
       `${pagePath} must contain factual lastmod as dateModified`,
     );
     assert.match(
@@ -729,7 +733,7 @@ test("category and subcategory pages use category-specific og:image and distinct
 
   // H1 and H2 distinctness on subcategory page
   const h1Match = ribbedHtml.match(/<h1><span>([^<]+)<\/span><\/h1>/)?.[1];
-  assert.equal(h1Match, "قیمت روز میلگرد آجدار");
+  assert.equal(h1Match, "قیمت روز میلگرد آجدار (گرید A2، A3 و A4)");
   assert.match(
     ribbedHtml,
     /<h2>جدول قیمت و مشخصات فنی میلگرد آجدار<\/h2>/,
@@ -1188,4 +1192,72 @@ test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting
       firstCardHtml.indexOf('<td data-label="ضخامت">۱۵</td>'),
     "A516 rows must be numerically sorted so ۴ precedes ۱۵",
   );
+});
+
+
+test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, zero-price CTA, and schemas render cleanly", async () => {
+  const extractJsonLd = (html) =>
+    [
+      ...html.matchAll(
+        /<script(?:\s+[^>]*)?\s+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g,
+      ),
+    ].map((m) => JSON.parse(m[1]));
+
+  const homeHtml = await readDist("index.html");
+  for (const href of [
+    "/rebar/ribbed/",
+    "/sheet/black-sheet/",
+    "/pipe/seamless-pipe/",
+    "/profile/box-profile/",
+    "/wire/steel-wire/",
+    "/pipe/thick-wall-pipe/",
+    "/pipe/scaffold-pipe/",
+    "/sheet/sheet-ck45/",
+    "/sheet/sheet-a516/",
+  ]) {
+    assert.match(
+      homeHtml,
+      new RegExp(`href="${href}"`),
+      `homepage overview must link directly to ${href}`,
+    );
+  }
+
+  const rebarChartHtml = await readDist("guide/rebar-weight-chart/index.html");
+  assert.match(rebarChartHtml, /class="quick-answer-grid"/);
+  assert.match(rebarChartHtml, /id="rebar-weight-calculator"/);
+  assert.match(rebarChartHtml, /مقایسه وزن واقعی شاخه ۱۲ متری کارخانه‌های ایران/);
+  assert.match(rebarChartHtml, /سؤالات متداول وزن میلگرد/);
+  const rebarSchemas = extractJsonLd(rebarChartHtml);
+  assert.ok(rebarSchemas.some((s) => s["@type"] === "Article"));
+  assert.ok(rebarSchemas.some((s) => s["@type"] === "Dataset"));
+  const rebarFaq = rebarSchemas.find((s) => s["@type"] === "FAQPage");
+  assert.ok(rebarFaq && rebarFaq.mainEntity.length >= 5);
+
+  const moneyRoutes = [
+    ["pipe/thick-wall-pipe/index.html", "/pipe/seamless-pipe/"],
+    ["pipe/scaffold-pipe/index.html", "/pipe/galvanized-pipe/"],
+    ["sheet/sheet-ck45/index.html", "/rebar/alloy/"],
+    ["rebar/ribbed/index.html", "/guide/rebar-weight-chart/"],
+    ["sheet/sheet-a516/index.html", "/sheet/sheet-st52/"],
+  ];
+
+  for (const [relPath, expectedLink] of moneyRoutes) {
+    const html = await readDist(relPath);
+    assert.match(html, /class="subcategory-guide"/, `${relPath} must render buying guide section`);
+    assert.match(html, /class="subcategory-faq-list"/, `${relPath} must render visible FAQ`);
+    assert.match(html, new RegExp(`href="${expectedLink}"`), `${relPath} must cross-link ${expectedLink}`);
+    const schemas = extractJsonLd(html);
+    assert.ok(schemas.some((s) => s["@type"] === "CollectionPage"), `${relPath} must emit CollectionPage`);
+    assert.ok(schemas.some((s) => s["@type"] === "FAQPage"), `${relPath} must emit FAQPage`);
+    assert.doesNotMatch(
+      html,
+      /"@type"\s*:\s*"(?:Product|Offer|AggregateOffer)"/,
+      `${relPath} must remain free of Product/Offer schemas`,
+    );
+  }
+
+  const ck45Html = await readDist("sheet/sheet-ck45/index.html");
+  assert.match(ck45Html, /class="zero-price-inquiry-card"/);
+  assert.match(ck45Html, /tel:\+982188888280/);
+  assert.match(ck45Html, /https:\/\/chat\.whatsapp\.com\//);
 });

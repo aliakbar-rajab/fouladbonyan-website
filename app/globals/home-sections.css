@@ -398,7 +398,36 @@
 .overview-cell-types {
   color: #b5b6bc;
   font-size: 0.88rem;
-  max-width: 200px;
+  min-width: 205px;
+  max-width: 265px;
+}
+
+.overview-sub-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.overview-sub-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e4e6ec;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.overview-sub-link:hover,
+.overview-sub-link:focus-visible {
+  border-color: rgba(246, 181, 0, 0.7);
+  background: rgba(246, 181, 0, 0.14);
+  color: #ffd96a;
 }
 
 .price-range-group {

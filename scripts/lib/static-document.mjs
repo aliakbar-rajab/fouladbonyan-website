@@ -233,6 +233,54 @@ export function buildArticleJsonLd({
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
+export function buildFaqJsonLd(faqs) {
+  if (!faqs || !faqs.length) return "";
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    inLanguage: "fa",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
+export function buildDatasetJsonLd({
+  name,
+  description,
+  url,
+  dateModified,
+  siteUrl,
+}) {
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name,
+    description,
+    url,
+    inLanguage: "fa",
+    ...(dateModified ? { dateModified } : {}),
+    creator: {
+      "@type": "Organization",
+      name: siteConfig.brand.name,
+      url: `${siteUrl}/`,
+    },
+    variableMeasured: [
+      "قطر میلگرد (میلی‌متر)",
+      "وزن هر متر میلگرد (کیلوگرم)",
+      "وزن شاخه ۱۲ متری میلگرد (کیلوگرم)",
+      "وزن واقعی میلگرد کارخانه‌های ایران",
+    ],
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
 const replaceMetaContent = (html, attrMatcher, value) =>
   html.replace(
     new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),

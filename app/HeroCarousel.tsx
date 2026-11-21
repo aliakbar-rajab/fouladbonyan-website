@@ -12,6 +12,7 @@ import { Breadcrumb } from "./Breadcrumb";
 import { pageBreadcrumb } from "./site-page";
 import { getHeroImageSources } from "./image-utils";
 import { ArrowIcon } from "./icons";
+import { getSubcategoryContent } from "./subcategory-content";
 import {
   carouselReducer,
   initialCarouselState,
@@ -116,11 +117,20 @@ export function HeroCarousel({
   if (categoryGroup) {
     const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
     const heroSources = getHeroImageSources(heroImg);
+    const customSubContent = subcategory
+      ? getSubcategoryContent(categoryGroup.id, subcategory.id)
+      : undefined;
     const displayLabel = subcategory ? subcategory.label : categoryGroup.label;
-    const displayH1 = subcategory ? `قیمت روز ${subcategory.label}` : categoryGroup.h1;
-    const displayIntro = subcategory
-      ? `استعلام قیمت روز ${subcategory.label} از کارخانه‌های معتبر کشور. برای دریافت پیش‌فاکتور، استعلام موجودی و مشاوره تخصصی خرید ${subcategory.label} با واحد فروش بنیان فولاد داریا تماس بگیرید.`
-      : categoryGroup.intro;
+    const displayH1 = customSubContent
+      ? customSubContent.h1
+      : subcategory
+        ? `قیمت روز ${subcategory.label}`
+        : categoryGroup.h1;
+    const displayIntro = customSubContent
+      ? customSubContent.heroIntro
+      : subcategory
+        ? `استعلام قیمت روز ${subcategory.label} از کارخانه‌های معتبر کشور. برای دریافت پیش‌فاکتور، استعلام موجودی و مشاوره تخصصی خرید ${subcategory.label} با واحد فروش بنیان فولاد داریا تماس بگیرید.`
+        : categoryGroup.intro;
 
     const breadcrumbItems = pageBreadcrumb({
       kind: "catalog",

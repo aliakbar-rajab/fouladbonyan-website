@@ -5,6 +5,7 @@ import {
   subcategoryHref,
 } from "../../app/category-meta.ts";
 import {
+  REBAR_WEIGHT_FAQS,
   guideIndex,
   guidePageDefinitions,
   guidePageKeys,
@@ -22,11 +23,14 @@ import {
   pagePayloadIds,
 } from "../../app/site-page.ts";
 import { loadPageElement, routePageSource } from "../../app/site-page-element.tsx";
+import { getSubcategoryContent } from "../../app/subcategory-content.ts";
 import {
   HERO_OG_IMAGE,
   buildArticleJsonLd,
   buildCatalogCollectionJsonLd,
   buildContactPageJsonLd,
+  buildDatasetJsonLd,
+  buildFaqJsonLd,
   buildHeroPreloadTag,
   routeLocation,
 } from "./static-document.mjs";
@@ -212,6 +216,7 @@ export async function collectSitePageDescriptors({
           subcategory: sub.id,
           subcategoryLabel: sub.label,
         });
+        const subContent = getSubcategoryContent(group.id, sub.id);
         pages.push({
           ...describedSub,
           lastmod,
@@ -221,7 +226,7 @@ export async function collectSitePageDescriptors({
           heroPreload,
           payloads: subcategoryPayloads,
           organizationData: null,
-          extraHeadHtml: buildCatalogCollectionJsonLd({
+          extraHeadHtml: `${buildCatalogCollectionJsonLd({
             title: describedSub.title,
             description: describedSub.description,
             pageUrl: describedSub.pageUrl,
@@ -230,7 +235,7 @@ export async function collectSitePageDescriptors({
             items: sub.factories.map((factory) => ({
               name: `قیمت ${sub.label} ${factory.name}`,
             })),
-          }),
+          })}${subContent?.faqs.length ? buildFaqJsonLd(subContent.faqs) : ""}`,
         });
       }
     }
@@ -294,6 +299,16 @@ export async function collectSitePageDescriptors({
   for (const key of guidePageKeys) {
     const definition = guidePageDefinitions[key];
     const described = await describeGuide({ kind: "guide", guide: key });
+    const rebarWeightSchemas =
+      key === "rebar-weight-chart"
+        ? `${buildDatasetJsonLd({
+            name: definition.title,
+            description: described.description,
+            url: described.pageUrl,
+            dateModified: snapshot.fetchedAt,
+            siteUrl,
+          })}${buildFaqJsonLd(REBAR_WEIGHT_FAQS)}`
+        : "";
     pages.push({
       ...described,
       lastmod: definition.lastmod,
@@ -303,7 +318,7 @@ export async function collectSitePageDescriptors({
       // These five carry Article JSON-LD, so the Open Graph type has to agree.
       // The guide index above is a listing, and stays the template's "website".
       ogType: "article",
-      extraHeadHtml: buildArticleJsonLd({
+      extraHeadHtml: `${buildArticleJsonLd({
         headline: definition.title,
         description: described.description,
         pageUrl: described.pageUrl,
@@ -311,7 +326,7 @@ export async function collectSitePageDescriptors({
         lastmod: definition.lastmod,
         siteUrl,
         image: guideImages[key],
-      }),
+      })}${rebarWeightSchemas}`,
     });
   }
 

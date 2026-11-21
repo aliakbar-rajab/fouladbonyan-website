@@ -7,6 +7,7 @@ import { guideIndex, guidePageDefinitions } from "./guide-page-data";
 import { infoPageDefinitions } from "./info-page-data";
 import { siteConfig } from "./site-config";
 import { siteRoutePath, type SiteRoute } from "./site-route";
+import { getSubcategoryContent } from "./subcategory-content";
 
 /**
  * The Site page: what a page of the site is, apart from how it is rendered.
@@ -64,6 +65,10 @@ export function pageHead(route: SiteRoute): PageHead {
       const { group, subcategory } = catalogPage(route);
       if (!subcategory) {
         return { title: group.seoTitle, description: group.seoDescription };
+      }
+      const custom = getSubcategoryContent(group.id, subcategory.id);
+      if (custom) {
+        return { title: custom.seoTitle, description: custom.seoDescription };
       }
       return {
         title: `قیمت ${subcategory.label} امروز | ${siteConfig.brand.name}`,

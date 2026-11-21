@@ -163,20 +163,24 @@ test("the homepage product navigation does not claim a category page is current"
     "The homepage product guide must not imply a user selection",
   );
 
-  const expectedCategories = [
-    "rebar",
-    "beam",
-    "sheet",
-    "profile",
-    "pipe",
-    "angle",
-    "channel",
-    "wire",
+  const expectedFlagshipRoutes = [
+    "/rebar/ribbed/",
+    "/beam/",
+    "/sheet/black-sheet/",
+    "/profile/box-profile/",
+    "/pipe/seamless-pipe/",
+    "/angle/",
+    "/channel/",
+    "/wire/steel-wire/",
   ];
-  for (const catId of expectedCategories) {
-    const link = overviewTable.querySelector(`a[href="/${catId}/"]`);
-    assert.ok(link, `Homepage overview must have crawlable link to /${catId}/`);
+  for (const href of expectedFlagshipRoutes) {
+    const link = overviewTable.querySelector(`a[href="${href}"]`);
+    assert.ok(link, `Homepage overview must have 1-click link to flagship route ${href}`);
   }
+  assert.ok(
+    overviewTable.querySelector('a[href="/pipe/thick-wall-pipe/"]'),
+    "Homepage overview must expose direct subcategory quick-links",
+  );
 
   await waitFor(() => assert.ok(screen.getAllByRole("table").length > 0));
 });
@@ -276,7 +280,7 @@ test("a subcategory route resolved from pathname or without explicit label resol
 
   assert.equal(
     screen.getByRole("heading", { level: 1 }).textContent,
-    "قیمت روز میلگرد آجدار",
+    "قیمت روز میلگرد آجدار (گرید A2، A3 و A4)",
   );
   const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
   assert.ok(breadcrumb);

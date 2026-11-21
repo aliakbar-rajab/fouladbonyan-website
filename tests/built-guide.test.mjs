@@ -55,9 +55,10 @@ test("F10: editorial guide pages exist with unique metadata, prerendered content
     // Exactly one H1, and it is this page's own
     const allH1s = html.match(/<h1[^>]*>[\s\S]*?<\/h1>/g) ?? [];
     assert.equal(allH1s.length, 1, `${page.path} must contain exactly one H1`);
+    const escapedH1 = page.h1.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.match(
       html,
-      new RegExp(`<h1[^>]*>${page.h1}</h1>`),
+      new RegExp(`<h1[^>]*>${escapedH1}</h1>`),
       `${page.path} must render its own H1`,
     );
     h1s.add(page.h1);
@@ -103,9 +104,16 @@ test("F10: editorial guide pages exist with unique metadata, prerendered content
       `${page.path} breadcrumb must end on itself`,
     );
 
-    // Guide pages are informational, not Organization/Product carriers
+    // Guide pages are informational, not Organization/Product carriers;
+    // rebar-weight-chart carries visible FAQs backed by FAQPage + Dataset JSON-LD.
     assert.doesNotMatch(html, /<script id="organization-structured-data"/);
-    assert.doesNotMatch(html, /"@type":"FAQPage"/);
+    assert.doesNotMatch(html, /"@type":"(?:Product|Offer|AggregateOffer)"/);
+    if (page.path === "guide/rebar-weight-chart/index.html") {
+      assert.match(html, /"@type":"FAQPage"/);
+      assert.match(html, /"@type":"Dataset"/);
+    } else {
+      assert.doesNotMatch(html, /"@type":"FAQPage"/);
+    }
     // These pages render no hero, so they must not inherit its preload hint.
     assert.doesNotMatch(
       html,

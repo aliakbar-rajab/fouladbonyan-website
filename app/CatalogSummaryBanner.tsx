@@ -6,8 +6,11 @@ import {
   hasDisplayablePriceRange,
 } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
+import { ContactLink } from "./ContactLink";
 import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
 import { presentPrice } from "./catalog-presentation";
+import { QUOTE_FORM_HREF } from "./quote-handoff";
+import { siteConfig } from "./site-config";
 
 function StatMarker({ type }: { type: "max" | "min" | "change" | "average" }) {
   return (
@@ -62,10 +65,29 @@ export function CatalogSummaryBanner({
         قیمت {category.label}
       </h3>
       {!pricingState.hasPrices ? (
-        <p>
-          قیمت عددی {category.label} امروز اعلام نشده است. برای استعلام
-          قیمت و موجودی با واحد فروش تماس بگیرید.
-        </p>
+        <div className="zero-price-inquiry-card" role="region" aria-label={`استعلام فوری ${category.label}`}>
+          <p>
+            قیمت عددی {category.label} امروز اعلام نشده است. برای استعلام قیمت
+            روز، موجودی ضخامت/سایز و ثبت سفارش با واحد فروش تماس بگیرید یا
+            درخواست پیش‌فاکتور ثبت کنید.
+          </p>
+          <div className="zero-price-actions">
+            <ContactLink className="zero-price-btn is-primary">
+              تماس فوری با فروش ({siteConfig.contact.phones[0].label})
+            </ContactLink>
+            <a
+              href={siteConfig.contact.whatsappCommunityUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="zero-price-btn"
+            >
+              استعلام در واتساپ
+            </a>
+            <a href={QUOTE_FORM_HREF} className="zero-price-btn">
+              درخواست پیش‌فاکتور {category.label}
+            </a>
+          </div>
+        </div>
       ) : pricingState.units.length > 1 ? (
         <p>
           قیمت‌های {category.label} با واحدهای فروش متفاوت ثبت شده‌اند؛

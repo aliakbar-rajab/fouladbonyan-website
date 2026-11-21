@@ -4,12 +4,19 @@ import { formatPersianNumber } from "./persian-numbers.mjs";
 import { parsePersianNumber } from "./persian-numbers.mjs";
 
 /**
- * Rebar-only sidebar tool. It lives outside the shared catalog so the catalog
- * carries no product-specific markup: the rebar route passes it in as the
- * catalog's sidebar extra, every other route passes nothing.
+ * Interactive rebar weight calculator used both as a collapsible sidebar tool
+ * on /rebar/* and expanded inline on /guide/rebar-weight-chart/.
  */
-export function RebarWeightCalculator() {
-  const [open, setOpen] = useState(false);
+export function RebarWeightCalculator({
+  defaultOpen = false,
+  averagePricePerKg = null,
+  showGuideLink = true,
+}: {
+  defaultOpen?: boolean;
+  averagePricePerKg?: number | null;
+  showGuideLink?: boolean;
+} = {}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [diameter, setDiameter] = useState("16");
   const [length, setLength] = useState("12");
   const [quantity, setQuantity] = useState("1");
@@ -125,9 +132,23 @@ export function RebarWeightCalculator() {
               کیلوگرم
             </strong>
           </p>
-          <a href="/guide/rebar-weight-chart/" className="calculator-guide-link">
-            مشاهده جدول کامل وزن میلگرد و فرمول محاسباتی ←
-          </a>
+          {averagePricePerKg && averagePricePerKg > 0 ? (
+            <p className="calculator-cost-estimate">
+              برآورد قیمت (بر پایه میانگین میلگرد آجدار):
+              <strong>
+                {weight === null
+                  ? " — "
+                  : ` ${formatPersianNumber(Math.round(weight * averagePricePerKg))} `}
+                تومان
+              </strong>
+              <a href="/rebar/ribbed/">مشاهده قیمت روز میلگرد آجدار</a>
+            </p>
+          ) : null}
+          {showGuideLink ? (
+            <a href="/guide/rebar-weight-chart/" className="calculator-guide-link">
+              مشاهده جدول کامل وزن میلگرد و فرمول محاسباتی ←
+            </a>
+          ) : null}
         </div>
       ) : null}
     </section>

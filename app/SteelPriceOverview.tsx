@@ -1,5 +1,5 @@
 import { QUOTE_FORM_HREF } from "./quote-handoff";
-import { subcategoryHref } from "./category-meta";
+import { subcategoryHref, type ProductGroupId } from "./category-meta";
 import { useEffect, useState } from "react";
 import {
   buildFallbackOverviews,
@@ -15,6 +15,88 @@ import {
 } from "./catalog-presentation";
 import { getThumbnailSources } from "./image-utils";
 import { ContactLink } from "./ContactLink";
+
+const OVERVIEW_FLAGSHIP_SUBCATEGORY: Partial<Record<ProductGroupId, string>> = {
+  rebar: "ribbed",
+  sheet: "black-sheet",
+  pipe: "seamless-pipe",
+  profile: "box-profile",
+  wire: "steel-wire",
+};
+
+const OVERVIEW_QUICK_SUBCATEGORIES: Record<
+  ProductGroupId,
+  readonly { id?: string; label: string }[]
+> = {
+  rebar: [
+    { id: "ribbed", label: "میلگرد آجدار" },
+    { id: "simple", label: "ساده" },
+    { id: "stainless", label: "استیل" },
+    { id: "alloy", label: "آلیاژی" },
+  ],
+  beam: [
+    { label: "تیرآهن IPE" },
+    { id: "hash", label: "تیرآهن هاش" },
+  ],
+  sheet: [
+    { id: "black-sheet", label: "ورق سیاه" },
+    { id: "galvanized-sheet", label: "گالوانیزه" },
+    { id: "oily-sheet", label: "روغنی" },
+    { id: "sheet-st52", label: "ST52" },
+    { id: "sheet-a516", label: "A516" },
+    { id: "sheet-ck45", label: "CK45" },
+  ],
+  profile: [
+    { id: "box-profile", label: "قوطی آهنی" },
+    { id: "building-profile", label: "ساختمانی" },
+    { id: "industrial-profile", label: "صنعتی" },
+    { id: "furniture-profile", label: "مبلی" },
+    { id: "galvanized-profile", label: "گالوانیزه" },
+  ],
+  pipe: [
+    { id: "seamless-pipe", label: "مانیسمان" },
+    { id: "thick-wall-pipe", label: "گوشتدار" },
+    { id: "scaffold-pipe", label: "داربست" },
+    { id: "gas-pipe", label: "گاز" },
+    { id: "galvanized-pipe", label: "گالوانیزه" },
+  ],
+  angle: [{ label: "نبشی فابریک و پرسی" }],
+  channel: [{ label: "ناودانی سبک و سنگین" }],
+  wire: [
+    { id: "steel-wire", label: "سیم مفتول" },
+    { id: "rib-lath", label: "رابیتس" },
+    { id: "steel-mesh", label: "مش" },
+    { id: "chicken-mesh", label: "توری مرغی" },
+    { id: "chain-link-mesh", label: "حصاری" },
+  ],
+};
+
+function overviewFlagshipHref(groupId: ProductGroupId): string {
+  return subcategoryHref(groupId, OVERVIEW_FLAGSHIP_SUBCATEGORY[groupId]);
+}
+
+function OverviewQuickLinks({
+  groupId,
+  label,
+}: {
+  groupId: ProductGroupId;
+  label: string;
+}) {
+  const links = OVERVIEW_QUICK_SUBCATEGORIES[groupId] ?? [];
+  return (
+    <nav className="overview-sub-links" aria-label={`زیرگروه‌های ${label}`}>
+      {links.map((entry) => (
+        <a
+          key={`${groupId}-${entry.id ?? "root"}`}
+          href={subcategoryHref(groupId, entry.id)}
+          className="overview-sub-link"
+        >
+          {entry.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
 
 function formatStatusText(status: string, percent: number): string {
   const trend = getTrendPresentation(status, percent);
@@ -93,11 +175,12 @@ export function SteelPriceOverview() {
           <tbody>
             {summaries.map((item) => {
               const thumbs = getThumbnailSources(item.image);
+              const targetHref = overviewFlagshipHref(item.id);
               return (
                 <tr key={item.id} className="overview-row">
                   <td className="overview-cell-group">
                     <a
-                      href={subcategoryHref(item.id)}
+                      href={targetHref}
                       className="overview-group-link"
                       title={`مشاهده جدول کامل قیمت ${item.label}`}
                     >
@@ -118,7 +201,7 @@ export function SteelPriceOverview() {
                     </a>
                   </td>
                   <td className="overview-cell-types">
-                    <span>{item.subTypes}</span>
+                    <OverviewQuickLinks groupId={item.id} label={item.label} />
                   </td>
                   <td className="overview-cell-price">
                     {item.priceRanges.length ? (
@@ -161,7 +244,7 @@ export function SteelPriceOverview() {
                   </td>
                   <td className="overview-cell-action">
                     <a
-                      href={subcategoryHref(item.id)}
+                      href={targetHref}
                       className="overview-action-link"
                       aria-label={`مشاهده جدول قیمت و مشخصات ${item.label}`}
                     >
@@ -178,6 +261,7 @@ export function SteelPriceOverview() {
       <div className="overview-mobile-cards" role="group" aria-label="فهرست خلاصه قیمت‌ها">
         {summaries.map((item) => {
           const thumbs = getThumbnailSources(item.image);
+          const targetHref = overviewFlagshipHref(item.id);
           return (
             <article key={item.id} className="overview-card">
               <div className="overview-card-header">
@@ -196,9 +280,9 @@ export function SteelPriceOverview() {
                 </picture>
                 <div>
                   <h4>
-                    <a href={subcategoryHref(item.id)}>قیمت {item.label}</a>
+                    <a href={targetHref}>قیمت {item.label}</a>
                   </h4>
-                  <p>{item.subTypes}</p>
+                  <OverviewQuickLinks groupId={item.id} label={item.label} />
                 </div>
               </div>
               <div className="overview-card-details">
@@ -219,7 +303,7 @@ export function SteelPriceOverview() {
                     <strong>{emptyPriceText(loaded)}</strong>
                   )}
                 </div>
-                <a href={subcategoryHref(item.id)} className="overview-card-btn">
+                <a href={targetHref} className="overview-card-btn">
                   مشاهده جدول کامل
                 </a>
               </div>

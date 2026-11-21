@@ -1,5 +1,7 @@
 .rebar-prices {
   margin-top: 1.25rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .rebar-kind-tabs {
@@ -787,6 +789,14 @@
   font-size: 0.9rem;
 }
 
+.calculator-cost-estimate a {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: #6f4e00;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
 .price-source-card,
 .rebar-contact-card {
   display: grid;
@@ -1269,11 +1279,11 @@
   color: #8c5d12;
 }
 
-.beam-guide-card {
+.sidebar-guide-card {
   padding: 1rem;
 }
 
-.beam-guide-card-header {
+.sidebar-guide-card-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1285,14 +1295,16 @@
   border-bottom: 1px solid #e8e9ec;
 }
 
-.beam-guide-card-links {
+.sidebar-guide-card-links {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.beam-guide-card-links a {
-  display: block;
+.sidebar-guide-card-links a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   background: #f6f7f9;
@@ -1303,7 +1315,271 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.beam-guide-card-links a:hover {
+.sidebar-guide-card-links a:hover {
   background: #ebecef;
   color: #0b57d0;
+}
+
+.zero-price-inquiry-card {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.45rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e4c66d;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.zero-price-inquiry-card p {
+  margin: 0;
+  color: #2f2a1d;
+  font-size: 0.9rem;
+  line-height: 1.85;
+}
+
+.zero-price-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.zero-price-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #cfd3dc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2229;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.zero-price-btn:hover {
+  border-color: #8a6500;
+  background: #f7f8fa;
+}
+
+.zero-price-btn.is-primary {
+  border-color: var(--brand-yellow);
+  background: var(--brand-yellow);
+  color: #14161a;
+}
+
+.zero-price-btn.is-primary:hover {
+  background: #f0b200;
+}
+
+.subcategory-guide {
+  margin-top: 1.5rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.subcategory-guide-card {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #dedfe5;
+  border-radius: 12px;
+  background: var(--white);
+  box-shadow: 0 8px 22px rgb(26 28 36 / 5%);
+}
+
+.subcategory-guide-header {
+  padding: 1.15rem 1.4rem;
+  border-bottom: 1px solid #d7dcdf;
+  background: #f4f5f7;
+}
+
+.subcategory-guide-header h2 {
+  margin: 0;
+  color: #1b1e24;
+  font-size: clamp(1.08rem, 2vw, 1.32rem);
+  font-weight: 900;
+}
+
+.subcategory-guide-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1.4rem;
+  min-width: 0;
+}
+
+.subcategory-guide-block {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.subcategory-guide-block h3 {
+  margin: 0 0 0.65rem;
+  color: #20242c;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.subcategory-guide-block p {
+  margin: 0 0 0.75rem;
+  color: #41454f;
+  font-size: 0.92rem;
+  line-height: 1.95;
+}
+
+.subcategory-guide-block p:last-child {
+  margin-bottom: 0;
+}
+
+.subcategory-guide-list {
+  margin: 0.6rem 0 0;
+  padding-inline-start: 1.3rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.subcategory-guide-list li {
+  color: #3b3f49;
+  font-size: 0.9rem;
+  line-height: 1.85;
+}
+
+.subcategory-spec-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid #dcdfe6;
+  border-radius: 10px;
+}
+
+.subcategory-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: start;
+}
+
+.subcategory-spec-table caption {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #dcdfe6;
+  background: #f4f5f7;
+  color: #2c303a;
+  font-weight: 800;
+  text-align: start;
+}
+
+.subcategory-spec-table th,
+.subcategory-spec-table td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid #e6e8ee;
+  color: #2e323c;
+  text-align: start;
+}
+
+.subcategory-spec-table thead th {
+  background: #232730;
+  color: #ffffff;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.subcategory-spec-table tbody tr:nth-child(even) {
+  background: #f6f7f9;
+}
+
+.subcategory-spec-table tbody tr:last-child th,
+.subcategory-spec-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.subcategory-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: 0.75rem;
+}
+
+.subcategory-related-card {
+  display: grid;
+  gap: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #d9dce3;
+  border-radius: 10px;
+  background: #f7f8fa;
+  color: #272b34;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.subcategory-related-card:hover {
+  border-color: #b78500;
+  background: #ffffff;
+}
+
+.subcategory-related-card strong {
+  color: #171b22;
+  font-size: 0.9rem;
+}
+
+.subcategory-related-card span {
+  color: #505561;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.subcategory-faq-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.subcategory-faq-item {
+  padding: 0.9rem 1rem;
+  border: 1px solid #e1e4ea;
+  border-radius: 10px;
+  background: #f8f9fb;
+}
+
+.subcategory-faq-item h4 {
+  margin: 0 0 0.4rem;
+  color: #1c2028;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.subcategory-faq-item p {
+  margin: 0;
+  color: #464a55;
+  font-size: 0.88rem;
+  line-height: 1.85;
+}
+
+.subcategory-guide-cta a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  background: var(--brand-yellow);
+  color: #14161a;
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.subcategory-guide-cta a:hover {
+  background: #f0b200;
+}
+
+@media (max-width: 640px) {
+  .subcategory-guide-header,
+  .subcategory-guide-body {
+    padding: 1rem;
+  }
+
+  .zero-price-actions {
+    flex-direction: column;
+  }
 }

@@ -18,6 +18,7 @@ import { useCatalogData } from "./use-catalog-data";
 import { CatalogSummaryBanner } from "./CatalogSummaryBanner";
 import { FactoryPriceCardList } from "./FactoryPriceCardList";
 import { CatalogFilterSidebar } from "./CatalogFilterSidebar";
+import { SubcategoryGuideSection } from "./SubcategoryGuideSection";
 
 const tabClassNames: Partial<Record<ProductGroupId, string>> = {
   beam: "beam-kind-tabs",
@@ -186,19 +187,51 @@ export function PriceCatalog({
           />
         </div>
       </div>
+
+      <SubcategoryGuideSection
+        catalogId={catalog.id}
+        categoryId={category.id}
+      />
     </div>
+  );
+}
+
+function RebarGuideSidebar() {
+  return (
+    <section
+      className="calculator-card sidebar-guide-card"
+      aria-label="راهنماهای فنی میلگرد"
+    >
+      <div className="sidebar-guide-card-header">
+        <span aria-hidden="true">📐</span>
+        <strong>راهنمای فنی میلگرد</strong>
+      </div>
+      <div className="sidebar-guide-card-links">
+        <a href="/guide/rebar-weight-chart/">
+          جدول وزن میلگرد آجدار و مقایسه کارخانه‌ها
+        </a>
+        <a href="/guide/ribbed-vs-plain-rebar/">
+          راهنمای تفاوت میلگرد آجدار و ساده
+        </a>
+      </div>
+    </section>
   );
 }
 
 function BeamGuideSidebar() {
   return (
-    <section className="calculator-card beam-guide-card" aria-label="راهنماهای فنی تیرآهن">
-      <div className="beam-guide-card-header">
+    <section
+      className="calculator-card sidebar-guide-card"
+      aria-label="راهنماهای فنی تیرآهن"
+    >
+      <div className="sidebar-guide-card-header">
         <span aria-hidden="true">📊</span>
         <strong>راهنماهای فنی تیرآهن</strong>
       </div>
-      <div className="beam-guide-card-links">
-        <a href="/guide/beam-weight-chart/">جدول وزن تیرآهن IPE به تفکیک کارخانه</a>
+      <div className="sidebar-guide-card-links">
+        <a href="/guide/beam-weight-chart/">
+          جدول وزن تیرآهن IPE به تفکیک کارخانه
+        </a>
         <a href="/guide/ipe-vs-hash-beam/">راهنمای تفاوت تیرآهن IPE و هاش</a>
       </div>
     </section>
@@ -207,7 +240,12 @@ function BeamGuideSidebar() {
 
 /** Product-specific sidebar tools, by group. */
 const sidebarExtras: Partial<Record<ProductGroupId, ReactNode>> = {
-  rebar: <RebarWeightCalculator />,
+  rebar: (
+    <>
+      <RebarWeightCalculator />
+      <RebarGuideSidebar />
+    </>
+  ),
   beam: <BeamGuideSidebar />,
 };
 
