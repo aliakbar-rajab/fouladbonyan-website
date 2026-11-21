@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { access, readdir, stat } from "node:fs/promises";
 import { productGroups } from "../app/category-meta.ts";
+import { siteConfig } from "../app/site-config.ts";
 import { parseBreadcrumbLd, readDist } from "./helpers/dist.mjs";
 
 test("production output contains required GitHub Pages files", async () => {
@@ -87,11 +88,27 @@ test("built HTML uses root-safe assets and production metadata", async () => {
   assert.match(html, /\/preloader\/fb-preloader\.js/);
   assert.doesNotMatch(html, /localhost|pages-dist|_next/);
 
-  // Organization JSON-LD is emitted only where the full address is visible.
-  assert.doesNotMatch(
-    html,
-    /<script id="organization-structured-data"/,
-    "Homepage must not emit Organization JSON-LD",
+  // Homepage emits unified @graph containing Organization + WebSite, corroborated by visible footer address.
+  const homeOrgMatch = html.match(
+    /<script id="organization-structured-data" type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  )?.[1];
+  assert.ok(homeOrgMatch, "Homepage must emit @graph JSON-LD inside organization-structured-data");
+  const homeGraphPayload = JSON.parse(homeOrgMatch);
+  assert.ok(Array.isArray(homeGraphPayload["@graph"]), "Homepage schema must use @graph");
+  const homeOrg = homeGraphPayload["@graph"].find((n) => n["@type"] === "Organization");
+  const homeWebSite = homeGraphPayload["@graph"].find((n) => n["@type"] === "WebSite");
+  assert.ok(homeOrg && homeWebSite, "Homepage @graph must include Organization and WebSite");
+  assert.equal(homeWebSite.publisher?.["@id"], homeOrg["@id"]);
+  assert.ok(Array.isArray(homeOrg.contactPoint) && homeOrg.contactPoint.length > 0);
+  assert.deepEqual(homeOrg.sameAs, [siteConfig.contact.whatsappCommunityUrl]);
+
+  const homeWithoutJsonLd = html.replace(
+    /<script\b[^>]*\btype="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
+    "",
+  );
+  assert.ok(
+    homeWithoutJsonLd.includes(siteConfig.business.address),
+    "Homepage footer must render full business address to corroborate Organization JSON-LD",
   );
 
   const contactHtml = await readDist("contact/index.html");
@@ -107,6 +124,7 @@ test("built HTML uses root-safe assets and production metadata", async () => {
     contactOrg.logo,
     "https://fouladbonyan.com/brand/bonyan-foulad-daria-logo.webp",
   );
+  assert.match(contactHtml, /"@type":"ContactPage"/, "/contact/ must emit ContactPage JSON-LD");
 
   const contactBc = parseBreadcrumbLd(
     contactHtml,

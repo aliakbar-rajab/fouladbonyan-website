@@ -138,6 +138,63 @@ export function buildWebSiteJsonLd({ siteUrl }) {
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
 
+export function buildContactPageJsonLd({
+  title,
+  description,
+  pageUrl,
+  siteUrl,
+}) {
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: title,
+    description,
+    inLanguage: "fa-IR",
+    isPartOf: { "@id": `${siteUrl}/#website` },
+    about: { "@id": `${siteUrl}/#organization` },
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
+export function buildCatalogCollectionJsonLd({
+  title,
+  description,
+  pageUrl,
+  siteUrl,
+  dateModified,
+  items = [],
+}) {
+  const payload = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: title,
+    description,
+    inLanguage: "fa-IR",
+    ...(dateModified ? { dateModified } : {}),
+    isPartOf: { "@id": `${siteUrl}/#website` },
+    publisher: { "@id": `${siteUrl}/#organization` },
+    ...(items.length > 0
+      ? {
+          mainEntity: {
+            "@type": "ItemList",
+            numberOfItems: items.length,
+            itemListElement: items.map((item, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: item.name,
+              ...(item.url ? { url: item.url } : {}),
+            })),
+          },
+        }
+      : {}),
+  };
+  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
+}
+
 export function buildArticleJsonLd({
   headline,
   description,
@@ -248,6 +305,7 @@ export function renderStaticDocument(
     title,
     description,
     pageUrl,
+    robots = "index, follow",
     ogType,
     ogImage,
     ogImageAlt,
@@ -273,6 +331,17 @@ export function renderStaticDocument(
       (match, prefix, suffix) =>
         `${prefix}${escapeHtmlAttribute(pageUrl)}${suffix}`,
     );
+
+  if (robots) {
+    if (/<meta[^>]*name="robots"[^>]*>/i.test(html)) {
+      html = replaceMetaContent(html, 'name="robots"', robots);
+    } else {
+      html = html.replace(
+        "</head>",
+        insert(`\n    <meta name="robots" content="${escapeHtmlAttribute(robots)}" />\n  </head>`),
+      );
+    }
+  }
 
   // Organization JSON-LD: inject structured data or strip placeholder
   if (organizationData) {
@@ -362,7 +431,7 @@ export function renderStaticDocument(
 export function buildSitemapXml({ siteUrl, rootLastmod, pages }) {
   const rootEntry = `  <url>\n    <loc>${siteUrl}/</loc>\n    <lastmod>${rootLastmod}</lastmod>\n  </url>`;
   const pageEntries = pages
-    .filter((page) => page.pageUrl !== `${siteUrl}/`)
+    .filter((page) => !page.noindex && page.pageUrl !== `${siteUrl}/`)
     .map(
       ({ pageUrl, lastmod }) =>
         `  <url>\n    <loc>${pageUrl}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`,

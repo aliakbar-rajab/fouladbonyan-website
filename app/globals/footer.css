@@ -581,7 +581,8 @@
 
 /* Chips shrink-wrap their content, so the pane must not stretch in the row. */
 .fg-chip {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 100%;
 }
 
 .fg-chip > .glass-surface__content {
@@ -601,6 +602,12 @@
   font-style: normal;
   white-space: nowrap;
   transition: color 0.18s ease;
+}
+
+address.fg-chip-content {
+  white-space: normal;
+  line-height: 1.55;
+  padding-block: 0.45rem;
 }
 
 .fg-chip-content span {

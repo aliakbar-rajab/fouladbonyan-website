@@ -1,4 +1,8 @@
-import { isSingleSubcategoryGroup, productGroups } from "../../app/category-meta.ts";
+import {
+  isSingleSubcategoryGroup,
+  productGroups,
+  subcategoryHref,
+} from "../../app/category-meta.ts";
 import {
   guideIndex,
   guidePageDefinitions,
@@ -6,6 +10,7 @@ import {
 } from "../../app/guide-page-data.ts";
 import { infoPageDefinitions } from "../../app/info-page-data.ts";
 import {
+  buildHomeGraphStructuredData,
   buildOrganizationStructuredData,
   siteConfig,
 } from "../../app/site-config.ts";
@@ -19,8 +24,9 @@ import { loadPageElement, routePageSource } from "../../app/site-page-element.ts
 import {
   HERO_OG_IMAGE,
   buildArticleJsonLd,
+  buildCatalogCollectionJsonLd,
+  buildContactPageJsonLd,
   buildHeroPreloadTag,
-  buildWebSiteJsonLd,
   routeLocation,
 } from "./static-document.mjs";
 
@@ -72,7 +78,8 @@ export async function collectSitePageDescriptors({
   siteUrl = siteConfig.siteUrl,
 }) {
   const rootLastmod = snapshot.fetchedAt.slice(0, 10);
-  const organizationData = buildOrganizationStructuredData();
+  const organizationData = buildOrganizationStructuredData(siteUrl);
+  const homeGraphData = buildHomeGraphStructuredData(siteUrl);
   const menuPayload = { id: pagePayloadIds.menu, data: menuCatalog };
   const describe = (route) => describeRoute(route, siteUrl);
 
@@ -87,8 +94,7 @@ export async function collectSitePageDescriptors({
       menuPayload,
       { id: pagePayloadIds.overview, data: overviewSummaries },
     ],
-    organizationData: null,
-    extraHeadHtml: buildWebSiteJsonLd({ siteUrl }),
+    organizationData: homeGraphData,
   });
 
   // 2. Category Landing Pages & Subcategories
@@ -116,9 +122,24 @@ export async function collectSitePageDescriptors({
       ogImageHeight: HERO_OG_IMAGE.height,
     };
 
+    const singleGroup = isSingleSubcategoryGroup(group.id);
+    const onlySubcategory = singleGroup ? catalog.categories[0] : null;
+    const overviewItems = singleGroup
+      ? (onlySubcategory?.factories ?? []).map((factory) => ({
+          name: `قیمت ${onlySubcategory.label} ${factory.name}`,
+        }))
+      : catalog.categories.map((sub) => ({
+          name: `قیمت ${sub.label}`,
+          url: `${siteUrl}${subcategoryHref(group.id, sub.id)}`,
+        }));
+
     // Category landing page
+    const describedGroup = await describe({
+      kind: "catalog",
+      category: group.id,
+    });
     pages.push({
-      ...(await describe({ kind: "catalog", category: group.id })),
+      ...describedGroup,
       lastmod,
       ogImage: groupOgImage,
       ogImageAlt: `قیمت ${group.label} | ${siteConfig.brand.name}`,
@@ -126,45 +147,103 @@ export async function collectSitePageDescriptors({
       heroPreload,
       payloads: catalogPayloads,
       organizationData: null,
+      extraHeadHtml: buildCatalogCollectionJsonLd({
+        title: describedGroup.title,
+        description: describedGroup.description,
+        pageUrl: describedGroup.pageUrl,
+        siteUrl,
+        dateModified: catalog.fetchedAt,
+        items: overviewItems,
+      }),
     });
 
     // Subcategory pages: single-subcategory families (angle, channel)
     // are consolidated onto their parent category page.
-    if (!isSingleSubcategoryGroup(group.id)) {
+    if (!singleGroup) {
       for (const sub of catalog.categories) {
+        // Scope initial-page-data to the active subcategory's rows while
+        // keeping lightweight category stubs so tab navigation renders identically
+        // during SSR/hydration.
+        const scopedCatalog = {
+          ...catalog,
+          categories: catalog.categories.map((entry) =>
+            entry.id === sub.id
+              ? entry
+              : {
+                  ...entry,
+                  filters: { sizes: [], factories: [] },
+                  factories: [],
+                },
+          ),
+        };
+        const subcategoryPayloads = [
+          menuPayload,
+          {
+            id: pagePayloadIds.catalog,
+            data: {
+              fetchedAt: snapshot.fetchedAt,
+              sourceName: snapshot.sourceName,
+              sourceHome: snapshot.sourceHome,
+              taxRate: snapshot.taxRate,
+              catalogs: [scopedCatalog],
+            },
+          },
+        ];
+
+        const describedSub = await describe({
+          kind: "catalog",
+          category: group.id,
+          subcategory: sub.id,
+          subcategoryLabel: sub.label,
+        });
         pages.push({
-          ...(await describe({
-            kind: "catalog",
-            category: group.id,
-            subcategory: sub.id,
-            subcategoryLabel: sub.label,
-          })),
+          ...describedSub,
           lastmod,
           ogImage: groupOgImage,
           ogImageAlt: `قیمت روز ${sub.label} | ${siteConfig.brand.name}`,
           ...ogImageSize,
           heroPreload,
-          payloads: catalogPayloads,
+          payloads: subcategoryPayloads,
           organizationData: null,
+          extraHeadHtml: buildCatalogCollectionJsonLd({
+            title: describedSub.title,
+            description: describedSub.description,
+            pageUrl: describedSub.pageUrl,
+            siteUrl,
+            dateModified: catalog.fetchedAt,
+            items: sub.factories.map((factory) => ({
+              name: `قیمت ${sub.label} ${factory.name}`,
+            })),
+          }),
         });
       }
     }
   }
 
   // 3. Contact Page
+  const describedContact = await describe({ kind: "contact" });
   pages.push({
-    ...(await describe({ kind: "contact" })),
+    ...describedContact,
     lastmod: "2026-08-11",
     heroPreload: null,
     payloads: [],
     organizationData,
+    extraHeadHtml: buildContactPageJsonLd({
+      title: describedContact.title,
+      description: describedContact.description,
+      pageUrl: describedContact.pageUrl,
+      siteUrl,
+    }),
   });
 
   // 4. Info Pages
   for (const [page, definition] of Object.entries(infoPageDefinitions)) {
+    const isNoindex = Boolean(definition.noindex);
     pages.push({
       ...(await describe({ kind: "info", page })),
       lastmod: definition.lastmod,
+      robots: isNoindex ? "noindex, follow" : "index, follow",
+      noindex: isNoindex,
       heroPreload: null,
       payloads: [],
       organizationData: null,

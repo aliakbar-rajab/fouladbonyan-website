@@ -2,7 +2,10 @@ import { StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import type { GuideReference } from "../app/steel-reference";
 import { buildGuideReference } from "../app/steel-reference";
-import { buildOrganizationStructuredData } from "../app/site-config";
+import {
+  buildHomeGraphStructuredData,
+  buildOrganizationStructuredData,
+} from "../app/site-config";
 import {
   loadCatalogSnapshot,
   primeCatalogReader,
@@ -60,9 +63,11 @@ const organizationJsonLd = document.getElementById(
 );
 if (organizationJsonLd) {
   if (isOrganizationRoute(route)) {
-    organizationJsonLd.textContent = JSON.stringify(
-      buildOrganizationStructuredData(),
-    );
+    const structuredData =
+      route.kind === "home"
+        ? buildHomeGraphStructuredData()
+        : buildOrganizationStructuredData();
+    organizationJsonLd.textContent = JSON.stringify(structuredData);
   } else {
     organizationJsonLd.remove();
   }

@@ -108,8 +108,10 @@ function validateCategory(category, location) {
     const factoryLocation = `${location}.factories[${factoryIndex}]`;
     assert(isRecord(factory), `${factoryLocation} شیء نیست`);
     assert(
-      typeof factory.name === "string" && factory.name.trim(),
-      `${factoryLocation}.name خالی است`,
+      typeof factory.name === "string" &&
+        factory.name.trim() &&
+        !/[\r\n]/.test(factory.name),
+      `${factoryLocation}.name خالی است یا خط جدید دارد`,
     );
     assert(
       !factoryNames.has(factory.name),
@@ -132,13 +134,15 @@ function validateCategory(category, location) {
       );
       rowIds.add(row.id);
       assert(
-        typeof row.title === "string" && row.title.trim(),
-        `${rowLocation}.title خالی است`,
+        typeof row.title === "string" &&
+          row.title.trim() &&
+          !/[\r\n]/.test(row.title),
+        `${rowLocation}.title خالی است یا خط جدید دارد`,
       );
       for (const field of ["size", "unit", "factory"]) {
         assert(
-          typeof row[field] === "string",
-          `${rowLocation}.${field} رشته نیست`,
+          typeof row[field] === "string" && !/[\r\n]/.test(row[field]),
+          `${rowLocation}.${field} رشته معتبر نیست یا خط جدید دارد`,
         );
       }
       assert(

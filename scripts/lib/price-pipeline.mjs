@@ -41,14 +41,28 @@ const persianDateFormatter = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
   timeZone: "Asia/Tehran",
 });
 
+function cleanText(value) {
+  if (value === undefined || value === null) return "";
+  return String(value)
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizeUnit(value) {
+  const unit = cleanText(value);
+  if (!unit) return "کیلوگرم";
+  return unit === "رکیلوگرم" ? "کیلوگرم" : unit;
+}
+
 function metaValue(item, key) {
   const directValue = item[`meta-${key}`];
   if (directValue !== undefined && directValue !== null) {
-    return String(directValue);
+    return cleanText(directValue);
   }
   const meta = item.metas?.find((entry) => entry.title === key);
   return meta?.value !== undefined && meta?.value !== null
-    ? String(meta.value)
+    ? cleanText(meta.value)
     : "";
 }
 
@@ -118,8 +132,8 @@ function parseCatalogPage(html, source) {
         const trend = normalizeCatalogTrend(item.status, item.percent);
         return {
         id: Number(item.id),
-        title: String(item.title ?? ""),
-        size: source.deriveSize?.(item) ?? metaValue(item, "سایز"),
+        title: cleanText(item.title),
+        size: cleanText(source.deriveSize?.(item) ?? metaValue(item, "سایز")),
         ...(source.specificationKey
           ? { specification: metaValue(item, source.specificationKey) }
           : {}),
@@ -129,10 +143,10 @@ function parseCatalogPage(html, source) {
         form: metaValue(item, "حالت"),
         approximateWeight: metaValue(item, "وزن تقریبی"),
         delivery: metaValue(item, "محل تحویل"),
-        unit: metaValue(item, "واحد") || "کیلوگرم",
+        unit: normalizeUnit(metaValue(item, "واحد")),
         factory:
           metaValue(item, "کارخانه") ||
-          String(factoryGroup.title ?? item.factory ?? ""),
+          cleanText(factoryGroup.title ?? item.factory ?? ""),
         ...(source.detailKeys
           ? {
               specifications: source.detailKeys
@@ -150,7 +164,7 @@ function parseCatalogPage(html, source) {
 
       const latestUpdate = Math.max(0, ...rows.map((row) => row.updatedAt));
       return {
-        name: String(factoryGroup.title ?? rows[0]?.factory ?? "سایر"),
+        name: cleanText(factoryGroup.title) || rows[0]?.factory || "سایر",
         updatedAt: latestUpdate,
         updatedDate: formatPersianDate(latestUpdate),
         rows,
@@ -173,7 +187,7 @@ function parseCatalogPage(html, source) {
     groupingLabel: source.groupingLabel ?? "کارخانه",
     specificationLabel:
       source.specificationLabel ?? source.specificationKey ?? "استاندارد",
-    sourceTitle: String(shopData.title ?? source.label),
+    sourceTitle: cleanText(shopData.title) || source.label,
     sourceUrl: source.url,
     summary: {
       date: toPersianDigits(String(compare.date ?? "")),

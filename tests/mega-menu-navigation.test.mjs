@@ -33,6 +33,10 @@ const renderPage = () =>
     ),
   );
 const { loadGroupCatalog } = await import("../app/catalog-reader.ts");
+const {
+  CATALOG_FILTER_HANDOFF_KEY,
+  resetCatalogFilterHandoffCache,
+} = await import("../app/catalog-filter-handoff.ts");
 
 const settle = () =>
   act(async () => {
@@ -50,6 +54,8 @@ const addRoot = (initialCategory, initialSubcategory) => {
 afterEach(() => {
   cleanup();
   document.getElementById("root")?.remove();
+  window.sessionStorage.clear();
+  resetCatalogFilterHandoffCache();
   window.history.replaceState({}, "", "/");
 });
 
@@ -63,17 +69,14 @@ function dispatchClick(element) {
 }
 
 /*
- * Regression coverage for the mega menu being a dead end on the homepage: a
- * category/factory/size "selection" only ever updated in-memory state that
- * ProductPanel only reads once route/search have already committed to a
- * category, so on the plain homepage (neither is true) the click had no
- * visible effect at all. The fix makes every one of these controls a real
- * <a href>; these tests pin that they stay real links (not preventDefault'd
- * into client-only state) and that App picks up the factory/size a link
- * carries as a query param.
+ * Regression coverage for the mega menu being a dead end on the homepage:
+ * group/subcategory links are real <a href> navigations, while factory and size
+ * quick-picks are buttons that carry the selected filter via sessionStorage and
+ * navigate cleanly to the canonical target page without minting `?factory=` or
+ * `?size=` crawlable links.
  */
 
-test("the homepage mega menu's subcategory, factory and size links are real navigations to pages that exist", async () => {
+test("the homepage mega menu keeps subcategory links crawlable and renders factory/size quick-picks as sessionStorage buttons", async () => {
   addRoot();
   renderPage();
   await settle();
@@ -87,18 +90,28 @@ test("the homepage mega menu's subcategory, factory and size links are real navi
   assert.equal(subcategoryLink.getAttribute("href"), "/rebar/ribbed/");
   assert.equal(dispatchClick(subcategoryLink).defaultPrevented, false);
 
-  const factoryLink = document.querySelector(".mega-rebar-factories a");
-  assert.ok(factoryLink, "expected at least one factory link in the mega menu");
-  assert.match(
-    factoryLink.getAttribute("href"),
-    /^\/rebar\/ribbed\/\?factory=/,
+  assert.equal(
+    document.querySelectorAll(".mega-rebar-factories a, .mega-rebar-sizes a")
+      .length,
+    0,
+    "factory and size quick-picks must not render parameterised <a> links",
   );
-  assert.equal(dispatchClick(factoryLink).defaultPrevented, false);
 
-  const sizeLink = document.querySelector(".mega-rebar-sizes a");
-  assert.ok(sizeLink, "expected at least one size link in the mega menu");
-  assert.match(sizeLink.getAttribute("href"), /^\/rebar\/ribbed\/\?size=/);
-  assert.equal(dispatchClick(sizeLink).defaultPrevented, false);
+  const factoryButton = document.querySelector(".mega-rebar-factories button");
+  assert.ok(factoryButton, "expected at least one factory button in the mega menu");
+  assert.equal(factoryButton.getAttribute("type"), "button");
+
+  const sizeButton = document.querySelector(".mega-rebar-sizes button");
+  assert.ok(sizeButton, "expected at least one size button in the mega menu");
+  assert.equal(sizeButton.getAttribute("type"), "button");
+
+  await user.click(factoryButton);
+  const stored = JSON.parse(
+    window.sessionStorage.getItem(CATALOG_FILTER_HANDOFF_KEY),
+  );
+  assert.equal(stored.groupId, "rebar");
+  assert.equal(stored.categoryId, "ribbed");
+  assert.ok(stored.factory, "clicking a factory button must record its factory filter");
 });
 
 test("a mega-menu group link switches the panel on a plain click and opens normally on a modifier click", async () => {
@@ -147,6 +160,31 @@ test("a mega-menu group link switches the panel on a plain click and opens norma
   assert.ok(
     document.querySelector(".mega-rebar-types").textContent.includes("تیرآهن"),
     "a plain click must switch the panel to that group",
+  );
+});
+
+test("landing on a subcategory page after a MegaMenu filter handoff applies the filter on mount", async () => {
+  const catalog = await loadGroupCatalog("rebar");
+  const ribbed = catalog.categories.find((category) => category.id === "ribbed");
+  const factory = ribbed.filters.factories[0];
+  assert.ok(factory, "test fixture requires at least one rebar factory");
+
+  window.sessionStorage.setItem(
+    CATALOG_FILTER_HANDOFF_KEY,
+    JSON.stringify({ groupId: "rebar", categoryId: "ribbed", factory }),
+  );
+  window.history.replaceState({}, "", "/rebar/ribbed/");
+  addRoot("rebar", "ribbed");
+  renderPage();
+  await settle();
+
+  await waitFor(() => {
+    assert.equal(screen.getByLabelText("کارخانه").value, factory);
+  });
+  assert.equal(
+    window.sessionStorage.getItem(CATALOG_FILTER_HANDOFF_KEY),
+    null,
+    "the one-shot handoff must be cleared once consumed",
   );
 });
 

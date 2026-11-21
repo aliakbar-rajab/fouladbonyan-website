@@ -781,6 +781,16 @@ body {
 
 .factory-price-card > header {
   background: linear-gradient(90deg, #f3f5f6, #fff);
+  color: var(--ink);
+  border-bottom: 1px solid #d7dcdf;
+}
+
+.factory-price-card > header h4 {
+  color: var(--ink);
+}
+
+.factory-price-card > header p {
+  color: #525860;
 }
 
 .row-expand-cell button svg,
@@ -799,11 +809,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   padding-inline: 0.65rem;
   border: 1px solid #c7a064;
   border-radius: 8px;
-  color: #75501f;
+  color: #6f4910;
   font-size: 0.72rem;
   font-weight: 800;
   white-space: nowrap;

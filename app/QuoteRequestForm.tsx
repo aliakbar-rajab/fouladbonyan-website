@@ -129,7 +129,11 @@ export function QuoteRequestForm() {
       handoff?.dimensions ??
       params.get("dimensions") ??
       ""
-    ).slice(0, 240);
+    )
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+      .slice(0, 240);
     const matchedProduct = isQuoteProduct(requestedProduct)
       ? requestedProduct
       : undefined;

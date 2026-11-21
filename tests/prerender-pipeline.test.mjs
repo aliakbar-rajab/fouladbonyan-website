@@ -42,6 +42,7 @@ const MOCK_TEMPLATE = `<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <meta name="description" content="Default Description" />
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://fouladbonyan.com/" />
     <link id="hero-image-preload" rel="preload" as="image" href="/default.avif" />
     <meta property="og:title" content="Default OG Title" />
@@ -232,6 +233,7 @@ test("buildSitemapXml produces well-formed XML with all 66 URLs", () => {
     { pageUrl: "https://fouladbonyan.com/", lastmod: "2026-08-28" },
     { pageUrl: "https://fouladbonyan.com/rebar/", lastmod: "2026-08-28" },
     { pageUrl: "https://fouladbonyan.com/contact/", lastmod: "2026-08-11" },
+    { pageUrl: "https://fouladbonyan.com/privacy/", lastmod: "2026-07-29", noindex: true },
   ];
 
   const xml = buildSitemapXml({
@@ -245,7 +247,19 @@ test("buildSitemapXml produces well-formed XML with all 66 URLs", () => {
   assert.match(xml, /<loc>https:\/\/fouladbonyan\.com\/<\/loc>/);
   assert.match(xml, /<loc>https:\/\/fouladbonyan\.com\/rebar\/<\/loc>/);
   assert.match(xml, /<loc>https:\/\/fouladbonyan\.com\/contact\/<\/loc>/);
+  assert.doesNotMatch(xml, /<loc>https:\/\/fouladbonyan\.com\/privacy\/<\/loc>/);
   assert.match(xml, /<\/urlset>\s*$/);
+});
+
+test("renderStaticDocument updates robots meta tag when noindex is requested", () => {
+  const html = renderStaticDocument(MOCK_TEMPLATE, {
+    title: "حریم خصوصی | بنیان فولاد داریا",
+    description: "سیاست حریم خصوصی",
+    pageUrl: "https://fouladbonyan.com/privacy/",
+    robots: "noindex, follow",
+    rootElement: React.createElement("div", null, "حریم خصوصی"),
+  });
+  assert.match(html, /<meta name="robots" content="noindex, follow" \/>/);
 });
 
 test("writePrerenderArtifacts creates expected files and directory hierarchy atomically", async () => {
@@ -294,6 +308,7 @@ test("writePrerenderArtifacts creates expected files and directory hierarchy ato
     });
 
     assert.equal(result.pageCount, 3);
+    assert.equal(result.sitemapCount, 3);
 
     const homeHtml = await readFile(join(tempDir, "index.html"), "utf8");
     assert.match(homeHtml, /<title>Home<\/title>/);

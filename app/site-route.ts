@@ -165,7 +165,7 @@ export function siteRouteDataset(route: SiteRoute): SiteRouteDataset {
 }
 
 export const isOrganizationRoute = (route: SiteRoute): boolean =>
-  route.kind === "contact";
+  route.kind === "home" || route.kind === "contact";
 
 export const isHeroRoute = (route: SiteRoute): boolean =>
   route.kind === "home" || route.kind === "catalog";

@@ -12,6 +12,7 @@ type PageDefinition = {
   description: string;
   seoDescription: string;
   lastmod: string;
+  noindex?: boolean;
 };
 
 export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
@@ -32,6 +33,7 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
     seoDescription:
       "شرایط استفاده از وب‌سایت بنیان فولاد داریا و توضیح ماهیت اطلاع‌رسانی قیمت‌ها و درخواست‌های پیش‌فاکتور.",
     lastmod: "2026-07-29",
+    noindex: true,
   },
   privacy: {
     title: "حریم خصوصی",
@@ -41,6 +43,7 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
     seoDescription:
       "سیاست حریم خصوصی بنیان فولاد داریا؛ نحوه استفاده از اطلاعات تماس و عملکرد محلی فرم‌های درخواست.",
     lastmod: "2026-07-29",
+    noindex: true,
   },
   "quote-process": {
     title: "فرایند درخواست پیش‌فاکتور",
@@ -58,6 +61,7 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
     seoDescription:
       "راهنمای ثبت شکایت و پیگیری در بنیان فولاد داریا، اطلاعات لازم و فرم آماده‌سازی متن شکایت.",
     lastmod: "2026-08-17",
+    noindex: true,
   },
   "shipping-delivery": {
     title: "شرایط ارسال و تحویل",
@@ -67,6 +71,7 @@ export const infoPageDefinitions: Record<InfoPageKey, PageDefinition> = {
     seoDescription:
       "شرایط ارسال و تحویل محصولات فولادی، مسئولیت حمل، زمان‌بندی، هزینه و نکات بازرسی هنگام تحویل.",
     lastmod: "2026-07-29",
+    noindex: true,
   },
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { writeCatalogFilterHandoff } from "./catalog-filter-handoff";
 import { localizeCatalogValue } from "./catalog-presentation";
 import {
   productGroups,
@@ -17,15 +18,18 @@ import { useCatalogData } from "./use-catalog-data";
  * static-entry/main.tsx seeds it before hydrateRoot, so this subtree renders
  * identically on the server and on the client for every route.
  *
- * Every link here is a real navigation, on purpose: a subcategory has its own
- * prerendered page, so following its href is what keeps the URL, <title>,
- * breadcrumb and visible catalog in agreement. A factory or size has no page
- * of its own, so it links to its group's initial category page instead, with
- * the pick carried as a `?factory=`/`?size=` query param that App reads once
- * on mount (see App.tsx) to seed the filter -- still a real navigation, just
- * to the nearest page that exists.
+ * Group and subcategory entries are real `<a href>` links pointing at canonical
+ * prerendered pages. Factory and size quick-picks are `<button type="button">`
+ * controls that hand the selected filter over via sessionStorage and navigate
+ * cleanly to the canonical target page without minting query-string URLs.
  */
-function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
+function MegaMenuSections({
+  groupId,
+  onFilterNavigate,
+}: {
+  groupId: ProductGroupId;
+  onFilterNavigate: () => void;
+}) {
   const state = useCatalogData(loadMenuGroup, groupId);
 
   if (state.status !== "ready") {
@@ -33,12 +37,19 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
   }
 
   const group = state.data;
-  // A factory or size has no page of its own, so its link lands on the group's
-  // initial subcategory page -- which for a single-subcategory group is the
-  // category URL itself. subcategoryHref owns that collapse.
+  // A factory or size has no page of its own, so clicking one lands on the
+  // group's initial subcategory page -- which for a single-subcategory group is
+  // the category URL itself. subcategoryHref owns that collapse.
   const filterBaseHref = subcategoryHref(groupId, group.initialCategoryId);
-  const filterHref = (param: "factory" | "size", value: string) =>
-    `${filterBaseHref}?${param}=${encodeURIComponent(value)}`;
+  const navigateWithFilter = (filter: { factory?: string; size?: string }) => {
+    writeCatalogFilterHandoff({
+      groupId,
+      categoryId: group.initialCategoryId,
+      ...filter,
+    });
+    onFilterNavigate();
+    window.location.assign(filterBaseHref);
+  };
 
   return (
     <>
@@ -48,12 +59,12 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
           <a
             href={subcategoryHref(groupId, category.id)}
             key={category.id}
+            onClick={onFilterNavigate}
           >
             {`قیمت ${category.label}`}
           </a>
         ))}
       </section>
-
 
       <section
         className="mega-rebar-factories"
@@ -64,12 +75,13 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         </p>
         <div>
           {group.factories.map((factory) => (
-            <a
-              href={filterHref("factory", factory)}
+            <button
+              type="button"
               key={factory}
+              onClick={() => navigateWithFilter({ factory })}
             >
               {group.label} {factory}
-            </a>
+            </button>
           ))}
         </div>
       </section>
@@ -78,12 +90,13 @@ function MegaMenuSections({ groupId }: { groupId: ProductGroupId }) {
         <p className="mega-group-label">سایزهای {group.label}</p>
         <div>
           {group.sizes.map((size) => (
-            <a
-              href={filterHref("size", size)}
+            <button
+              type="button"
               key={size}
+              onClick={() => navigateWithFilter({ size })}
             >
               {group.label} {localizeCatalogValue(size)}
-            </a>
+            </button>
           ))}
         </div>
       </section>
@@ -187,7 +200,13 @@ export function MegaMenu({ onMobileClose, activeGroup }: MegaMenuProps) {
           className="product-dropdown rebar-mega-menu"
           hidden={!productsOpen}
         >
-          <MegaMenuSections groupId={shownProduct} />
+          <MegaMenuSections
+            groupId={shownProduct}
+            onFilterNavigate={() => {
+              setProductsOpen(false);
+              onMobileClose();
+            }}
+          />
 
           <section className="mega-other-products" aria-label="گروه محصولات">
             <p className="mega-group-label">گروه محصولات</p>

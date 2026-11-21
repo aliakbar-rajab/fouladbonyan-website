@@ -16,7 +16,12 @@ import {
 } from "../app/catalog-pricing.mjs";
 import { buildCatalogSearchGroups } from "../app/catalog-search.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
-import { createRetryableLoader } from "../app/catalog-reader.ts";
+import {
+  createRetryableLoader,
+  loadCatalogSnapshot,
+  loadGroupCatalog,
+  primeCatalogSnapshot,
+} from "../app/catalog-reader.ts";
 import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
 import { filterProductGroups } from "../app/site-logic.mjs";
 import {
@@ -40,6 +45,27 @@ const pricedRowsOf = (category) =>
 test("committed price payloads pass runtime semantic validation", async () => {
   const snapshot = await readJson("../app/data/catalog-prices.json");
   assert.equal(validateCatalogSnapshot(snapshot), snapshot);
+});
+
+test("validation rejects control newlines inside factory names or row fields", async () => {
+  const snapshot = await readJson("../app/data/catalog-prices.json");
+  for (const field of ["title", "size", "unit", "factory"]) {
+    const tampered = structuredClone(snapshot);
+    const row = tampered.catalogs[0].categories[0].factories[0].rows[0];
+    row[field] = `${row[field] || "x"}\n18`;
+    assert.throws(
+      () => validateCatalogSnapshot(tampered),
+      new RegExp(`row.*${field}|خط جدید`),
+      `row.${field} with embedded newline must be rejected`,
+    );
+  }
+  const tamperedFactory = structuredClone(snapshot);
+  tamperedFactory.catalogs[0].categories[0].factories[0].name += "\nخط";
+  assert.throws(
+    () => validateCatalogSnapshot(tamperedFactory),
+    /خط جدید|name/,
+    "factory.name with embedded newline must be rejected",
+  );
 });
 
 test("a snapshot that drops, reorders or relabels what the taxonomy expects is not publishable", async () => {
@@ -500,4 +526,33 @@ test("catalog-pricing: per-unit ranges never cross Sales units", () => {
     { unit: "کیلوگرم", min: 10, max: 20 },
     { unit: "شاخه", min: 100, max: 100 },
   ]);
+});
+
+test("catalog-reader: loadCatalogSnapshot upgrades a trimmed subcategory cache to the full snapshot", async () => {
+  const full = await readJson("../app/data/catalog-prices.json");
+  const sheet = structuredClone(full.catalogs.find((c) => c.id === "sheet"));
+  const scopedSheet = {
+    ...sheet,
+    categories: sheet.categories.map((entry) =>
+      entry.id === "sheet-ck45"
+        ? entry
+        : { ...entry, filters: { sizes: [], factories: [] }, factories: [] },
+    ),
+  };
+
+  primeCatalogSnapshot({
+    fetchedAt: full.fetchedAt,
+    sourceName: full.sourceName,
+    sourceHome: full.sourceHome,
+    taxRate: full.taxRate,
+    catalogs: [scopedSheet],
+  });
+
+  const cachedBefore = loadGroupCatalog.getCached("sheet");
+  assert.ok(cachedBefore.categories.some((c) => c.factories.length === 0));
+
+  const upgraded = await loadCatalogSnapshot();
+  assert.equal(upgraded.catalogs.length, full.catalogs.length);
+  const upgradedSheet = upgraded.catalogs.find((c) => c.id === "sheet");
+  assert.ok(upgradedSheet.categories.every((c) => c.factories.length > 0));
 });

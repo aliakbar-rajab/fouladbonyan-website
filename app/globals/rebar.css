@@ -223,20 +223,17 @@
   align-items: center;
   gap: 1rem;
   padding: 0.55rem 1rem;
-  color: var(--white);
-  direction: ltr;
-}
-
-.factory-price-card > header > * {
-  direction: rtl;
+  border-bottom: 1px solid #d7dcdf;
+  color: var(--ink);
 }
 
 .factory-price-card > header h4 {
   grid-column: 1;
   margin: 0;
   overflow: hidden;
+  color: var(--ink);
   font-size: 1.15rem;
-  text-align: center;
+  text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -245,13 +242,15 @@
   grid-column: 2;
   grid-row: 1;
   margin: 0;
-  color: #e4e4e7;
+  color: #525860;
   font-size: 0.76rem;
+  text-align: end;
   white-space: nowrap;
 }
 
-.factory-price-card > header p > span {
-  color: var(--brand-yellow);
+.factory-price-card > header p b {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .tax-switch {
@@ -301,6 +300,7 @@
 }
 
 .rebar-price-table {
+  width: 100%;
   min-width: 680px;
   table-layout: fixed;
 }
@@ -334,9 +334,12 @@
   width: 9rem;
 }
 
-.rebar-price-table thead th:nth-child(6),
+.rebar-price-table thead th:nth-child(6) {
+  width: 6rem;
+}
+
 .rebar-price-table thead th:nth-child(7) {
-  width: 5.5rem;
+  width: 8.5rem;
 }
 
 .rebar-price-table tbody tr.rebar-row-group:hover {
@@ -346,13 +349,16 @@
 .rebar-price-table tbody tr.rebar-row-group.is-dark-row,
 .rebar-price-table
   tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group),
+  tr.rebar-row-group:nth-child(even of .rebar-row-group) {
+  background: #f6f7f9;
+}
+
 .rebar-price-table tbody tr.rebar-row-group.is-dark-row:hover {
-  background: #3b3b3e;
+  background: #fffaf0;
 }
 
 .rebar-price-table tbody td {
-  color: #555660;
+  color: #4a4d57;
   font-size: 0.84rem;
 }
 
@@ -361,8 +367,8 @@
   tbody
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   td {
-  border-bottom-color: #56565a;
-  color: #f3f3f4;
+  border-bottom-color: #e2e5ea;
+  color: #4a4d57;
 }
 
 .rebar-price-table tbody tr.is-dark-row .row-expand-cell button,
@@ -371,7 +377,7 @@
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   .row-expand-cell
   button {
-  color: #fff;
+  color: #30313a;
 }
 
 .rebar-price-table tbody tr.is-dark-row .row-expand-cell button:hover,
@@ -380,7 +386,7 @@
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   .row-expand-cell
   button:hover {
-  background: rgb(255 255 255 / 14%);
+  background: #e7e9ef;
 }
 
 .row-expand-cell button {
@@ -412,7 +418,7 @@
   tbody
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   .row-price {
-  color: #fff;
+  color: #30313c;
 }
 
 .rebar-price-table .row-price small {
@@ -427,11 +433,16 @@
   tr.rebar-row-group:nth-child(even of .rebar-row-group)
   .row-price
   small {
-  color: #d4d4d7;
+  color: var(--muted);
 }
 
-.rebar-price-table .row-price.is-call {
-  color: #9f6d00;
+.rebar-price-table .row-price.is-call,
+.rebar-price-table tbody tr.is-dark-row .row-price.is-call,
+.rebar-price-table
+  tbody
+  tr.rebar-row-group:nth-child(even of .rebar-row-group)
+  .row-price.is-call {
+  color: #875900;
   font-size: 0.77rem;
   white-space: nowrap;
 }
@@ -446,49 +457,12 @@
 }
 
 .row-change.is-down {
-  color: #10a966 !important;
+  color: #0d7a4a !important;
 }
 
 .row-change.is-unverified,
 .row-change.is-mixed {
-  color: #9f6d00 !important;
-}
-
-.rebar-price-table tbody tr.is-dark-row .row-change,
-.rebar-price-table
-  tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group)
-  .row-change {
-  color: #e0e2ea !important;
-}
-
-.rebar-price-table tbody tr.is-dark-row .row-change.is-up,
-.rebar-price-table
-  tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group)
-  .row-change.is-up {
-  color: #ff9cac !important;
-}
-
-.rebar-price-table tbody tr.is-dark-row .row-change.is-down,
-.rebar-price-table
-  tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group)
-  .row-change.is-down {
-  color: #63e6a3 !important;
-}
-
-.rebar-price-table tbody tr.is-dark-row .row-change.is-unverified,
-.rebar-price-table
-  tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group)
-  .row-change.is-unverified,
-.rebar-price-table tbody tr.is-dark-row .row-change.is-mixed,
-.rebar-price-table
-  tbody
-  tr.rebar-row-group:nth-child(even of .rebar-row-group)
-  .row-change.is-mixed {
-  color: #ffd45d !important;
+  color: #875900 !important;
 }
 
 .catalog-load-state {
@@ -906,7 +880,7 @@
   }
 
   .rebar-contact-card a {
-    min-height: 2.2rem;
+    min-height: 2.75rem;
     margin-top: 0.25rem;
     font-size: 0.76rem;
   }
@@ -978,7 +952,7 @@
   }
 
   .price-source-card a {
-    min-height: 2.2rem;
+    min-height: 2.75rem;
     padding-inline: 0.75rem;
   }
 
@@ -992,7 +966,7 @@
   }
 
   .rebar-contact-card a {
-    min-height: 2.2rem;
+    min-height: 2.75rem;
     padding-inline: 1rem;
     margin-top: 0;
   }
@@ -1014,7 +988,7 @@
     grid-column: 1;
     grid-row: 1;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgb(255 255 255 / 12%);
+    border-bottom: 1px solid #e2e5e9;
     font-size: 0.92rem;
     text-align: start;
   }
@@ -1072,14 +1046,14 @@
   .rebar-price-table tbody tr.rebar-row-group td::before {
     content: attr(data-label);
     display: block;
-    color: #878891;
+    color: #5f626d;
     font-size: 0.75rem;
     font-weight: 700;
     margin-bottom: 0.15rem;
   }
 
   .rebar-price-table tbody tr.rebar-row-group.is-dark-row td::before {
-    color: #d4d4d7;
+    color: #5f626d;
   }
 
   .rebar-row-group .row-expand-cell {
@@ -1090,7 +1064,7 @@
   }
 
   .rebar-price-table tbody tr.rebar-row-group.is-dark-row .row-expand-cell {
-    border-inline-end-color: #56565a !important;
+    border-inline-end-color: #e2e5ea !important;
   }
 
   .rebar-price-table tbody tr.rebar-row-group td.row-expand-cell::before,

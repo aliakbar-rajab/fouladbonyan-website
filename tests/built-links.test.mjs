@@ -86,7 +86,7 @@ test("every indexable URL in sitemap.xml has at least one internal link from ano
     ),
   );
 
-  assert.equal(sitemapUrls.size, 66, "sitemap must contain 66 indexable URLs");
+  assert.equal(sitemapUrls.size, 62, "sitemap must contain 62 indexable URLs (excluding 4 legal/utility noindex pages)");
 
   const files = await collectHtmlFiles(distDir);
   const htmlByFile = new Map(

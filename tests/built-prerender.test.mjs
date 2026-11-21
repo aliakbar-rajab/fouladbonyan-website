@@ -312,7 +312,7 @@ test("F14: widening row coverage creates no factory or size URLs", async () => {
   const locs = (sitemap.match(/<loc>([^<]+)<\/loc>/g) ?? []).map((loc) =>
     loc.replace(/<\/?loc>/g, ""),
   );
-  assert.equal(locs.length, 66, "the sitemap must not grow");
+  assert.equal(locs.length, 62, "the sitemap must contain the 62 indexable URLs and not grow");
   for (const loc of locs) {
     const depth = loc
       .replace("https://fouladbonyan.com/", "")

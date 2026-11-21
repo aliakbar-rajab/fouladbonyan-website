@@ -69,13 +69,19 @@ export async function writePrerenderArtifacts({
   // 2. Generate sitemap XML in memory
   const sitemapXml = buildSitemapXml({ siteUrl, rootLastmod, pages });
 
-  // 3. Write all HTML files to dist
+  // 3. Create output directories sequentially (avoids parent/child mkdir
+  // races on Windows), then write all HTML files to dist.
+  const preparedOutputs = renderedOutputs.map(({ outPath, html }) => ({
+    outDir: resolve(distDir, ...outPath),
+    html,
+  }));
+  for (const { outDir } of preparedOutputs) {
+    await mkdir(outDir, { recursive: true });
+  }
   await Promise.all(
-    renderedOutputs.map(async ({ outPath, html }) => {
-      const outDir = resolve(distDir, ...outPath);
-      await mkdir(outDir, { recursive: true });
-      await writeFile(resolve(outDir, "index.html"), html, "utf8");
-    }),
+    preparedOutputs.map(({ outDir, html }) =>
+      writeFile(resolve(outDir, "index.html"), html, "utf8"),
+    ),
   );
 
   // 4. Write sitemap.xml
@@ -92,8 +98,8 @@ export async function writePrerenderArtifacts({
     );
   }
 
-  // Every page written also gets a sitemap entry, so one count describes both.
-  return { pageCount: pages.length };
+  const sitemapCount = pages.filter((page) => !page.noindex).length;
+  return { pageCount: pages.length, sitemapCount };
 }
 
 /**

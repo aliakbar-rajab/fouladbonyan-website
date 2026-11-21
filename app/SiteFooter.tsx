@@ -168,7 +168,7 @@ export function SiteFooter({ topHref = "#top" }: SiteFooterProps) {
             >
               <address className="fg-chip-content">
                 <span aria-hidden="true">⌖</span>
-                {siteConfig.business.shortAddress}
+                {`${siteConfig.business.city}، ${siteConfig.business.address}`}
               </address>
             </GlassSurface>
           </div>

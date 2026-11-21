@@ -102,18 +102,28 @@ export const footerQuickLinks = [
   { href: "/contact/", label: "تماس با ما" },
 ] as const satisfies readonly NavLink[];
 
-export function buildOrganizationStructuredData() {
+export function buildOrganizationStructuredData(siteUrl = siteConfig.siteUrl) {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "@id": `${siteConfig.siteUrl}/#organization`,
+    "@id": `${siteUrl}/#organization`,
     name: siteConfig.brand.name,
     alternateName: siteConfig.brand.alternateName,
-    url: `${siteConfig.siteUrl}/`,
-    logo: `${siteConfig.siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
+    url: `${siteUrl}/`,
+    logo: `${siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
     telephone: siteConfig.contact.phones.map((phone) =>
       phone.href.replace("tel:", ""),
     ),
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        telephone: siteConfig.contact.phones[0].href.replace("tel:", ""),
+        contactType: "sales",
+        areaServed: "IR",
+        availableLanguage: ["fa"],
+      },
+    ],
+    sameAs: [siteConfig.contact.whatsappCommunityUrl],
     address: {
       "@type": "PostalAddress",
       streetAddress: siteConfig.business.address,
@@ -137,5 +147,38 @@ export function buildOrganizationStructuredData() {
     ...(siteConfig.contact.officialEmail
       ? { email: siteConfig.contact.officialEmail }
       : {}),
+  };
+}
+
+export function buildWebSiteStructuredData(siteUrl = siteConfig.siteUrl) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteUrl}/#website`,
+    url: `${siteUrl}/`,
+    name: siteConfig.brand.name,
+    alternateName: siteConfig.brand.alternateName,
+    description: siteConfig.home.description,
+    inLanguage: "fa-IR",
+    publisher: {
+      "@id": `${siteUrl}/#organization`,
+    },
+  };
+}
+
+export function buildHomeGraphStructuredData(siteUrl = siteConfig.siteUrl) {
+  const organizationNode: Record<string, unknown> = {
+    ...buildOrganizationStructuredData(siteUrl),
+  };
+  delete organizationNode["@context"];
+
+  const websiteNode: Record<string, unknown> = {
+    ...buildWebSiteStructuredData(siteUrl),
+  };
+  delete websiteNode["@context"];
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [organizationNode, websiteNode],
   };
 }

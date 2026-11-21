@@ -8,6 +8,7 @@ import {
   type ProductGroupId,
 } from "./category-meta";
 import { initialCategoryIdOf } from "./catalog-reader";
+import { takeCatalogFilterHandoff } from "./catalog-filter-handoff";
 import type { CatalogViewRequest } from "./catalog-types";
 import { resolveCatalogRouteRequest } from "./site-route";
 import { filterProductGroups } from "./site-logic.mjs";
@@ -136,17 +137,22 @@ export function useCatalogWorkspace({
 
   const [activeViewRequest, setActiveViewRequest] = useState<CatalogViewRequest>(
     () => {
+      const targetCategoryId =
+        route.subcategory ??
+        (route.category ? initialCategoryIdOf(route.category) : undefined);
+      const handoff =
+        typeof window !== "undefined" && route.category
+          ? takeCatalogFilterHandoff(route.category, targetCategoryId)
+          : null;
       const params =
         typeof window === "undefined"
           ? null
           : new URLSearchParams(window.location.search);
       return {
         requestId: 0,
-        categoryId:
-          route.subcategory ??
-          (route.category ? initialCategoryIdOf(route.category) : undefined),
-        factory: params?.get("factory") ?? undefined,
-        size: params?.get("size") ?? undefined,
+        categoryId: targetCategoryId,
+        factory: handoff?.factory ?? params?.get("factory") ?? undefined,
+        size: handoff?.size ?? params?.get("size") ?? undefined,
       };
     },
   );

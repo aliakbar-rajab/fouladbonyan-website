@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import sharp from "sharp";
 import {
   productGroups,
@@ -222,10 +222,43 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
   assert.equal(h1s.size, 44, "All 44 subcategory H1s must be distinct");
   assert.equal(canonicals.size, 44, "All 44 subcategory canonicals must be distinct");
 
-  // Sitemap total: 1 home + 8 category + 44 subcategory + 1 contact + 6 info
-  // + 1 guide index + 5 guides = 66
+  // Sitemap total: 1 home + 8 category + 44 subcategory + 1 contact + 2 indexable info
+  // (about, quote-process) + 1 guide index + 5 guides = 62 (4 legal/utility pages are noindex)
   const allLocs = sitemap.match(/<loc>[^<]+<\/loc>/g) ?? [];
-  assert.equal(allLocs.length, 66, "Sitemap must contain exactly 66 URLs");
+  assert.equal(allLocs.length, 62, "Sitemap must contain exactly 62 indexable URLs");
+
+  const homeHtmlForFooter = await readDist("index.html");
+  for (const noindexInfo of ["terms", "privacy", "complaints", "shipping-delivery"]) {
+    const infoHtml = await readDist(`${noindexInfo}/index.html`);
+    assert.equal(
+      metaContent(infoHtml, "name", "robots"),
+      "noindex, follow",
+      `${noindexInfo}/ must emit noindex, follow`,
+    );
+    assert.doesNotMatch(
+      sitemap,
+      new RegExp(`<loc>https://fouladbonyan\\.com/${noindexInfo}/</loc>`),
+      `${noindexInfo}/ must not be present in sitemap.xml`,
+    );
+    assert.match(
+      homeHtmlForFooter,
+      new RegExp(`href="/${noindexInfo}/"`),
+      `${noindexInfo}/ must stay accessible in footer links`,
+    );
+  }
+  for (const indexedInfo of ["about", "quote-process"]) {
+    const infoHtml = await readDist(`${indexedInfo}/index.html`);
+    assert.equal(
+      metaContent(infoHtml, "name", "robots"),
+      "index, follow",
+      `${indexedInfo}/ must remain indexable`,
+    );
+    assert.match(
+      sitemap,
+      new RegExp(`<loc>https://fouladbonyan\\.com/${indexedInfo}/</loc>`),
+      `${indexedInfo}/ must be present in sitemap.xml`,
+    );
+  }
 
   // Verify permanent redirect stubs for single subcategories
   for (const group of ["angle", "channel"]) {
@@ -346,21 +379,27 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
     assert.ok(catalog, `catalog for ${group.id} must exist in snapshot`);
 
     if (group.id === "angle" || group.id === "channel") {
-      // Single subcategory groups link directly to parent category
+      // Single subcategory groups link directly to parent category, while
+      // factory and size quick-picks render as sessionStorage buttons.
       assert.match(
         groupHtml,
         new RegExp(`<a href="/${group.id}/"[^>]*>قیمت ${group.label}</a>`),
         `MegaMenu on ${group.id} must link directly to /${group.id}/ for single subcategory`,
       );
-      assert.match(
+      assert.doesNotMatch(
         groupHtml,
-        new RegExp(`<a href="/${group.id}/\\?factory=`),
-        `MegaMenu on ${group.id} must have factory filter link pointing to /${group.id}/`,
+        new RegExp(`<a href="/${group.id}/\\?(?:factory|size)=`),
+        `MegaMenu on ${group.id} must not emit query-string factory or size links`,
       );
       assert.match(
         groupHtml,
-        new RegExp(`<a href="/${group.id}/\\?size=`),
-        `MegaMenu on ${group.id} must have size filter link pointing to /${group.id}/`,
+        /<section class="mega-rebar-factories"[\s\S]*?<button type="button"/,
+        `MegaMenu on ${group.id} must render button quick-picks for factories`,
+      );
+      assert.match(
+        groupHtml,
+        /<section class="mega-rebar-sizes"[\s\S]*?<button type="button"/,
+        `MegaMenu on ${group.id} must render button quick-picks for sizes`,
       );
     } else {
       // Multi-category groups render links for every real subcategory
@@ -484,7 +523,7 @@ test("category landing pages render a distinct overview and link to every subcat
   }
 });
 
-test("homepage WebSite references the Organization emitted beside its visible address on contact", async () => {
+test("homepage @graph links WebSite and Organization corroborated by visible addresses on / and /contact/, and catalog routes emit CollectionPage", async () => {
   const homeHtml = await readDist("index.html");
   const contactHtml = await readDist("contact/index.html");
   const aboutHtml = await readDist("about/index.html");
@@ -496,18 +535,35 @@ test("homepage WebSite references the Organization emitted beside its visible ad
   const contactJsonLd = parseJsonLd(contactHtml);
   const aboutJsonLd = parseJsonLd(aboutHtml);
 
-  const website = homeJsonLd.find((item) => item["@type"] === "WebSite");
-  assert.ok(website, "Homepage must contain WebSite JSON-LD");
+  const homeGraph = homeJsonLd.find((item) => Array.isArray(item["@graph"]));
+  assert.ok(homeGraph, "Homepage must emit unified @graph JSON-LD");
+  const homeGraphNodes = homeGraph["@graph"];
+  const homeOrganizations = homeGraphNodes.filter((n) => n["@type"] === "Organization");
+  const homeWebSites = homeGraphNodes.filter((n) => n["@type"] === "WebSite");
+  assert.equal(homeOrganizations.length, 1, "Homepage @graph must include one Organization");
+  assert.equal(homeWebSites.length, 1, "Homepage @graph must include one WebSite");
+
+  const website = homeWebSites[0];
+  const homeOrg = homeOrganizations[0];
   assert.equal(website.name, siteConfig.brand.name);
-  assert.equal(
-    homeJsonLd.filter((item) => item["@type"] === "Organization").length,
-    0,
-    "Homepage must not duplicate the Organization object",
+  assert.equal(website.publisher?.["@id"], homeOrg["@id"]);
+  assert.equal(homeOrg.address?.streetAddress, siteConfig.business.address);
+  assert.ok(Array.isArray(homeOrg.contactPoint) && homeOrg.contactPoint.length > 0);
+  assert.deepEqual(homeOrg.sameAs, [siteConfig.contact.whatsappCommunityUrl]);
+
+  const homeWithoutJsonLd = homeHtml.replace(
+    /<script\b[^>]*\btype="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
+    "",
   );
+  assert.ok(
+    homeWithoutJsonLd.includes(siteConfig.business.address),
+    "Organization streetAddress must be visible in homepage footer text",
+  );
+
   assert.equal(
     aboutJsonLd.filter((item) => item["@type"] === "Organization").length,
     0,
-    "/about/ must not emit Organization JSON-LD without the full address",
+    "/about/ must not emit Organization JSON-LD",
   );
 
   const contactOrganizations = contactJsonLd.filter(
@@ -515,7 +571,7 @@ test("homepage WebSite references the Organization emitted beside its visible ad
   );
   assert.equal(contactOrganizations.length, 1, "/contact/ must emit one Organization object");
   const organization = contactOrganizations[0];
-  assert.equal(website.publisher?.["@id"], organization["@id"]);
+  assert.equal(organization["@id"], homeOrg["@id"]);
   assert.equal(organization.address?.streetAddress, siteConfig.business.address);
   assert.equal(organization.location?.["@type"], "Place");
   assert.deepEqual(organization.location?.geo, {
@@ -523,6 +579,10 @@ test("homepage WebSite references the Organization emitted beside its visible ad
     latitude: siteConfig.officeCoordinates.lat,
     longitude: siteConfig.officeCoordinates.lng,
   });
+
+  const contactPageNode = contactJsonLd.find((item) => item["@type"] === "ContactPage");
+  assert.ok(contactPageNode, "/contact/ must emit ContactPage JSON-LD");
+  assert.equal(contactPageNode.about?.["@id"], organization["@id"]);
 
   const contactWithoutJsonLd = contactHtml.replace(
     /<script\b[^>]*\btype="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/g,
@@ -532,6 +592,33 @@ test("homepage WebSite references the Organization emitted beside its visible ad
     contactWithoutJsonLd.includes(siteConfig.business.address),
     "Organization streetAddress must match visible /contact/ text from siteConfig",
   );
+
+  // Verify all 52 catalog pages emit CollectionPage + ItemList + dateModified
+  // and remain strictly free of Product / Offer / AggregateOffer schema.
+  const snapshot = await readJson("catalog-prices.json");
+  let collectionCount = 0;
+  for (const catalog of snapshot.catalogs) {
+    const pathsToCheck = [
+      `${catalog.id}/index.html`,
+      ...((singleSubcategoryGroupIds.includes(catalog.id) ? [] : catalog.categories.map((c) => `${catalog.id}/${c.id}/index.html`))),
+    ];
+    for (const relPath of pathsToCheck) {
+      const catHtml = await readDist(relPath);
+      const schemas = parseJsonLd(catHtml);
+      const collection = schemas.find((item) => item["@type"] === "CollectionPage");
+      assert.ok(collection, `${relPath} must emit CollectionPage JSON-LD`);
+      assert.equal(collection.dateModified, snapshot.fetchedAt, `${relPath} dateModified must match snapshot fetchedAt`);
+      assert.equal(collection.mainEntity?.["@type"], "ItemList", `${relPath} CollectionPage must contain an ItemList`);
+      assert.ok(collection.mainEntity.numberOfItems > 0, `${relPath} ItemList must be non-empty`);
+      assert.doesNotMatch(
+        catHtml,
+        /"@type"\s*:\s*"(?:Product|Offer|AggregateOffer)"/,
+        `${relPath} must not emit Product, Offer, or AggregateOffer JSON-LD`,
+      );
+      collectionCount += 1;
+    }
+  }
+  assert.equal(collectionCount, 52, "expected CollectionPage JSON-LD across all 52 catalog pages");
 
   // Apple touch icon
   assert.match(
@@ -704,7 +791,7 @@ test("every page's declared og:image dimensions match the image it actually poin
     checked += 1;
   }
 
-  assert.equal(checked, 66, "every indexable page must have been checked");
+  assert.equal(checked, 66, "every rendered site page must have been checked");
   // Guards the swap this test exists for: the catalog hero really is a
   // different size from the template's /og.png default.
   assert.deepEqual(measured.get("og.png"), { width: 1730, height: 909 });
@@ -722,7 +809,14 @@ test("every page's declared og:image dimensions match the image it actually poin
  * did not notice, because it only asks whether a link resolves to a file, and a
  * stub is a file. Ask whether the target is indexable.
  */
-test("no indexable page links to a noindex or redirecting URL", async () => {
+const APPROVED_NOINDEX_LEGAL_PATHS = new Set([
+  "/terms/",
+  "/privacy/",
+  "/complaints/",
+  "/shipping-delivery/",
+]);
+
+test("no indexable page links to a redirecting stub or unapproved noindex URL", async () => {
   const files = await distHtmlFiles();
   const byPathname = new Map();
   for (const file of files) {
@@ -732,9 +826,20 @@ test("no indexable page links to a noindex or redirecting URL", async () => {
     byPathname.set(pathname, html);
   }
 
-  const isIndexable = (html) =>
-    !/<meta name="robots" content="[^"]*noindex/.test(html) &&
-    !/<meta http-equiv="refresh"/i.test(html);
+  const isRedirect = (html) => /<meta http-equiv="refresh"/i.test(html);
+  const isNoindex = (html) => /<meta name="robots" content="[^"]*noindex/.test(html);
+  const isIndexable = (html) => !isNoindex(html) && !isRedirect(html);
+
+  // Confirm ONLY the 4 approved legal/utility pages + 404.html + 2 redirect stubs carry noindex.
+  const actualNoindexNonRedirects = [...byPathname.entries()]
+    .filter(([pathname, html]) => pathname !== "/404.html" && isNoindex(html) && !isRedirect(html))
+    .map(([pathname]) => pathname)
+    .sort();
+  assert.deepEqual(
+    actualNoindexNonRedirects,
+    [...APPROVED_NOINDEX_LEGAL_PATHS].sort(),
+    "only the four declared legal/utility pages may carry noindex",
+  );
 
   const failures = [];
   let checkedLinks = 0;
@@ -749,8 +854,10 @@ test("no indexable page links to a noindex or redirecting URL", async () => {
       const targetHtml = byPathname.get(target.pathname);
       if (!targetHtml) continue; // built-links.test.mjs owns missing routes
       checkedLinks += 1;
-      if (!isIndexable(targetHtml)) {
-        failures.push(`${pathname} -> ${href}`);
+      if (isRedirect(targetHtml)) {
+        failures.push(`${pathname} -> ${href} (redirect stub)`);
+      } else if (isNoindex(targetHtml) && !APPROVED_NOINDEX_LEGAL_PATHS.has(target.pathname)) {
+        failures.push(`${pathname} -> ${href} (unapproved noindex)`);
       }
     }
   }
@@ -759,7 +866,7 @@ test("no indexable page links to a noindex or redirecting URL", async () => {
   assert.deepEqual(
     failures,
     [],
-    "indexable pages must link at the canonical URL, never at a redirect stub",
+    "indexable pages must link at canonical URLs, never at redirect stubs or unapproved noindex pages",
   );
 });
 
@@ -810,7 +917,8 @@ test("no built page emits a parameterised quote URL", async () => {
     "every row must point at the single clean quote URL",
   );
 
-  // The rows are told apart by their accessible name, not by their href.
+  // The rows are told apart by their accessible name, not by their href,
+  // and mark the repetitive row-level quote action as rel="nofollow".
   const labelled = ribbed.match(
     /<td[^>]*class="row-quote-cell"[^>]*><a href="\/quote-process\/#quote-form" aria-label="[^"]+"/g,
   );
@@ -819,61 +927,54 @@ test("no built page emits a parameterised quote URL", async () => {
     rowLinks.length,
     "each row's quote link must carry its own aria-label",
   );
+  const nofollowed = ribbed.match(
+    /<td[^>]*class="row-quote-cell"[^>]*><a href="\/quote-process\/#quote-form" aria-label="[^"]+" rel="nofollow"/g,
+  );
+  assert.equal(
+    nofollowed?.length,
+    rowLinks.length,
+    "each row's quote link must carry rel=\"nofollow\"",
+  );
 });
 
 /*
- * The `?factory=` and `?size=` links are the legitimate query URLs that remain:
- * a factory or a size has no page of its own. Their values are Persian mill and
- * size names, so they have to survive percent-encoding intact.
+ * MegaMenu factory/size quick-picks now travel via sessionStorage buttons
+ * rather than `<a href="...?factory=">` / `...?size=` links, so ZERO internal
+ * query-string anchor links should exist anywhere in built HTML files.
  */
-test("every remaining query URL is correctly encoded and round-trips", async () => {
+test("no built page emits internal query-string anchor links", async () => {
   const files = await distHtmlFiles();
-  let checked = 0;
+  const offenders = [];
 
   for (const file of files) {
     const html = await readDist(file);
     for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
       const href = match[1].replaceAll("&amp;", "&");
-      if (!href.includes("?")) continue;
-      // Only our own URLs: an outbound map or source link is not ours to
-      // re-encode, and its query legitimately carries characters like ",".
       if (!href.startsWith("/")) continue;
-      const [path, query] = href.split("?");
-
-      // The set encodeURIComponent leaves alone (RFC 3986 unreserved plus the
-      // sub-delims it permits, so "?size=10*10" is correct as written), the
-      // "%" of an escape, and the separators. Anything else -- a raw space or
-      // a raw Persian mill name -- means the value was never encoded.
-      assert.doesNotMatch(
-        query,
-        /[^A-Za-z0-9\-._~!*'()%&=+#]/,
-        `${file}: "${href}" carries a raw character that must be percent-encoded`,
-      );
-
-      const params = new URLSearchParams(query.split("#")[0]);
-      for (const [key, value] of params) {
-        assert.ok(
-          ["factory", "size"].includes(key),
-          `${file}: unexpected query parameter "${key}" on ${path}`,
-        );
-        assert.ok(
-          value.length > 0,
-          `${file}: "${key}" decoded to an empty value on ${path}`,
-        );
-        // Re-encoding what came back must reproduce what shipped.
-        assert.ok(
-          query.includes(encodeURIComponent(value)),
-          `${file}: "${value}" is not encoded as encodeURIComponent would encode it`,
-        );
-        checked += 1;
+      if (href.includes("?")) {
+        offenders.push(`${file} -> ${href}`);
       }
     }
   }
 
-  assert.ok(
-    checked > 100,
-    `expected the mega-menu filter links, saw ${checked}`,
+  assert.deepEqual(
+    offenders,
+    [],
+    `internal links must use clean canonical paths instead of query parameters: ${offenders.slice(0, 5).join(", ")}`,
   );
+});
+
+test("subcategory pages scope initial-page-data payloads cleanly", async () => {
+  for (const relPath of [
+    "sheet/sheet-ck45/index.html",
+    "sheet/sheet-a516/index.html",
+  ]) {
+    const info = await stat(new URL(`../dist/${relPath}`, import.meta.url));
+    assert.ok(
+      info.size < 120_000,
+      `${relPath} HTML size (${info.size} bytes) must stay below 120 KB via subcategory scoping`,
+    );
+  }
 });
 
 /*

@@ -73,11 +73,19 @@ export function createRetryableLoader<T>(
 let cachedSnapshot: CatalogSnapshot | undefined;
 let pendingFullSnapshot: Promise<CatalogSnapshot> | undefined;
 
+function isFullGroupCatalog(group: GroupCatalog): boolean {
+  return (
+    group.categories.length > 0 &&
+    group.categories.every((category) => category.factories.length > 0)
+  );
+}
+
 export const loadCatalogSnapshot = Object.assign(
   async (): Promise<CatalogSnapshot> => {
     if (
       cachedSnapshot !== undefined &&
-      cachedSnapshot.catalogs.length >= productGroups.length
+      cachedSnapshot.catalogs.length >= productGroups.length &&
+      cachedSnapshot.catalogs.every(isFullGroupCatalog)
     ) {
       return cachedSnapshot;
     }
@@ -85,14 +93,23 @@ export const loadCatalogSnapshot = Object.assign(
       .then((module) => module.default as CatalogSnapshot)
       .then((full) => {
         if (cachedSnapshot) {
-          const existingIds = new Set(cachedSnapshot.catalogs.map((c) => c.id));
-          const missing = full.catalogs.filter(
-            (c) => !existingIds.has(c.id as ProductGroupId),
+          // A subcategory route primes only one category inside its group and
+          // leaves sibling categories stubbed (`factories: []`). Merge full
+          // groups over any partial/stubbed group when the complete snapshot loads.
+          const cachedById = new Map(
+            cachedSnapshot.catalogs.map((c) => [c.id, c]),
           );
           cachedSnapshot = {
             ...full,
             ...cachedSnapshot,
-            catalogs: [...cachedSnapshot.catalogs, ...missing],
+            catalogs: full.catalogs.map((fullCatalog) => {
+              const existing = cachedById.get(
+                fullCatalog.id as ProductGroupId,
+              );
+              return existing && isFullGroupCatalog(existing)
+                ? existing
+                : fullCatalog;
+            }),
           };
         } else {
           cachedSnapshot = full;
@@ -152,7 +169,7 @@ export async function loadGroupCatalog(
   groupId: ProductGroupId,
 ): Promise<GroupCatalog> {
   const cached = loadGroupCatalog.getCached(groupId);
-  if (cached) return cached;
+  if (cached && isFullGroupCatalog(cached)) return cached;
   const snapshot = await loadCatalogSnapshot();
   const catalog = snapshot.catalogs.find((item) => item.id === groupId);
   if (!catalog) {

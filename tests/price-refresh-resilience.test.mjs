@@ -163,3 +163,35 @@ test("local refresh keeps the prior valid category when one source fails", async
     assert.deepEqual(JSON.parse(await readFile(outputPath, "utf8")), snapshot);
   });
 });
+
+test("local refresh strips embedded newlines/tabs and fixes upstream رکیلوگرم typo", async () => {
+  await withTempOutput(async (outputPath) => {
+    const fetchImpl = async () => {
+      const products = Array.from({ length: 120 }, (_, index) => ({
+        ...fakeProductItem(index, "میلگرد \n ۱۸"),
+        "meta-واحد": "رکیلوگرم",
+        "meta-کارخانه": "کارخانه\tتست\r\nاصلی",
+      }));
+      const shopData = {
+        title: "تست\nتیتر",
+        products: [{ title: "کارخانه\r\nاصلی", productsitem: products }],
+        price_compare: { date: "1404/01/01", percent: 1, status: "same" },
+      };
+      const nextData = { props: { pageProps: { shopData } } };
+      return new Response(
+        `<html><body><script type="application/json" id="__NEXT_DATA__">${JSON.stringify(nextData)}</script></body></html>`,
+        { status: 200 },
+      );
+    };
+
+    const { snapshot } = await updateLocalPriceSnapshot({
+      outputPath,
+      fetchImpl,
+    });
+    const firstFactory = snapshot.catalogs[0].categories[0].factories[0];
+    assert.equal(firstFactory.name, "کارخانه اصلی");
+    assert.equal(firstFactory.rows[0].title, "میلگرد ۱۸ 1");
+    assert.equal(firstFactory.rows[0].unit, "کیلوگرم");
+    assert.equal(firstFactory.rows[0].factory, "کارخانه تست اصلی");
+  });
+});

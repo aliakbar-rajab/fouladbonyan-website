@@ -115,6 +115,15 @@ test("core palette combinations meet WCAG AA contrast", () => {
     ["metadata on white", token("--muted"), token("--white")],
     // The tightest pair on the page: the source card's prose, at 11.5px.
     ["source prose on white", used("#71727B"), token("--white")],
+    // Factory card headers sit on a light #f3f5f6 -> #fff gradient.
+    ["factory header title on gradient", token("--ink"), used("#f3f5f6")],
+    ["factory header date on gradient", used("#525860"), used("#f3f5f6")],
+    // Light-surface zebra striping and status/CTA inks on alternating rows.
+    ["zebra row text on light stripe", used("#4a4d57"), used("#f6f7f9")],
+    ["zebra row price on light stripe", used("#30313c"), used("#f6f7f9")],
+    ["call-for-price on light stripe", used("#875900"), used("#f6f7f9")],
+    ["quote CTA on light stripe", used("#6f4910"), used("#f6f7f9")],
+    ["downward trend on light stripe", used("#0d7a4a"), used("#f6f7f9")],
   ];
 
   for (const [name, foreground, background] of combinations) {

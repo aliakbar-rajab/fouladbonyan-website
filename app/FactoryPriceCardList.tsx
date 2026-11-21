@@ -319,6 +319,7 @@ export function FactoryPriceCardList({
                             <a
                               href={QUOTE_FORM_HREF}
                               aria-label={`افزودن ${row.title} به درخواست پیش‌فاکتور`}
+                              rel="nofollow"
                               onClick={() =>
                                 writeQuoteHandoff(
                                   quoteHandoffFor(
