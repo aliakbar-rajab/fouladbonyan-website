@@ -1,4 +1,5 @@
 import { renderToString } from "react-dom/server";
+import { getHeroImageSources } from "../../app/image-utils.ts";
 import { siteConfig } from "../../app/site-config.ts";
 import { siteRedirectRoutes } from "../../app/site-page.ts";
 import { siteRouteDataset, siteRoutePath } from "../../app/site-route.ts";
@@ -26,31 +27,17 @@ export const HERO_OG_IMAGE = {
 };
 
 export function buildHeroPreloadTag(group) {
-  const heroImg = group.heroImage ?? group.image;
-  if (heroImg.includes("hero-")) {
-    const base = heroImg
-      .replace(/-1680\.(jpg|webp|avif)$/, "")
-      .replace(/\.(jpg|webp|avif)$/, "");
-    return `<link
-      id="hero-image-preload"
-      rel="preload"
-      as="image"
-      type="image/avif"
-      href="${base}-1680.avif"
-      imagesrcset="${base}-640.avif 640w, ${base}-960.avif 960w, ${base}-1280.avif 1280w, ${base}-1680.avif 1672w"
-      imagesizes="100vw"
-      fetchpriority="high"
-    />`;
-  }
-  const base = heroImg.replace(/\.(jpg|webp|avif)$/, "");
+  const { avifHref, avifSrcSet, sizes } = getHeroImageSources(
+    group.heroImage ?? group.image,
+  );
   return `<link
       id="hero-image-preload"
       rel="preload"
       as="image"
       type="image/avif"
-      href="${base}.avif"
-      imagesrcset="${base}-240.avif 240w, ${base}-384.avif 384w"
-      imagesizes="100vw"
+      href="${avifHref}"
+      imagesrcset="${avifSrcSet}"
+      imagesizes="${sizes}"
       fetchpriority="high"
     />`;
 }
@@ -81,6 +68,22 @@ const escapeHtmlAttribute = (value) =>
 const jsonForScript = (data) => JSON.stringify(data).replace(/</g, "\\u003c");
 
 const insert = (value) => () => value;
+
+/**
+ * Replaces a required template slot and fails fast if index.html drifted so
+ * missing tags cannot silently pass through into generated pages.
+ */
+function replaceRequired(html, pattern, replacer, slotName) {
+  let matched = false;
+  const next = html.replace(pattern, (...args) => {
+    matched = true;
+    return replacer(...args);
+  });
+  if (!matched) {
+    throw new Error(`Static HTML template is missing required slot: ${slotName}`);
+  }
+  return next;
+}
 
 const datasetAttributeName = (key) =>
   `data-${key.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`)}`;
@@ -114,22 +117,6 @@ export function buildBreadcrumbJsonLd(items) {
       name: item.name,
       item: item.url,
     })),
-  };
-  return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
-}
-
-export function buildWebSiteJsonLd({ siteUrl }) {
-  const payload = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${siteUrl}/#website`,
-    url: `${siteUrl}/`,
-    name: siteConfig.brand.name,
-    alternateName: siteConfig.brand.alternateName,
-    description: siteConfig.home.description,
-    publisher: {
-      "@id": `${siteUrl}/#organization`,
-    },
   };
   return `\n    <script type="application/ld+json">${jsonForScript(payload)}</script>`;
 }
@@ -280,9 +267,11 @@ export function buildDatasetJsonLd({
 }
 
 const replaceMetaContent = (html, attrMatcher, value) =>
-  html.replace(
+  replaceRequired(
+    html,
     new RegExp(`(<meta[^>]*?${attrMatcher}[^>]*?content=")[^"]*(")`),
     (match, prefix, suffix) => `${prefix}${escapeHtmlAttribute(value)}${suffix}`,
+    `<meta ${attrMatcher}>`,
   );
 
 /*
@@ -365,24 +354,29 @@ export function renderStaticDocument(
     modulePreloadHrefs = [],
   },
 ) {
-  let html = baseHtml
-    .replace(
-      /<title>[^<]*<\/title>/,
-      insert(`<title>${escapeHtmlText(title)}</title>`),
-    )
-    .replace(
-      /(<link rel="canonical" href=")[^"]*(")/,
-      (match, prefix, suffix) =>
-        `${prefix}${escapeHtmlAttribute(pageUrl)}${suffix}`,
-    );
+  let html = replaceRequired(
+    baseHtml,
+    /<title>[^<]*<\/title>/,
+    insert(`<title>${escapeHtmlText(title)}</title>`),
+    "<title>",
+  );
+  html = replaceRequired(
+    html,
+    /(<link rel="canonical" href=")[^"]*(")/,
+    (match, prefix, suffix) =>
+      `${prefix}${escapeHtmlAttribute(pageUrl)}${suffix}`,
+    '<link rel="canonical">',
+  );
 
   if (robots) {
     if (/<meta[^>]*name="robots"[^>]*>/i.test(html)) {
       html = replaceMetaContent(html, 'name="robots"', robots);
     } else {
-      html = html.replace(
+      html = replaceRequired(
+        html,
         "</head>",
         insert(`\n    <meta name="robots" content="${escapeHtmlAttribute(robots)}" />\n  </head>`),
+        "</head>",
       );
     }
   }
@@ -390,22 +384,28 @@ export function renderStaticDocument(
   // Organization JSON-LD: inject structured data or strip placeholder
   if (organizationData) {
     const orgJson = jsonForScript(organizationData);
-    html = html.replace(
+    html = replaceRequired(
+      html,
       /(<script id="organization-structured-data" type="application\/ld\+json">)[\s\S]*?(<\/script>)/,
       (match, open, close) => `${open}${orgJson}${close}`,
+      '<script id="organization-structured-data">',
     );
   } else {
-    html = html.replace(
+    html = replaceRequired(
+      html,
       /\s*<script id="organization-structured-data"[\s\S]*?<\/script>/,
-      "",
+      insert(""),
+      '<script id="organization-structured-data">',
     );
   }
 
   // Hero preload handling
   if (heroPreload !== undefined) {
-    html = html.replace(
+    html = replaceRequired(
+      html,
       /\s*<link\s+id="hero-image-preload"[\s\S]*?\/>/,
       insert(heroPreload ? `\n    ${heroPreload}` : ""),
+      '<link id="hero-image-preload">',
     );
   }
 
@@ -422,9 +422,11 @@ export function renderStaticDocument(
 
   // Render React markup inside #root
   const rootHtml = renderToString(rootElement);
-  html = html.replace(
+  html = replaceRequired(
+    html,
     /<div id="root"[\s\S]*<\/div>/,
     insert(`<div id="root"${rootAttributes}>${rootHtml}</div>`),
+    '<div id="root">',
   );
 
   // Append hydration payloads before </body>
@@ -435,14 +437,21 @@ export function renderStaticDocument(
           `\n    <script id="${id}" type="application/json">${jsonForScript(data)}</script>`,
       )
       .join("");
-    html = html.replace("</body>", insert(`${scripts}\n  </body>`));
+    html = replaceRequired(
+      html,
+      "</body>",
+      insert(`${scripts}\n  </body>`),
+      "</body>",
+    );
   }
 
   // Inject Breadcrumb JSON-LD before </head>
   if (breadcrumb.length > 0) {
-    html = html.replace(
+    html = replaceRequired(
+      html,
       "</head>",
       insert(`${buildBreadcrumbJsonLd(breadcrumb)}\n  </head>`),
+      "</head>",
     );
   }
 
@@ -457,13 +466,23 @@ export function renderStaticDocument(
     <link rel="modulepreload" crossorigin href="${escapeHtmlAttribute(href)}">`,
       )
       .join("");
-    html = html.replace("</head>", insert(`${links}
-  </head>`));
+    html = replaceRequired(
+      html,
+      "</head>",
+      insert(`${links}
+  </head>`),
+      "</head>",
+    );
   }
 
-  // Inject extra head elements (e.g. WebSite or Article JSON-LD) before </head>
+  // Inject extra head elements (e.g. CollectionPage, ContactPage, or Article JSON-LD) before </head>
   if (extraHeadHtml) {
-    html = html.replace("</head>", insert(`${extraHeadHtml}\n  </head>`));
+    html = replaceRequired(
+      html,
+      "</head>",
+      insert(`${extraHeadHtml}\n  </head>`),
+      "</head>",
+    );
   }
 
   return html;

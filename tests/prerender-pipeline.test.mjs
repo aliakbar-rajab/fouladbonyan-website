@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import React from "react";
@@ -13,14 +13,16 @@ import {
 } from "../scripts/lib/static-document.mjs";
 import { collectSitePageDescriptors } from "../scripts/lib/site-pages.mjs";
 import {
+  compileStaticSite,
   generateStaticSite,
-  writePrerenderArtifacts,
+  writeCompiledSite,
 } from "../scripts/lib/prerender-pipeline.mjs";
 import {
   buildMenuCatalog,
   buildOverviewSummaries,
   resetCatalogReader,
 } from "../app/catalog-reader.ts";
+import { getHeroImageSources } from "../app/image-utils.ts";
 import { buildGuideReference } from "../app/steel-reference.ts";
 import {
   interpretSiteRoute,
@@ -45,11 +47,17 @@ const MOCK_TEMPLATE = `<!doctype html>
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://fouladbonyan.com/" />
     <link id="hero-image-preload" rel="preload" as="image" href="/default.avif" />
+    <meta property="og:type" content="website" />
     <meta property="og:title" content="Default OG Title" />
     <meta property="og:description" content="Default OG Desc" />
     <meta property="og:url" content="https://fouladbonyan.com/" />
+    <meta property="og:image" content="https://fouladbonyan.com/og.png" />
+    <meta property="og:image:width" content="1730" />
+    <meta property="og:image:height" content="909" />
+    <meta property="og:image:alt" content="Default OG Alt" />
     <meta name="twitter:title" content="Default Twitter Title" />
     <meta name="twitter:description" content="Default Twitter Desc" />
+    <meta name="twitter:image" content="https://fouladbonyan.com/og.png" />
     <script id="organization-structured-data" type="application/ld+json">{}</script>
     <title>Default Title</title>
   </head>
@@ -149,6 +157,70 @@ test("renderStaticDocument transforms shell cleanly and embeds React SSR markup"
   assert.match(html, /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"/);
 });
 
+test("renderStaticDocument fails fast when a required template slot is missing", () => {
+  const baseDescriptor = {
+    title: "عنوان",
+    description: "توضیحات",
+    pageUrl: "https://fouladbonyan.com/test/",
+    rootElement: React.createElement("div", null, "متن"),
+    heroPreload: null,
+    organizationData: null,
+  };
+
+  assert.throws(
+    () =>
+      renderStaticDocument(
+        MOCK_TEMPLATE.replace(/<title>[^<]*<\/title>/, ""),
+        baseDescriptor,
+      ),
+    /missing required slot: <title>/,
+  );
+
+  assert.throws(
+    () =>
+      renderStaticDocument(
+        MOCK_TEMPLATE.replace(/<div id="root"><\/div>/, ""),
+        baseDescriptor,
+      ),
+    /missing required slot: <div id="root">/,
+  );
+
+  assert.throws(
+    () =>
+      renderStaticDocument(
+        MOCK_TEMPLATE.replace(/<link id="hero-image-preload"[^>]*\/>/, ""),
+        baseDescriptor,
+      ),
+    /missing required slot: <link id="hero-image-preload">/,
+  );
+
+  assert.throws(
+    () =>
+      renderStaticDocument(
+        MOCK_TEMPLATE.replace(
+          /<script id="organization-structured-data"[\s\S]*?<\/script>/,
+          "",
+        ),
+        baseDescriptor,
+      ),
+    /missing required slot: <script id="organization-structured-data">/,
+  );
+
+  assert.throws(
+    () =>
+      renderStaticDocument(
+        MOCK_TEMPLATE.replace(/<meta property="og:image"[^>]*\/>/, ""),
+        {
+          ...baseDescriptor,
+          ogImage: "https://fouladbonyan.com/categories/hero-rebar-1280.jpg",
+          ogImageWidth: 1280,
+          ogImageHeight: 720,
+        },
+      ),
+    /missing required slot: <meta property="og:image">/,
+  );
+});
+
 test("a hostile upstream label cannot break out of the markup it is spliced into", () => {
   // Titles, descriptions and dataset values are built from category and product
   // labels scraped off fooladiranian.com, and the payload scripts carry that
@@ -226,7 +298,7 @@ test("renderStaticDocument injects organization data when provided", () => {
   );
 });
 
-test("buildSitemapXml produces well-formed XML with all 66 URLs", () => {
+test("buildSitemapXml produces well-formed XML with indexable URLs only", () => {
   const mockPages = [
     { pageUrl: "https://fouladbonyan.com/", lastmod: "2026-08-28" },
     { pageUrl: "https://fouladbonyan.com/rebar/", lastmod: "2026-08-28" },
@@ -260,50 +332,23 @@ test("renderStaticDocument updates robots meta tag when noindex is requested", (
   assert.match(html, /<meta name="robots" content="noindex, follow" \/>/);
 });
 
-test("writePrerenderArtifacts creates expected files and directory hierarchy atomically", async () => {
+test("writeCompiledSite flushes a compiled virtual site into the expected directory hierarchy", async () => {
   const tempDir = await mkdtemp(join(tmpdir(), "prerender-test-"));
 
   try {
-    const mockPages = [
-      {
-        outPath: [],
-        pageUrl: "https://fouladbonyan.com/",
-        lastmod: "2026-08-28",
-        title: "Home",
-        description: "Home Desc",
-        rootElement: React.createElement("div", null, "Home"),
-        payloads: [],
-        breadcrumb: [],
-      },
-      {
-        outPath: ["rebar"],
-        pageUrl: "https://fouladbonyan.com/rebar/",
-        lastmod: "2026-08-28",
-        title: "Rebar",
-        description: "Rebar Desc",
-        rootElement: React.createElement("div", null, "Rebar"),
-        payloads: [],
-        breadcrumb: [],
-      },
-      {
-        outPath: ["rebar", "ribbed"],
-        pageUrl: "https://fouladbonyan.com/rebar/ribbed/",
-        lastmod: "2026-08-28",
-        title: "Ribbed",
-        description: "Ribbed Desc",
-        rootElement: React.createElement("div", null, "Ribbed"),
-        payloads: [],
-        breadcrumb: [],
-      },
-    ];
+    const virtualSite = {
+      files: new Map([
+        ["index.html", "<!doctype html><title>Home</title>"],
+        ["rebar/index.html", "<!doctype html><title>Rebar</title>"],
+        ["rebar/ribbed/index.html", "<!doctype html><title>Ribbed</title>"],
+        ["sitemap.xml", "<urlset><url><loc>https://fouladbonyan.com/rebar/ribbed/</loc></url></urlset>"],
+        ["_redirects", "/angle/angle/ /angle/ 301\n/beam/beam/ /beam/ 301\n/wire/wire/ /wire/steel-wire/ 301\n"],
+      ]),
+      pageCount: 3,
+      sitemapCount: 3,
+    };
 
-    const result = await writePrerenderArtifacts({
-      distDir: tempDir,
-      templateHtml: MOCK_TEMPLATE,
-      pages: mockPages,
-      rootLastmod: "2026-08-28",
-      siteUrl: "https://fouladbonyan.com",
-    });
+    const result = await writeCompiledSite(tempDir, virtualSite);
 
     assert.equal(result.pageCount, 3);
     assert.equal(result.sitemapCount, 3);
@@ -329,19 +374,30 @@ test("writePrerenderArtifacts creates expected files and directory hierarchy ato
   }
 });
 
-test("buildHeroPreloadTag generates valid preload link for category hero images", () => {
+test("buildHeroPreloadTag reuses app/image-utils.ts and emits existing AVIF preload hrefs", async () => {
+  const heroSources = getHeroImageSources("/categories/hero-rebar-1680.jpg");
   const heroTag = buildHeroPreloadTag({
     heroImage: "/categories/hero-rebar-1680.jpg",
   });
   assert.match(heroTag, /id="hero-image-preload"/);
+  assert.ok(heroTag.includes(`href="${heroSources.avifHref}"`));
+  assert.ok(heroTag.includes(`imagesrcset="${heroSources.avifSrcSet}"`));
   assert.match(heroTag, /href="\/categories\/hero-rebar-1680\.avif"/);
-  assert.match(heroTag, /imagesrcset="\/categories\/hero-rebar-640\.avif/);
 
+  const fallbackSources = getHeroImageSources("/categories/01-rebar.jpg");
   const fallbackTag = buildHeroPreloadTag({
     image: "/categories/01-rebar.jpg",
   });
   assert.match(fallbackTag, /id="hero-image-preload"/);
-  assert.match(fallbackTag, /href="\/categories\/01-rebar\.avif"/);
+  assert.ok(fallbackTag.includes(`href="${fallbackSources.avifHref}"`));
+  assert.ok(fallbackTag.includes(`imagesrcset="${fallbackSources.avifSrcSet}"`));
+  assert.match(fallbackTag, /href="\/categories\/01-rebar-384\.avif"/);
+
+  // Confirm both preload targets exist as real generated files in public/.
+  await Promise.all([
+    access(new URL(`../public${heroSources.avifHref}`, import.meta.url)),
+    access(new URL(`../public${fallbackSources.avifHref}`, import.meta.url)),
+  ]);
 });
 
 test("buildBreadcrumbJsonLd formats Schema.org BreadcrumbList payload", () => {
@@ -369,18 +425,40 @@ test("replaceSocialMeta updates OpenGraph, Twitter and description meta tags", (
   assert.match(updated, /<meta name="twitter:description" content="توضیحات جدید" \/>/);
 });
 
+test("compileStaticSite builds virtual files, sitemap, and redirects in-process", async () => {
+  const [templateHtml, snapshotRaw] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../app/data/catalog-prices.json", import.meta.url), "utf8"),
+  ]);
+  const snapshot = JSON.parse(snapshotRaw);
+
+  const compiled = await compileStaticSite({
+    templateHtml,
+    snapshot,
+    siteUrl: "https://example.test",
+  });
+
+  assert.equal(compiled.pageCount, 65);
+  assert.equal(compiled.sitemapCount, 61);
+  assert.equal(compiled.files.get("sitemap.xml"), compiled.sitemapXml);
+  assert.equal(compiled.files.get("_redirects"), compiled.redirectsText);
+  assert.ok(compiled.files.has("index.html"));
+  assert.ok(compiled.files.has("rebar/ribbed/index.html"));
+  assert.ok(compiled.files.has("angle/angle/index.html"));
+  assert.match(compiled.files.get("index.html"), /<link rel="canonical" href="https:\/\/example\.test\/" \/>/);
+  assert.match(compiled.sitemapXml, /<loc>https:\/\/example\.test\/rebar\/<\/loc>/);
+  assert.match(compiled.redirectsText, /^\/angle\/angle\/ \/angle\/ 301$/m);
+});
+
 /*
  * The orchestration itself, with no build behind it.
  *
- * generateStaticSite used to read dist/index.html and the 2.4 MB snapshot off
- * disk unconditionally, so everything it sequences -- priming the catalog
- * caches, building the menu and overview projections, the guide reference, and
- * handing the descriptors to the writer -- was reachable only by running
- * `vite build` first and then asserting against dist/.
+ * generateStaticSite reads inputs through its seams, compiles the virtual site
+ * via compileStaticSite, and hands that compiled site to writeSite.
  */
-test("generateStaticSite sequences the build without a dist or a writer", async () => {
+test("generateStaticSite compiles in memory and hands the virtual site to writeSite", async () => {
   let templateReads = 0;
-  const written = [];
+  const writes = [];
 
   const result = await generateStaticSite({
     siteUrl: "https://example.test",
@@ -388,33 +466,33 @@ test("generateStaticSite sequences the build without a dist or a writer", async 
       templateReads += 1;
       return Promise.resolve(MOCK_TEMPLATE);
     },
-    writeArtifacts: (args) => {
-      written.push(args);
-      return { pageCount: args.pages.length };
+    writeSite: (distDir, compiled) => {
+      writes.push({ distDir, compiled });
+      return { pageCount: compiled.pageCount, sitemapCount: compiled.sitemapCount };
     },
   });
 
   assert.equal(templateReads, 1, "the template is read through the seam, once");
-  assert.equal(written.length, 1);
+  assert.equal(writes.length, 1);
 
-  const [args] = written;
-  assert.equal(args.templateHtml, MOCK_TEMPLATE, "the injected template is what reaches the writer");
-  assert.equal(args.siteUrl, "https://example.test");
-  assert.match(args.rootLastmod, /^\d{4}-\d{2}-\d{2}$/);
-  assert.equal(result.pageCount, args.pages.length);
+  const [{ compiled }] = writes;
+  assert.equal(compiled.siteUrl, "https://example.test");
+  assert.match(compiled.rootLastmod, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(result.pageCount, compiled.pageCount);
+  assert.equal(result.sitemapCount, compiled.sitemapCount);
 
-  // The descriptors are real: the homepage, and every page carrying the fields
-  // renderStaticDocument and buildSitemapXml each need.
-  assert.ok(args.pages.length > 0);
-  const home = args.pages.find((page) => page.pageUrl === "https://example.test/");
-  assert.ok(home, "the homepage descriptor is present");
-  assert.ok(home.title && home.description && home.rootElement);
+  assert.ok(compiled.pages.length > 0);
+  const home = compiled.pages.find((page) => page.pageUrl === "https://example.test/");
+  assert.ok(home, "the homepage entry is present");
+  assert.ok(home.title && home.description && home.html);
+  assert.equal(compiled.files.get("index.html"), home.html);
 
-  for (const page of args.pages) {
+  for (const page of compiled.pages) {
     assert.ok(Array.isArray(page.outPath), `${page.pageUrl} needs an outPath`);
     assert.ok(page.title, `${page.pageUrl} needs a title`);
     assert.ok(page.description, `${page.pageUrl} needs a description`);
     assert.match(page.lastmod, /^\d{4}-\d{2}-\d{2}$/, `${page.pageUrl} needs a lastmod`);
     assert.ok(page.pageUrl.startsWith("https://example.test/"), "every URL honours the injected siteUrl");
+    assert.equal(compiled.files.get(page.relPath), page.html);
   }
 });

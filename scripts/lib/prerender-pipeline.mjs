@@ -1,7 +1,6 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { siteConfig } from "../../app/site-config.ts";
-import { buildRedirectsFile, siteRedirectRoutes } from "../../app/site-page.ts";
 import { buildGuideReference } from "../../app/steel-reference.ts";
 import {
   buildMenuCatalog,
@@ -17,16 +16,24 @@ import {
 import { collectSitePageDescriptors } from "./site-pages.mjs";
 
 /**
- * Static site generation: prime the catalog caches, ask site-pages.mjs which
- * pages exist, hand each to static-document.mjs, and write the result.
+ * Static site generation: compile the entire static site in memory into a
+ * virtual output map (`compileStaticSite`), then flush that virtual site to
+ * disk through a thin writer adapter (`writeCompiledSite`).
  *
- * The two modules it sits on are the ones with the content. This file is the
- * sequence, and it used to also be both of them -- 732 lines behind fourteen
- * exports, half of which no test could reach without running a full build
- * first, because the entry point read `dist/index.html` and a 2.4 MB snapshot
- * off disk unconditionally. Both reads are now seams: production passes
- * nothing and gets the real files, a test passes its own.
+ * Separating pure compilation from disk writes guarantees a failure part-way
+ * through leaves dist untouched and lets SEO and prerender tests assert
+ * directly against compiled HTML, sitemap.xml, and _redirects in-process.
  */
+
+const htmlOutputPath = (segments) =>
+  segments.length === 0 ? "index.html" : `${segments.join("/")}/index.html`;
+
+function addVirtualFile(files, relPath, content) {
+  if (files.has(relPath)) {
+    throw new Error(`Duplicate static output path: ${relPath}`);
+  }
+  files.set(relPath, content);
+}
 
 /**
  * The files to modulepreload for a lazily loaded page module: its own chunk
@@ -50,88 +57,17 @@ export function modulePreloadsFor(manifest, source) {
 }
 
 /**
- * Renders every page in memory before writing anything, so a failure part-way
- * through leaves the previous dist untouched rather than half-replaced.
+ * Pure virtual site compilation: primes the catalog caches from `snapshot`,
+ * collects every page descriptor, renders all HTML documents and redirect
+ * stubs against `templateHtml`, and builds `sitemap.xml` and `_redirects`.
+ * Performs no filesystem I/O.
  */
-export async function writePrerenderArtifacts({
-  distDir,
+export async function compileStaticSite({
   templateHtml,
-  pages,
-  rootLastmod,
-  siteUrl,
-  redirectRoutes = siteRedirectRoutes(siteUrl),
-  redirectsText = buildRedirectsFile(),
-}) {
-  // 1. Render all HTML documents in memory
-  const renderedOutputs = pages.map((page) => ({
-    outPath: page.outPath,
-    html: renderStaticDocument(templateHtml, page),
-  }));
-
-  // 2. Generate sitemap XML in memory
-  const sitemapXml = buildSitemapXml({ siteUrl, rootLastmod, pages });
-
-  // 3. Create output directories sequentially (avoids parent/child mkdir
-  // races on Windows), then write all HTML files to dist.
-  const preparedOutputs = renderedOutputs.map(({ outPath, html }) => ({
-    outDir: resolve(distDir, ...outPath),
-    html,
-  }));
-  for (const { outDir } of preparedOutputs) {
-    await mkdir(outDir, { recursive: true });
-  }
-  await Promise.all(
-    preparedOutputs.map(({ outDir, html }) =>
-      writeFile(resolve(outDir, "index.html"), html, "utf8"),
-    ),
-  );
-
-  // 4. Write sitemap.xml and generated _redirects
-  await Promise.all([
-    writeFile(resolve(distDir, "sitemap.xml"), sitemapXml, "utf8"),
-    writeFile(resolve(distDir, "_redirects"), redirectsText, "utf8"),
-  ]);
-
-  // 5. Write permanent redirect stubs for consolidated / renamed catalog URLs
-  for (const { fromPath, toUrl, targetLabel } of redirectRoutes) {
-    const outDir = resolve(distDir, ...fromPath);
-    await mkdir(outDir, { recursive: true });
-    await writeFile(
-      resolve(outDir, "index.html"),
-      buildRedirectHtml({ toUrl, targetLabel }),
-      "utf8",
-    );
-  }
-
-  const sitemapCount = pages.filter((page) => !page.noindex).length;
-  return { pageCount: pages.length, sitemapCount };
-}
-
-/**
- * Main entry point for static site generation.
- *
- * `readTemplate` and `readSnapshot` are the seams. They default to the real
- * build's inputs -- the Vite-built shell and the committed catalog snapshot --
- * and exist so the sequence below can be exercised without either.
- */
-export async function generateStaticSite({
-  distDir = resolve(import.meta.dirname, "..", "..", "dist"),
-  dataDir = resolve(import.meta.dirname, "..", "..", "app", "data"),
+  snapshot,
+  manifest = null,
   siteUrl = siteConfig.siteUrl,
-  readTemplate = () => readFile(resolve(distDir, "index.html"), "utf8"),
-  readSnapshot = async () =>
-    JSON.parse(await readFile(resolve(dataDir, "catalog-prices.json"), "utf8")),
-  readManifest = () => readViteManifest(distDir),
-  writeArtifacts = writePrerenderArtifacts,
-} = {}) {
-  const [templateHtml, snapshot, manifest] = await Promise.all([
-    readTemplate(),
-    readSnapshot(),
-    readManifest(),
-  ]);
-
-  // Build shared projections from the snapshot, then reset and prime the
-  // catalog store for SSR rendering.
+}) {
   const menuCatalog = await buildMenuCatalog(snapshot);
   const overviewSummaries = buildOverviewSummaries(snapshot);
   resetCatalogReader();
@@ -143,7 +79,6 @@ export async function generateStaticSite({
 
   const reference = buildGuideReference(snapshot);
 
-  // Collect page descriptors
   const { pages, rootLastmod, redirectRoutes, redirectsText } =
     await collectSitePageDescriptors({
       snapshot,
@@ -153,18 +88,117 @@ export async function generateStaticSite({
       siteUrl,
     });
 
-  const result = await writeArtifacts({
-    distDir,
-    templateHtml,
-    pages: pages.map((page) => ({
+  const files = new Map();
+
+  const renderedPages = pages.map((page) => {
+    const modulePreloadHrefs = modulePreloadsFor(manifest, page.pageModuleSource);
+    const relPath = htmlOutputPath(page.outPath);
+    const html = renderStaticDocument(templateHtml, {
       ...page,
-      modulePreloadHrefs: modulePreloadsFor(manifest, page.pageModuleSource),
-    })),
+      modulePreloadHrefs,
+    });
+    addVirtualFile(files, relPath, html);
+    return {
+      ...page,
+      modulePreloadHrefs,
+      relPath,
+      html,
+    };
+  });
+
+  const sitemapXml = buildSitemapXml({
+    siteUrl,
+    rootLastmod,
+    pages: renderedPages,
+  });
+  addVirtualFile(files, "sitemap.xml", sitemapXml);
+  addVirtualFile(files, "_redirects", redirectsText);
+
+  const renderedRedirects = redirectRoutes.map((redirect) => {
+    const relPath = htmlOutputPath(redirect.fromPath);
+    const html = buildRedirectHtml({
+      toUrl: redirect.toUrl,
+      targetLabel: redirect.targetLabel,
+    });
+    addVirtualFile(files, relPath, html);
+    return {
+      ...redirect,
+      relPath,
+      html,
+    };
+  });
+
+  const sitemapCount = renderedPages.filter((page) => !page.noindex).length;
+
+  return {
+    files,
+    pages: renderedPages,
+    redirects: renderedRedirects,
+    sitemapXml,
+    redirectsText,
     rootLastmod,
     siteUrl,
-    redirectRoutes,
-    redirectsText,
+    pageCount: renderedPages.length,
+    sitemapCount,
+  };
+}
+
+/**
+ * Thin disk writer adapter: flushes a compiled virtual site into `distDir`.
+ * Output directories are created sequentially first to avoid parent/child
+ * mkdir races on Windows.
+ */
+export async function writeCompiledSite(distDir, compiled) {
+  const outputDirs = new Set();
+  for (const relPath of compiled.files.keys()) {
+    outputDirs.add(dirname(resolve(distDir, relPath)));
+  }
+  for (const dir of outputDirs) {
+    await mkdir(dir, { recursive: true });
+  }
+  await Promise.all(
+    [...compiled.files.entries()].map(([relPath, content]) =>
+      writeFile(resolve(distDir, relPath), content, "utf8"),
+    ),
+  );
+
+  return {
+    pageCount: compiled.pageCount,
+    sitemapCount: compiled.sitemapCount,
+  };
+}
+
+/**
+ * Main entry point for static site generation.
+ *
+ * `readTemplate`, `readSnapshot`, `readManifest`, and `writeSite` are the I/O
+ * seams around `compileStaticSite`. Production passes nothing and reads/writes
+ * the real build directories; tests can substitute in-memory adapters.
+ */
+export async function generateStaticSite({
+  distDir = resolve(import.meta.dirname, "..", "..", "dist"),
+  dataDir = resolve(import.meta.dirname, "..", "..", "app", "data"),
+  siteUrl = siteConfig.siteUrl,
+  readTemplate = () => readFile(resolve(distDir, "index.html"), "utf8"),
+  readSnapshot = async () =>
+    JSON.parse(await readFile(resolve(dataDir, "catalog-prices.json"), "utf8")),
+  readManifest = () => readViteManifest(distDir),
+  writeSite = writeCompiledSite,
+} = {}) {
+  const [templateHtml, snapshot, manifest] = await Promise.all([
+    readTemplate(),
+    readSnapshot(),
+    readManifest(),
+  ]);
+
+  const compiled = await compileStaticSite({
+    templateHtml,
+    snapshot,
+    manifest,
+    siteUrl,
   });
+
+  const result = await writeSite(distDir, compiled);
   if (manifest) await rm(resolve(distDir, ".vite"), { recursive: true, force: true });
   return result;
 }

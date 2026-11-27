@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import {
   catalogRedirectRules,
@@ -11,22 +11,20 @@ import {
 } from "../app/category-meta.ts";
 import { siteConfig } from "../app/site-config.ts";
 import {
+  loadCompiledSite,
   loadGroupCatalogs,
   parseBreadcrumbLd,
-  readDist,
+  readCompiled,
   readJson,
 } from "./helpers/dist.mjs";
 
 const SITE_ORIGIN = "https://fouladbonyan.com";
 
-/** Every generated HTML file in dist, as forward-slashed relative paths. */
-async function distHtmlFiles() {
-  const entries = await readdir(new URL("../dist", import.meta.url), {
-    recursive: true,
-  });
-  return entries
+/** Every compiled HTML file in the virtual site, as forward-slashed relative paths. */
+async function compiledHtmlFiles() {
+  const site = await loadCompiledSite();
+  return [...site.files.keys()]
     .filter((entry) => entry.endsWith(".html"))
-    .map((entry) => entry.split("\\").join("/"))
     .sort();
 }
 
@@ -51,7 +49,7 @@ test("category landing pages have unique metadata, a CSP-safe initial tab, and s
   ];
 
   for (const category of categories) {
-    const html = await readDist(`${category.id}/index.html`);
+    const html = await readCompiled(`${category.id}/index.html`);
     assert.match(html, new RegExp(`<title>${category.title}`));
     assert.match(
       html,
@@ -94,7 +92,7 @@ test("category landing pages have unique metadata, a CSP-safe initial tab, and s
     );
   }
 
-  const sitemap = await readDist("sitemap.xml");
+  const sitemap = await readCompiled("sitemap.xml");
   assert.doesNotMatch(sitemap, /<changefreq>/);
   assert.doesNotMatch(sitemap, /<priority>/);
   for (const category of categories) {
@@ -127,11 +125,11 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
   const titles = new Set();
   const h1s = new Set();
   const canonicals = new Set();
-  const sitemap = await readDist("sitemap.xml");
+  const sitemap = await readCompiled("sitemap.xml");
 
   for (const sub of subcategoryList) {
     const pagePath = `${sub.groupId}/${sub.id}/index.html`;
-    const html = await readDist(pagePath);
+    const html = await readCompiled(pagePath);
     const expectedCanonical = `https://fouladbonyan.com/${sub.groupId}/${sub.id}/`;
 
     // Title
@@ -229,9 +227,9 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
   const allLocs = sitemap.match(/<loc>[^<]+<\/loc>/g) ?? [];
   assert.equal(allLocs.length, 61, "Sitemap must contain exactly 61 indexable URLs");
 
-  const homeHtmlForFooter = await readDist("index.html");
+  const homeHtmlForFooter = await readCompiled("index.html");
   for (const noindexInfo of ["terms", "privacy", "complaints", "shipping-delivery"]) {
-    const infoHtml = await readDist(`${noindexInfo}/index.html`);
+    const infoHtml = await readCompiled(`${noindexInfo}/index.html`);
     assert.equal(
       metaContent(infoHtml, "name", "robots"),
       "noindex, follow",
@@ -249,7 +247,7 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     );
   }
   for (const indexedInfo of ["about", "quote-process"]) {
-    const infoHtml = await readDist(`${indexedInfo}/index.html`);
+    const infoHtml = await readCompiled(`${indexedInfo}/index.html`);
     assert.equal(
       metaContent(infoHtml, "name", "robots"),
       "index, follow",
@@ -267,7 +265,7 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     const from = `/${rule.fromPath.join("/")}/`;
     const to = rule.toPath;
     const stubRel = `${rule.fromPath.join("/")}/index.html`;
-    const redirectHtml = await readDist(stubRel);
+    const redirectHtml = await readCompiled(stubRel);
     assert.match(
       redirectHtml,
       new RegExp(`<meta http-equiv="refresh" content="0; url=https://fouladbonyan\\.com${to}"`),
@@ -290,19 +288,15 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
     );
   }
 
-  // Verify NO factory, size, or filter URLs exist in dist
-  const distEntries = await readdir(new URL("../dist", import.meta.url), {
-    recursive: true,
-  });
-  const htmlFiles = distEntries.filter(
-    (f) => f.endsWith("index.html") || f.endsWith(".html"),
-  );
-  // Expected html files: index.html (1) + 404.html (1) + 8 categories
-  // + 43 subcategories + 4 redirect stubs + contact (1) + 6 info + guide index (1) + 5 guides = 70
+  // Verify NO factory, size, or filter URLs exist in compiled output
+  const htmlFiles = await compiledHtmlFiles();
+  // Expected compiled HTML files: index.html (1) + 8 categories
+  // + 43 subcategories + 4 redirect stubs + contact (1) + 6 info + guide index (1) + 5 guides = 69
+  // (404.html is a static public asset verified in built-assets.test.mjs).
   assert.equal(
     htmlFiles.length,
-    70,
-    `Expected exactly 70 HTML files across dist, found ${htmlFiles.length}`,
+    69,
+    `Expected exactly 69 compiled HTML files, found ${htmlFiles.length}`,
   );
 });
 
@@ -313,22 +307,19 @@ test("F5: subcategory landing pages have unique metadata, crawlable breadcrumbs,
  * template and renders each page in a clean pass. Assert against every generated page.
  */
 test("every generated page contains only its own content and exactly one H1", async () => {
-  const entries = await readdir(new URL("../dist", import.meta.url), {
-    recursive: true,
-  });
+  const entries = await compiledHtmlFiles();
   const redirectStubPaths = new Set(
     catalogRedirectRules.map((r) => `${r.fromPath.join("/")}/index.html`),
   );
   const pages = entries
     .filter((entry) => entry.endsWith("index.html"))
-    .map((entry) => entry.split("\\").join("/"))
     .filter((p) => !redirectStubPaths.has(p));
   // 1 home + 8 category + 43 subcategory + contact + 6 info + 6 guide = 65
   // (404.html is the only other HTML file and has no index.html name; 4 redirect stubs excluded).
   assert.equal(pages.length, 65, `expected the full page set, got ${pages.length}`);
 
   for (const page of pages) {
-    const html = await readDist(page);
+    const html = await readCompiled(page);
 
     const headings = html.match(/<h1[\s>]/g) ?? [];
     assert.equal(
@@ -371,7 +362,7 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
   const snapshot = await readJson("catalog-prices.json");
 
   // All 8 category links exist in mega menu on the homepage
-  const homeHtml = await readDist("index.html");
+  const homeHtml = await readCompiled("index.html");
   for (const group of productGroups) {
     assert.match(
       homeHtml,
@@ -382,7 +373,7 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
 
   // Across product group landing pages, verify MegaMenu renders all real subcategories and correct single-category links
   for (const group of productGroups) {
-    const groupHtml = await readDist(`${group.id}/index.html`);
+    const groupHtml = await readCompiled(`${group.id}/index.html`);
     const catalog = snapshot.catalogs.find((c) => c.id === group.id);
     assert.ok(catalog, `catalog for ${group.id} must exist in snapshot`);
 
@@ -434,16 +425,13 @@ test("F5: MegaMenu contains crawlable links for all product groups and subcatego
  * type.
  */
 test("every generated page has a globally unique <title>", async () => {
-  const entries = await readdir(new URL("../dist", import.meta.url), {
-    recursive: true,
-  });
-  const pages = entries
-    .filter((entry) => entry.endsWith("index.html"))
-    .map((entry) => entry.split("\\").join("/"));
+  const pages = (await compiledHtmlFiles()).filter((entry) =>
+    entry.endsWith("index.html"),
+  );
 
   const titlesByPage = new Map();
   for (const page of pages) {
-    const html = await readDist(page);
+    const html = await readCompiled(page);
     const title = html.match(/<title>([^<]+)<\/title>/)?.[1];
     assert.ok(title, `${page} must have a <title>`);
     titlesByPage.set(page, title);
@@ -480,7 +468,7 @@ test("category landing pages render a distinct overview and link to every subcat
   const catalogs = await loadGroupCatalogs();
 
   for (const catalog of catalogs) {
-    const html = await readDist(`${catalog.id}/index.html`);
+    const html = await readCompiled(`${catalog.id}/index.html`);
 
     if (rendersCatalogOnGroupRoute(catalog.id)) {
       // Consolidated families (angle, channel, beam) render their primary PriceCatalog
@@ -502,7 +490,7 @@ test("category landing pages render a distinct overview and link to every subcat
             new RegExp(`href="/${catalog.id}/${sub.id}/"`),
             `${catalog.id}/ must link to its non-consolidated subcategory ${catalog.id}/${sub.id}/`,
           );
-          const subHtml = await readDist(`${catalog.id}/${sub.id}/index.html`);
+          const subHtml = await readCompiled(`${catalog.id}/${sub.id}/index.html`);
           assert.match(
             subHtml,
             /class="rebar-prices"/,
@@ -533,7 +521,7 @@ test("category landing pages render a distinct overview and link to every subcat
       // The reverse must still hold: subcategory pages keep their own full
       // table and never fall back to the group overview.
       for (const sub of catalog.categories) {
-        const subHtml = await readDist(`${catalog.id}/${sub.id}/index.html`);
+        const subHtml = await readCompiled(`${catalog.id}/${sub.id}/index.html`);
         assert.match(
           subHtml,
           /class="rebar-prices"/,
@@ -550,9 +538,9 @@ test("category landing pages render a distinct overview and link to every subcat
 });
 
 test("homepage @graph links WebSite and Organization corroborated by visible addresses on / and /contact/, and catalog routes emit CollectionPage", async () => {
-  const homeHtml = await readDist("index.html");
-  const contactHtml = await readDist("contact/index.html");
-  const aboutHtml = await readDist("about/index.html");
+  const homeHtml = await readCompiled("index.html");
+  const contactHtml = await readCompiled("contact/index.html");
+  const aboutHtml = await readCompiled("about/index.html");
   const parseJsonLd = (html) =>
     [...html.matchAll(/<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
       ([, body]) => JSON.parse(body),
@@ -631,7 +619,7 @@ test("homepage @graph links WebSite and Organization corroborated by visible add
         .map((c) => `${catalog.id}/${c.id}/index.html`),
     ];
     for (const relPath of pathsToCheck) {
-      const catHtml = await readDist(relPath);
+      const catHtml = await readCompiled(relPath);
       const schemas = parseJsonLd(catHtml);
       const collection = schemas.find((item) => item["@type"] === "CollectionPage");
       assert.ok(collection, `${relPath} must emit CollectionPage JSON-LD`);
@@ -673,7 +661,7 @@ test("guide pages emit Article structured data with factual publication and modi
   ];
 
   for (const pagePath of guidePages) {
-    const html = await readDist(pagePath);
+    const html = await readCompiled(pagePath);
     assert.match(
       html,
       /<script type="application\/ld\+json">\{"@context":"https:\/\/schema\.org","@type":"Article"/,
@@ -712,7 +700,7 @@ test("guide pages emit Article structured data with factual publication and modi
 });
 
 test("category and subcategory pages use category-specific og:image and distinct H2", async () => {
-  const rebarHtml = await readDist("rebar/index.html");
+  const rebarHtml = await readCompiled("rebar/index.html");
   assert.match(
     rebarHtml,
     /<meta\s+property="og:image"\s+content="https:\/\/fouladbonyan\.com\/categories\/hero-rebar-1280\.jpg"/,
@@ -724,7 +712,7 @@ test("category and subcategory pages use category-specific og:image and distinct
     "rebar landing page must use hero-rebar-1280.jpg as twitter:image",
   );
 
-  const ribbedHtml = await readDist("rebar/ribbed/index.html");
+  const ribbedHtml = await readCompiled("rebar/ribbed/index.html");
   assert.match(
     ribbedHtml,
     /<meta\s+property="og:image"\s+content="https:\/\/fouladbonyan\.com\/categories\/hero-rebar-1280\.jpg"/,
@@ -746,7 +734,7 @@ test("category and subcategory pages use category-specific og:image and distinct
     /href="\/guide\/rebar-weight-chart\/"/,
     "rebar overview must link to rebar weight chart guide",
   );
-  const beamHtml = await readDist("beam/index.html");
+  const beamHtml = await readCompiled("beam/index.html");
   assert.match(
     beamHtml,
     /href="\/guide\/beam-weight-chart\/"/,
@@ -762,7 +750,7 @@ test("category and subcategory pages use category-specific og:image and distinct
  * passed because they all checked the URL alone. Read the real pixels back.
  */
 test("every page's declared og:image dimensions match the image it actually points at", async () => {
-  const files = await distHtmlFiles();
+  const files = await compiledHtmlFiles();
   const measured = new Map();
 
   const measure = async (imageUrl) => {
@@ -773,7 +761,7 @@ test("every page's declared og:image dimensions match the image it actually poin
     const relative = imageUrl.slice(SITE_ORIGIN.length + 1);
     if (!measured.has(relative)) {
       const bytes = await readFile(
-        new URL(`../dist/${relative}`, import.meta.url),
+        new URL(`../public/${relative}`, import.meta.url),
       );
       const { width, height } = await sharp(bytes).metadata();
       measured.set(relative, { width, height });
@@ -783,7 +771,7 @@ test("every page's declared og:image dimensions match the image it actually poin
 
   let checked = 0;
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     const image = metaContent(html, "property", "og:image");
     const twitterImage = metaContent(html, "name", "twitter:image");
     if (!image) {
@@ -852,10 +840,10 @@ const APPROVED_NOINDEX_LEGAL_PATHS = new Set([
 ]);
 
 test("no indexable page links to a redirecting stub or unapproved noindex URL", async () => {
-  const files = await distHtmlFiles();
+  const files = await compiledHtmlFiles();
   const byPathname = new Map();
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     const pathname =
       file === "index.html" ? "/" : `/${file.replace(/index\.html$/, "")}`;
     byPathname.set(pathname, html);
@@ -913,12 +901,12 @@ test("no indexable page links to a redirecting stub or unapproved noindex URL", 
  * in sessionStorage (app/quote-handoff.ts), so every row shares one clean href.
  */
 test("no built page emits a parameterised quote URL", async () => {
-  const files = await distHtmlFiles();
+  const files = await compiledHtmlFiles();
   const offenders = [];
   let quoteLinks = 0;
 
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
       const href = match[1].replaceAll("&amp;", "&");
       if (!href.includes("/quote-process/")) continue;
@@ -935,7 +923,7 @@ test("no built page emits a parameterised quote URL", async () => {
 
   // Every row still offers the action, as a plain anchor a crawler and a
   // no-JavaScript visitor can both follow, and they all share one href.
-  const ribbed = await readDist("rebar/ribbed/index.html");
+  const ribbed = await readCompiled("rebar/ribbed/index.html");
   const rowLinks = [
     ...ribbed.matchAll(
       /<td[^>]*class="row-quote-cell"[^>]*>\s*<a\b[^>]*\bhref="([^"]+)"/g,
@@ -978,11 +966,11 @@ test("no built page emits a parameterised quote URL", async () => {
  * query-string anchor links should exist anywhere in built HTML files.
  */
 test("no built page emits internal query-string anchor links", async () => {
-  const files = await distHtmlFiles();
+  const files = await compiledHtmlFiles();
   const offenders = [];
 
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/gi)) {
       const href = match[1].replaceAll("&amp;", "&");
       if (!href.startsWith("/")) continue;
@@ -1004,10 +992,11 @@ test("subcategory pages scope initial-page-data payloads cleanly", async () => {
     "sheet/sheet-ck45/index.html",
     "sheet/sheet-a516/index.html",
   ]) {
-    const info = await stat(new URL(`../dist/${relPath}`, import.meta.url));
+    const html = await readCompiled(relPath);
+    const size = Buffer.byteLength(html, "utf8");
     assert.ok(
-      info.size < 120_000,
-      `${relPath} HTML size (${info.size} bytes) must stay below 120 KB via subcategory scoping`,
+      size < 120_000,
+      `${relPath} HTML size (${size} bytes) must stay below 120 KB via subcategory scoping`,
     );
   }
 });
@@ -1017,7 +1006,7 @@ test("subcategory pages scope initial-page-data payloads cleanly", async () => {
  * app/site-page.ts (backed by catalogRedirectRules) so they cannot drift.
  */
 test("generated dist/_redirects covers exactly the consolidated and renamed catalog URLs", async () => {
-  const redirects = await readDist("_redirects");
+  const redirects = await readCompiled("_redirects");
   const rules = redirects
     .split("\n")
     .map((line) => line.trim())
@@ -1038,7 +1027,7 @@ test("generated dist/_redirects covers exactly the consolidated and renamed cata
     );
 
     const stubRel = `${rule.fromPath.join("/")}/index.html`;
-    const stub = await readDist(stubRel);
+    const stub = await readCompiled(stubRel);
     assert.match(stub, /<meta name="robots" content="noindex, follow"/);
     assert.match(
       stub,
@@ -1052,12 +1041,12 @@ test("generated dist/_redirects covers exactly the consolidated and renamed cata
  * articles emit Article JSON-LD, everything else is a website.
  */
 test("og:type is article exactly on the pages that emit Article JSON-LD", async () => {
-  const files = await distHtmlFiles();
+  const files = await compiledHtmlFiles();
   const articleTyped = [];
   const articleSchema = [];
 
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     if (metaContent(html, "property", "og:type") === "article") {
       articleTyped.push(file);
     }
@@ -1075,7 +1064,7 @@ test("og:type is article exactly on the pages that emit Article JSON-LD", async 
   assert.deepEqual(articleTyped.sort(), expected);
 
   // The guide index lists the articles; it is not one of them.
-  const guideIndex = await readDist("guide/index.html");
+  const guideIndex = await readCompiled("guide/index.html");
   assert.equal(metaContent(guideIndex, "property", "og:type"), "website");
 });
 
@@ -1084,7 +1073,7 @@ test("og:type is article exactly on the pages that emit Article JSON-LD", async 
  * visually -- but without it the H1's textContent reads "...فولاد؛بنیان...".
  */
 test("the homepage H1 keeps a whitespace boundary between its two lines", async () => {
-  const html = await readDist("index.html");
+  const html = await readCompiled("index.html");
   const h1 = html.match(/<h1>([\s\S]*?)<\/h1>/)?.[1];
   assert.ok(h1, "the homepage must have an H1");
 
@@ -1137,12 +1126,12 @@ test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting
   const redirectStubPaths = new Set(
     catalogRedirectRules.map((r) => `${r.fromPath.join("/")}/index.html`),
   );
-  const files = (await distHtmlFiles()).filter(
+  const files = (await compiledHtmlFiles()).filter(
     (f) => f.endsWith("index.html") && !redirectStubPaths.has(f),
   );
 
   for (const file of files) {
-    const html = await readDist(file);
+    const html = await readCompiled(file);
     assert.doesNotMatch(
       html,
       /href="\/beam\/beam\/"|href="\/wire\/wire\/"/,
@@ -1150,16 +1139,16 @@ test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting
     );
   }
 
-  const boxHtml = await readDist("profile/box-profile/index.html");
+  const boxHtml = await readCompiled("profile/box-profile/index.html");
   assert.match(boxHtml, /قوطی پروفیل آهنی/);
   assert.doesNotMatch(boxHtml, /"name":"قوطی و پروفیل".*"name":"قوطی و پروفیل"/);
 
   for (const relPath of ["rebar/ribbed/index.html", "beam/index.html"]) {
-    const html = await readDist(relPath);
+    const html = await readCompiled(relPath);
     assert.match(html, /استاندارد \/ گرید/, `${relPath} must use استاندارد / گرید column header`);
   }
 
-  const thickHtml = await readDist("pipe/thick-wall-pipe/index.html");
+  const thickHtml = await readCompiled("pipe/thick-wall-pipe/index.html");
   assert.match(thickHtml, /ضخامت جداره \(میلی‌متر\)/);
   assert.match(thickHtml, /<bdi dir="ltr">[^<]*×[^<]*<\/bdi>/);
   assert.match(thickHtml, /<td data-label="ضخامت جداره \(میلی‌متر\)">۲۰<\/td>/);
@@ -1169,7 +1158,7 @@ test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting
     "thick-wall-pipe rows should display computed wall thickness instead of placeholder dashes",
   );
 
-  const scaffoldHtml = await readDist("pipe/scaffold-pipe/index.html");
+  const scaffoldHtml = await readCompiled("pipe/scaffold-pipe/index.html");
   assert.match(scaffoldHtml, /وزن تقریبی شاخه/);
   assert.match(scaffoldHtml, /۱٫۵ اینچ \(نمره ۵\)/);
   assert.doesNotMatch(
@@ -1178,7 +1167,7 @@ test("Phase 2 built pages enforce consolidated routes, semantic columns, sorting
     "scaffold-pipe prices must be rounded to whole toman",
   );
 
-  const a516Html = await readDist("sheet/sheet-a516/index.html");
+  const a516Html = await readCompiled("sheet/sheet-a516/index.html");
   const firstCardHtml =
     a516Html.match(/<section class="factory-price-card[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.ok(
@@ -1201,7 +1190,7 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
       ),
     ].map((m) => JSON.parse(m[1]));
 
-  const homeHtml = await readDist("index.html");
+  const homeHtml = await readCompiled("index.html");
   for (const href of [
     "/rebar/ribbed/",
     "/sheet/black-sheet/",
@@ -1220,7 +1209,7 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
     );
   }
 
-  const rebarChartHtml = await readDist("guide/rebar-weight-chart/index.html");
+  const rebarChartHtml = await readCompiled("guide/rebar-weight-chart/index.html");
   assert.match(rebarChartHtml, /class="quick-answer-grid"/);
   assert.match(rebarChartHtml, /id="rebar-weight-calculator"/);
   assert.match(rebarChartHtml, /مقایسه وزن واقعی شاخه ۱۲ متری کارخانه‌های ایران/);
@@ -1249,7 +1238,7 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
   ];
 
   for (const [relPath, expectedLink] of moneyRoutes) {
-    const html = await readDist(relPath);
+    const html = await readCompiled(relPath);
     assert.match(html, /class="subcategory-guide"/, `${relPath} must render buying guide section`);
     assert.match(html, /class="subcategory-faq-list"/, `${relPath} must render visible FAQ`);
     assert.match(html, new RegExp(`href="${expectedLink}"`), `${relPath} must cross-link ${expectedLink}`);
@@ -1265,14 +1254,14 @@ test("Phase 3 homepage flagship links and top 6 money-page guides, calculators, 
 
   // Unified header/nav & B2B sticky bar checks across both `/` and `/guide/rebar-weight-chart/`
   for (const routeRel of ["index.html", "guide/rebar-weight-chart/index.html"]) {
-    const html = await readDist(routeRel);
+    const html = await readCompiled(routeRel);
     assert.match(html, /class="header-sticky-phone"/, `${routeRel} must expose sticky click-to-call pill`);
     assert.match(html, /href="\/guide\/"[^>]*>راهنمای فنی و جدول وزن<\/a>/, `${routeRel} must link /guide/ in nav`);
     assert.match(html, /class="product-dropdown rebar-mega-menu"/, `${routeRel} must include MegaMenu`);
     assert.match(html, /class="mobile-actions"[\s\S]*?https:\/\/chat\.whatsapp\.com\//, `${routeRel} mobile-actions must include WhatsApp`);
   }
 
-  const ck45Html = await readDist("sheet/sheet-ck45/index.html");
+  const ck45Html = await readCompiled("sheet/sheet-ck45/index.html");
   assert.match(ck45Html, /class="zero-price-inquiry-card"/);
   assert.match(ck45Html, /tel:\+982188888280/);
   assert.match(ck45Html, /https:\/\/chat\.whatsapp\.com\//);

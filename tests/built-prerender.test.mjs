@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readdir } from "node:fs/promises";
 import { infoPageDefinitions } from "../app/info-page-data.ts";
 import {
   catalogRedirectRules,
@@ -9,7 +8,11 @@ import {
   rendersCatalogOnGroupRoute,
 } from "../app/category-meta.ts";
 import { pageHero } from "../app/site-page.ts";
-import { loadGroupCatalogs, readDist } from "./helpers/dist.mjs";
+import {
+  loadCompiledSite,
+  loadGroupCatalogs,
+  readCompiled,
+} from "./helpers/dist.mjs";
 
 /*
  * F14 — the catalog used to render `filteredFactories.slice(0, 6)`, so a
@@ -41,7 +44,7 @@ async function loadCatalogSubcategories() {
 
 test("prerendered SSG HTML contains complete meaningful content before JavaScript runs", async () => {
   // 1. Homepage
-  const homeHtml = await readDist("index.html");
+  const homeHtml = await readCompiled("index.html");
   assert.match(
     homeHtml,
     /<div id="root">[\s\S]+<\/div>/,
@@ -67,7 +70,7 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
 
   // 2. Category pages
   for (const group of productGroups) {
-    const catHtml = await readDist(`${group.id}/index.html`);
+    const catHtml = await readCompiled(`${group.id}/index.html`);
     assert.match(
       catHtml,
       new RegExp(`<div id="root" data-initial-category="${group.id}">[\\s\\S]+<\\/div>`),
@@ -112,7 +115,7 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
   ];
 
   for (const { page, h1 } of infoPages) {
-    const pageHtml = await readDist(`${page}/index.html`);
+    const pageHtml = await readCompiled(`${page}/index.html`);
     assert.match(
       pageHtml,
       new RegExp(`<div id="root" data-page="${page}">[\\s\\S]+<\\/div>`),
@@ -142,7 +145,7 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
       const pagePath = isConsolidated
         ? `${groupId}/index.html`
         : `${groupId}/${sub.id}/index.html`;
-      const html = await readDist(pagePath);
+      const html = await readCompiled(pagePath);
       const page = isConsolidated ? groupId : `${groupId}/${sub.id}`;
 
       assert.equal(
@@ -173,7 +176,7 @@ test("F14: every row of a subcategory reaches the prerendered HTML", async () =>
     // A category landing page for multi-category families must render CategoryOverview
     // -- one summary row per subcategory -- unless it consolidates its primary table
     // directly onto the parent route (angle, channel, beam).
-    const landingHtml = await readDist(`${groupId}/index.html`);
+    const landingHtml = await readCompiled(`${groupId}/index.html`);
     if (consolidatedOnGroup) {
       assert.equal(
         countRows(landingHtml),
@@ -238,7 +241,7 @@ test("F14: all mill cards on /rebar/ribbed/ render visibly with Quick Mill Filte
     "میلگرد آجدار is stocked by far more than six mills; this test is pointless otherwise",
   );
 
-  const html = await readDist("rebar/ribbed/index.html");
+  const html = await readCompiled("rebar/ribbed/index.html");
 
   const cards = html.split('<section class="factory-price-card');
   assert.equal(
@@ -276,19 +279,16 @@ test("F14: all mill cards on /rebar/ribbed/ render visibly with Quick Mill Filte
 
 test("F14: widening row coverage creates no factory or size URLs", async () => {
   const groups = await loadCatalogSubcategories();
-  const entries = await readdir(new URL("../dist", import.meta.url), {
-    recursive: true,
-    withFileTypes: true,
-  });
-  const directories = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) =>
-      `${entry.parentPath ?? entry.path}/${entry.name}`
-        .split("\\")
-        .join("/")
-        .split("/dist/")
-        .at(-1),
-    );
+  const site = await loadCompiledSite();
+  const directorySet = new Set();
+  for (const relPath of site.files.keys()) {
+    const parts = relPath.split("/");
+    parts.pop();
+    for (let i = 1; i <= parts.length; i += 1) {
+      directorySet.add(parts.slice(0, i).join("/"));
+    }
+  }
+  const directories = [...directorySet];
 
   const redirectDirsByGroup = new Map();
   for (const rule of catalogRedirectRules) {
@@ -321,7 +321,7 @@ test("F14: widening row coverage creates no factory or size URLs", async () => {
     assert.equal(under.length, allowed.size);
   }
 
-  const sitemap = await readDist("sitemap.xml");
+  const sitemap = await readCompiled("sitemap.xml");
   const locs = (sitemap.match(/<loc>([^<]+)<\/loc>/g) ?? []).map((loc) =>
     loc.replace(/<\/?loc>/g, ""),
   );

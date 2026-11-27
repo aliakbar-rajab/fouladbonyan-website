@@ -1,4 +1,5 @@
 export type ResponsiveImageSources = {
+  avifHref: string;
   avifSrcSet: string;
   webpSrcSet: string;
   jpgSrcSet: string;
@@ -14,6 +15,7 @@ function buildStandardImageSources(
 ): ResponsiveImageSources {
   const base = imagePath.replace(/\.(jpg|webp|avif)$/, "");
   return {
+    avifHref: `${base}-384.avif`,
     avifSrcSet: `${base}-240.avif 240w, ${base}-384.avif 384w`,
     webpSrcSet: `${base}-240.webp 240w, ${base}-384.webp 384w`,
     jpgSrcSet: `${base}-240.jpg 240w, ${base}.jpg 384w`,
@@ -34,6 +36,7 @@ export function getHeroImageSources(imagePath: string): ResponsiveImageSources {
       .replace(/-1680\.(jpg|webp|avif)$/, "")
       .replace(/\.(jpg|webp|avif)$/, "");
     return {
+      avifHref: `${base}-1680.avif`,
       avifSrcSet: `${base}-640.avif 640w, ${base}-960.avif 960w, ${base}-1280.avif 1280w, ${base}-1680.avif 1672w`,
       webpSrcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}-1280.webp 1280w, ${base}-1680.webp 1672w`,
       jpgSrcSet: `${base}-640.jpg 640w, ${base}-960.jpg 960w, ${base}-1280.jpg 1280w, ${base}-1680.jpg 1672w`,

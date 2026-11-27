@@ -10,6 +10,7 @@ test("production output contains required GitHub Pages files", async () => {
     [
       "index.html",
       "404.html",
+      "_redirects",
       "robots.txt",
       "sitemap.xml",
       "manifest.webmanifest",
@@ -33,6 +34,16 @@ test("production output contains required GitHub Pages files", async () => {
       "categories/01-rebar-384.avif",
       "categories/01-rebar-240.webp",
     ].map((path) => access(new URL(`../dist/${path}`, import.meta.url))),
+  );
+
+  const distEntries = await readdir(new URL("../dist", import.meta.url), {
+    recursive: true,
+  });
+  const htmlFiles = distEntries.filter((file) => file.endsWith(".html"));
+  assert.equal(
+    htmlFiles.length,
+    70,
+    `Expected exactly 70 HTML files across dist (69 compiled + 404.html), found ${htmlFiles.length}`,
   );
 });
 
