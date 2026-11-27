@@ -15,17 +15,38 @@ import {
   type CatalogPageHero,
 } from "./site-page";
 import { resolveCatalogRouteRequest, type SiteRoute } from "./site-route";
-import { filterProductGroups } from "./site-logic.mjs";
 import {
   evaluateCatalogSearch,
   loadCatalogSearchGroups,
-  priceSectionHeading,
   type CatalogSearchGroup,
 } from "./catalog-search";
 
 // ---------------------------------------------------------------------------
-// 3. DEEP WORKSPACE COORDINATOR
+// 1. WORKSPACE HEADING & VIEW STATE
 // ---------------------------------------------------------------------------
+
+export function priceSectionHeading(
+  subcategoryLabel: string | undefined,
+  categoryLabel: string | undefined,
+): { title: string; description: string } {
+  if (subcategoryLabel) {
+    return {
+      title: `جدول قیمت و مشخصات فنی ${subcategoryLabel}`,
+      description: `قیمت روز و مشخصات فنی ${subcategoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
+    };
+  }
+  if (categoryLabel) {
+    return {
+      title: `جدول و مقایسه قیمت انواع ${categoryLabel}`,
+      description: `قیمت روز و مشخصات فنی انواع ${categoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
+    };
+  }
+  return {
+    title: "قیمت روز آهن‌آلات و مقاطع فولادی",
+    description:
+      "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید.",
+  };
+}
 
 /** Element id of the price workspace, and the scroll target it names. */
 export const PRICE_WORKSPACE_ID = "price-workspace";
@@ -44,6 +65,7 @@ export type CatalogViewMode =
   | "empty";
 
 export type CatalogWorkspaceSearchState = {
+  input: string;
   query: string;
   isActive: boolean;
   isSearching: boolean;
@@ -62,6 +84,8 @@ export type CatalogWorkspace = {
   visibleGroup: ProductGroup | null;
   /** Active selected tab ID in the navigation list */
   selectedTabId: ProductGroupId;
+  /** Selected value for the mobile group dropdown (empty on home overview) */
+  selectedGroupValue: ProductGroupId | "";
   /** Current view and filter parameters for price tables */
   activeViewRequest: CatalogViewRequest;
   /** Dynamic section title and subtitle */
@@ -76,18 +100,20 @@ export type CatalogWorkspace = {
   isCategoryRoute: boolean;
 
   // --- Domain Actions ---
-  /** Submit a search query with resilient async loading and race protection */
-  submitSearch: (query: string) => Promise<boolean>;
+  /** Update the controlled search input text */
+  setSearchInput: (value: string) => void;
+  /** Submit a search query (defaults to the current search input) with race protection */
+  submitSearch: (query?: string) => Promise<boolean>;
   /** Switch to a specific catalog group and optional target view */
   selectGroup: (
     groupId: ProductGroupId,
     view?: Omit<CatalogViewRequest, "requestId">,
   ) => void;
-  /** Handle tab selection with automatic search interception */
+  /** Handle tab selection with automatic search interception; returns true if intercepted */
   selectTab: (
     groupId: ProductGroupId,
     event?: { preventDefault: () => void },
-  ) => void;
+  ) => boolean;
   /** Reset search and return to default catalog view */
   clearSearch: () => void;
 };
@@ -141,9 +167,10 @@ export function useCatalogWorkspace({
     () => route.category ?? productGroups[0].id,
   );
 
+  const [searchInput, setSearchInput] = useState("");
   const [committedQuery, setCommittedQuery] = useState("");
   const [searchStatusMessage, setSearchStatusMessage] = useState("");
-  const [searchGroups, setSearchGroups] = useState<CatalogSearchGroup[] | null>(
+  const [matchedGroups, setMatchedGroups] = useState<ProductGroup[] | null>(
     null,
   );
   const [isSearching, setIsSearching] = useState(false);
@@ -202,13 +229,7 @@ export function useCatalogWorkspace({
     rendersCatalogDirectly,
   ]);
 
-  const filteredGroups: ProductGroup[] = useMemo(
-    () =>
-      searchGroups && committedQuery
-        ? filterProductGroups(searchGroups, committedQuery)
-        : productGroups,
-    [committedQuery, searchGroups],
-  );
+  const filteredGroups: ProductGroup[] = matchedGroups ?? productGroups;
 
   const visibleGroup = useMemo(
     () =>
@@ -233,13 +254,13 @@ export function useCatalogWorkspace({
   const routeGroupId = route.category ?? productGroups[0].id;
   const routeCategoryId = route.subcategory ?? initialCategoryIdOf(routeGroupId);
 
-  const selectedTabId = useMemo(
-    () =>
-      isCategoryRoute || isSearchActive
-        ? (visibleGroup?.id ?? productGroups[0].id)
-        : productGroups[0].id,
-    [isCategoryRoute, isSearchActive, visibleGroup?.id],
-  );
+  const showSelectedGroup = isCategoryRoute || isSearchActive;
+  const selectedTabId = showSelectedGroup
+    ? (visibleGroup?.id ?? productGroups[0].id)
+    : productGroups[0].id;
+  const selectedGroupValue: ProductGroupId | "" = showSelectedGroup
+    ? selectedTabId
+    : "";
 
   const heading = useMemo(
     () =>
@@ -274,7 +295,9 @@ export function useCatalogWorkspace({
     ) => {
       // Invalidate in-flight search requests
       searchTokenRef.current += 1;
+      setSearchInput("");
       setCommittedQuery("");
+      setMatchedGroups(null);
       setSearchStatusMessage("");
       setIsSearching(false);
       setActiveGroup(groupId);
@@ -294,13 +317,18 @@ export function useCatalogWorkspace({
   }, [selectGroup, routeGroupId, routeCategoryId]);
 
   const submitSearch = useCallback(
-    async (query: string): Promise<boolean> => {
-      const trimmed = query.trim();
+    async (query?: string): Promise<boolean> => {
+      const rawQuery = query ?? searchInput;
+      const trimmed = rawQuery.trim();
       const currentToken = ++searchTokenRef.current;
 
       if (!trimmed) {
         clearSearch();
         return true;
+      }
+
+      if (query !== undefined) {
+        setSearchInput(rawQuery);
       }
 
       setIsSearching(true);
@@ -325,7 +353,7 @@ export function useCatalogWorkspace({
 
       const evaluation = evaluateCatalogSearch(trimmed, loadedGroups);
 
-      setSearchGroups(loadedGroups);
+      setMatchedGroups(evaluation.matchedGroups);
       setCommittedQuery(trimmed);
       setSearchStatusMessage(evaluation.statusMessage);
       setIsSearching(false);
@@ -342,15 +370,16 @@ export function useCatalogWorkspace({
 
       return evaluation.matchedGroups.length > 0;
     },
-    [searchLoader, clearSearch],
+    [searchInput, searchLoader, clearSearch],
   );
 
   const selectTab = useCallback(
-    (groupId: ProductGroupId, event?: { preventDefault: () => void }) => {
-      if (committedQuery) {
-        event?.preventDefault();
-        selectGroup(groupId);
-      }
+    (groupId: ProductGroupId, event?: { preventDefault: () => void }): boolean => {
+      if (!committedQuery) return false;
+      event?.preventDefault();
+      selectGroup(groupId);
+      scrollToPriceWorkspace();
+      return true;
     },
     [committedQuery, selectGroup],
   );
@@ -360,17 +389,20 @@ export function useCatalogWorkspace({
     activeGroup,
     visibleGroup,
     selectedTabId,
+    selectedGroupValue,
     activeViewRequest,
     heading,
     brandHref: isCategoryRoute ? "/" : "#top",
     hero,
     search: {
+      input: searchInput,
       query: committedQuery,
       isActive: isSearchActive,
       isSearching,
       statusMessage: searchStatusMessage,
     },
     isCategoryRoute,
+    setSearchInput,
     submitSearch,
     selectGroup,
     selectTab,

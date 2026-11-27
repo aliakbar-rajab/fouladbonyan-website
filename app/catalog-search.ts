@@ -10,11 +10,67 @@ import {
   type GroupCatalog,
 } from "./catalog-reader";
 import type { CatalogViewRequest } from "./catalog-types";
+import { toAsciiDigits } from "./persian-numbers.mjs";
 import { isProductGroupId } from "./site-route";
-import { filterProductGroups } from "./site-logic.mjs";
 
 // ---------------------------------------------------------------------------
-// 1. SEARCH INDEXING & PROJECTION
+// 1. SEARCH TEXT NORMALIZATION & FILTERING
+// ---------------------------------------------------------------------------
+
+export type SearchableProductRow = {
+  product: string;
+  origin: string;
+  unit: string;
+  categoryId?: string;
+  factory?: string;
+  size?: string;
+  searchText?: string;
+};
+
+export type SearchableProductGroup<
+  TRow extends SearchableProductRow = SearchableProductRow,
+> = {
+  id: string;
+  label: string;
+  rows: TRow[];
+};
+
+export function normalizeSearchText(value = ""): string {
+  return toAsciiDigits(value)
+    .trim()
+    .toLocaleLowerCase("fa")
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Search all product groups and retain only groups containing matching rows.
+ *
+ * Generic in the group, because this only ever narrows the list it is given:
+ * callers get back groups of the same shape they passed in.
+ */
+export function filterProductGroups<TGroup extends SearchableProductGroup>(
+  groups: TGroup[],
+  query: string,
+): TGroup[] {
+  const needle = normalizeSearchText(query);
+  if (!needle) return groups;
+
+  return groups
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter((row) =>
+        normalizeSearchText(
+          `${group.label} ${row.product} ${row.origin} ${row.unit} ${row.searchText ?? ""}`,
+        ).includes(needle),
+      ),
+    }))
+    .filter((group) => group.rows.length > 0);
+}
+
+// ---------------------------------------------------------------------------
+// 2. SEARCH INDEXING & PROJECTION
 // ---------------------------------------------------------------------------
 
 export type CatalogSearchRow = {
@@ -88,7 +144,7 @@ export const loadCatalogSearchGroups = createRetryableLoader<CatalogSearchGroup[
 );
 
 // ---------------------------------------------------------------------------
-// 2. PURE DOMAIN EVALUATION
+// 3. PURE DOMAIN EVALUATION
 // ---------------------------------------------------------------------------
 
 export type SearchExecutionResult = {
@@ -140,28 +196,5 @@ export function evaluateCatalogSearch(
           categoryId: initialCategoryIdOf(selectedGroupId),
         },
     statusMessage: `${totalCount.toLocaleString("fa-IR")} نتیجه برای «${trimmed}» پیدا شد.`,
-  };
-}
-
-export function priceSectionHeading(
-  subcategoryLabel: string | undefined,
-  categoryLabel: string | undefined,
-): { title: string; description: string } {
-  if (subcategoryLabel) {
-    return {
-      title: `جدول قیمت و مشخصات فنی ${subcategoryLabel}`,
-      description: `قیمت روز و مشخصات فنی ${subcategoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
-    };
-  }
-  if (categoryLabel) {
-    return {
-      title: `جدول و مقایسه قیمت انواع ${categoryLabel}`,
-      description: `قیمت روز و مشخصات فنی انواع ${categoryLabel} از معتبرترین کارخانه‌ها. برای استعلام موجودی و قیمت قطعی با واحد فروش تماس بگیرید.`,
-    };
-  }
-  return {
-    title: "قیمت روز آهن‌آلات و مقاطع فولادی",
-    description:
-      "خلاصه قیمت روز همه دسته‌های فولادی بر اساس استعلام بازار. برای مشاهده مشخصات کامل روی هر گروه کلیک کنید.",
   };
 }

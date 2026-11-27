@@ -5,96 +5,17 @@ import { setupDomEnv } from "./helpers/dom-env.mjs";
 setupDomEnv({ url: "https://example.test/" });
 
 const { act, cleanup, renderHook } = await import("@testing-library/react");
-const { useCatalogWorkspace } = await import("../app/use-catalog-workspace.ts");
+const { priceSectionHeading, useCatalogWorkspace } = await import(
+  "../app/use-catalog-workspace.ts"
+);
 const { buildCatalogSearchGroups } = await import("../app/catalog-search.ts");
 const { productGroups } = await import("../app/category-meta.ts");
+const { mockCatalogs } = await import("./helpers/catalog-search-fixture.mjs");
 
 afterEach(() => {
   cleanup();
   window.history.replaceState({}, "", "/");
 });
-
-const mockRow = (id, title, size, factory) => ({
-  id,
-  title,
-  size,
-  standard: "A3",
-  grade: "St37",
-  branchLength: "12",
-  form: "شاخه",
-  approximateWeight: "20",
-  delivery: "تهران",
-  unit: "کیلوگرم",
-  factory,
-  price: 55_000,
-  percent: 1.5,
-  status: "up",
-  updatedAt: 1_700_000_000,
-  updatedDate: "۱۴۰۲/۰۸/۲۳",
-  specifications: [{ label: "ضخامت", value: "2mm" }],
-});
-
-const mockCategory = (id, label, rows) => ({
-  id,
-  label,
-  groupingLabel: "کارخانه",
-  specificationLabel: "استاندارد",
-  sourceTitle: label,
-  sourceUrl: "https://example.test/source",
-  summary: {
-    date: "امروز",
-    min: 50_000,
-    max: 60_000,
-    average: 55_000,
-    percent: 1.5,
-    status: "up",
-  },
-  filters: {
-    sizes: [...new Set(rows.map((r) => r.size))],
-    factories: [...new Set(rows.map((r) => r.factory))],
-  },
-  factories: [...new Set(rows.map((r) => r.factory))].map((factoryName) => ({
-    name: factoryName,
-    updatedAt: 1_700_000_000,
-    updatedDate: "۱۴۰۲/۰۸/۲۳",
-    rows: rows.filter((r) => r.factory === factoryName),
-  })),
-});
-
-const mockCatalogs = [
-  {
-    id: "rebar",
-    label: "میلگرد",
-    initialCategoryId: "ribbed",
-    fetchedAt: "2026-07-27T10:00:00.000Z",
-    sourceName: "منبع آزمایشی",
-    sourceHome: "https://example.test/",
-    taxRate: 0.1,
-    categories: [
-      mockCategory("ribbed", "میلگرد آجدار", [
-        mockRow(1, "میلگرد آجدار ۱۴ نیشابور", "14", "نیشابور", "ribbed"),
-        mockRow(2, "میلگرد آجدار ۱۶ اصفهان", "16", "ذوب‌آهن اصفهان", "ribbed"),
-      ]),
-      mockCategory("simple", "میلگرد ساده", [
-        mockRow(3, "میلگرد ساده ۱۰ کویر کاشان", "10", "کویر کاشان", "simple"),
-      ]),
-    ],
-  },
-  {
-    id: "beam",
-    label: "تیرآهن",
-    initialCategoryId: "beam",
-    fetchedAt: "2026-07-27T10:00:00.000Z",
-    sourceName: "منبع آزمایشی",
-    sourceHome: "https://example.test/",
-    taxRate: 0.1,
-    categories: [
-      mockCategory("beam", "تیرآهن IPE", [
-        mockRow(4, "تیرآهن ۱۸ فایکو", "18", "فایکو", "beam"),
-      ]),
-    ],
-  },
-];
 
 // ---------------------------------------------------------------------------
 // 2. DEEP WORKSPACE HOOK & DERIVED VIEW TESTS
@@ -108,6 +29,8 @@ test("useCatalogWorkspace initializes default home workspace state with compact 
   assert.equal(result.current.brandHref, "#top");
   assert.equal(result.current.activeGroup, "rebar");
   assert.equal(result.current.selectedTabId, "rebar");
+  assert.equal(result.current.selectedGroupValue, "");
+  assert.equal(result.current.search.input, "");
   assert.equal(result.current.search.query, "");
   assert.equal(result.current.search.isActive, false);
   assert.equal(result.current.search.isSearching, false);
@@ -360,25 +283,35 @@ test("useCatalogWorkspace selectTab intercepts click under active search and all
   };
 
   // 1. Inactive search: does not preventDefault (standard <a> link navigation)
+  let intercepted = false;
   act(() => {
-    result.current.selectTab("sheet", mockEvent);
+    intercepted = result.current.selectTab("sheet", mockEvent);
   });
+  assert.equal(intercepted, false);
   assert.equal(prevented, false);
 
-  // 2. Activate search
+  // 2. Activate search via controlled input
+  act(() => {
+    result.current.setSearchInput("فایکو");
+  });
   await act(async () => {
-    await result.current.submitSearch("فایکو");
+    await result.current.submitSearch();
   });
   assert.equal(result.current.search.isActive, true);
+  assert.equal(result.current.search.input, "فایکو");
+  assert.equal(result.current.selectedGroupValue, "beam");
 
-  // 3. Active search: prevents default link navigation and switches workspace group in-place
+  // 3. Active search: prevents default link navigation, clears input, and switches workspace group in-place
   act(() => {
-    result.current.selectTab("profile", mockEvent);
+    intercepted = result.current.selectTab("profile", mockEvent);
   });
+  assert.equal(intercepted, true);
   assert.equal(prevented, true);
   assert.equal(result.current.activeGroup, "profile");
+  assert.equal(result.current.search.input, "");
   assert.equal(result.current.search.query, "");
   assert.equal(result.current.search.isActive, false);
+  assert.equal(result.current.selectedGroupValue, "");
 });
 
 test("useCatalogWorkspace selectGroup transitions catalog view and preserves custom parameters", () => {
@@ -453,4 +386,15 @@ test("useCatalogWorkspace discards stale out-of-order async responses (race cond
   assert.equal(result.current.search.query, "فایکو");
   assert.equal(result.current.activeGroup, "beam");
   assert.match(result.current.search.statusMessage, /فایکو/);
+});
+
+test("priceSectionHeading formats headings for category, subcategory, and home routes", () => {
+  const subcatHeading = priceSectionHeading("میلگرد ساده", "میلگرد");
+  assert.equal(subcatHeading.title, "جدول قیمت و مشخصات فنی میلگرد ساده");
+
+  const catHeading = priceSectionHeading(undefined, "تیرآهن");
+  assert.equal(catHeading.title, "جدول و مقایسه قیمت انواع تیرآهن");
+
+  const defaultHeading = priceSectionHeading(undefined, undefined);
+  assert.equal(defaultHeading.title, "قیمت روز آهن‌آلات و مقاطع فولادی");
 });

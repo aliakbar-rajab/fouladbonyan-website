@@ -15,7 +15,10 @@ import {
   priceRangesByUnit,
   summarisePricedRows,
 } from "../app/catalog-pricing.mjs";
-import { buildCatalogSearchGroups } from "../app/catalog-search.ts";
+import {
+  buildCatalogSearchGroups,
+  filterProductGroups,
+} from "../app/catalog-search.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import {
   buildMenuCatalog,
@@ -31,7 +34,6 @@ import {
   scopeCatalogSnapshot,
 } from "../app/catalog-reader.ts";
 import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
-import { filterProductGroups } from "../app/site-logic.mjs";
 import {
   summarizeCatalogDates,
   summarizeCatalogTrends,
@@ -308,6 +310,14 @@ test("rebar weight calculator rejects fractional or non-positive branch quantiti
   assert.equal(calculateRebarWeight(16, 12, 2), (16 ** 2 / 162) * 12 * 2);
   assert.equal(calculateRebarWeight(16, 12, 1.5), null);
   assert.equal(calculateRebarWeight(16, 12, 0), null);
+  const weightAscii = calculateRebarWeight("16", "12", "1");
+  const weightPersian = calculateRebarWeight("۱۶", "۱۲", "۱");
+  assert.ok(weightAscii !== null);
+  assert.ok(weightPersian !== null);
+  assert.equal(weightAscii.toFixed(2), weightPersian.toFixed(2));
+  assert.equal(calculateRebarWeight("0", "12", "1"), null);
+  assert.equal(calculateRebarWeight("16", "12", "۰"), null);
+  assert.equal(calculateRebarWeight("invalid", "12", "1"), null);
 });
 
 test("implausible trend percentages must be quarantined before publication", async () => {

@@ -3,94 +3,80 @@ import test from "node:test";
 import {
   buildCatalogSearchGroups,
   evaluateCatalogSearch,
-  priceSectionHeading,
+  filterProductGroups,
+  normalizeSearchText,
 } from "../app/catalog-search.ts";
+import { mockCatalogs } from "./helpers/catalog-search-fixture.mjs";
 const { productGroups } = await import("../app/category-meta.ts");
 
-const mockRow = (id, title, size, factory) => ({
-  id,
-  title,
-  size,
-  standard: "A3",
-  grade: "St37",
-  branchLength: "12",
-  form: "شاخه",
-  approximateWeight: "20",
-  delivery: "تهران",
-  unit: "کیلوگرم",
-  factory,
-  price: 55_000,
-  percent: 1.5,
-  status: "up",
-  updatedAt: 1_700_000_000,
-  updatedDate: "۱۴۰۲/۰۸/۲۳",
-  specifications: [{ label: "ضخامت", value: "2mm" }],
-});
-
-const mockCategory = (id, label, rows) => ({
-  id,
-  label,
-  groupingLabel: "کارخانه",
-  specificationLabel: "استاندارد",
-  sourceTitle: label,
-  sourceUrl: "https://example.test/source",
-  summary: {
-    date: "امروز",
-    min: 50_000,
-    max: 60_000,
-    average: 55_000,
-    percent: 1.5,
-    status: "up",
-  },
-  filters: {
-    sizes: [...new Set(rows.map((r) => r.size))],
-    factories: [...new Set(rows.map((r) => r.factory))],
-  },
-  factories: [...new Set(rows.map((r) => r.factory))].map((factoryName) => ({
-    name: factoryName,
-    updatedAt: 1_700_000_000,
-    updatedDate: "۱۴۰۲/۰۸/۲۳",
-    rows: rows.filter((r) => r.factory === factoryName),
-  })),
-});
-
-const mockCatalogs = [
+// Shaped like the rows buildCatalogSearchGroups actually produces: ASCII digits
+// in the title, plus the categoryId/factory/size/searchText navigation metadata.
+const normalizationGroups = [
   {
     id: "rebar",
     label: "میلگرد",
-    initialCategoryId: "ribbed",
-    fetchedAt: "2026-07-27T10:00:00.000Z",
-    sourceName: "منبع آزمایشی",
-    sourceHome: "https://example.test/",
-    taxRate: 0.1,
-    categories: [
-      mockCategory("ribbed", "میلگرد آجدار", [
-        mockRow(1, "میلگرد آجدار ۱۴ نیشابور", "14", "نیشابور", "ribbed"),
-        mockRow(2, "میلگرد آجدار ۱۶ اصفهان", "16", "ذوب‌آهن اصفهان", "ribbed"),
-      ]),
-      mockCategory("simple", "میلگرد ساده", [
-        mockRow(3, "میلگرد ساده ۱۰ کویر کاشان", "10", "کویر کاشان", "simple"),
-      ]),
+    rows: [
+      {
+        product: "میلگرد 16 نیشابور آجدار A3",
+        origin: "نیشابور",
+        unit: "کیلوگرم",
+        categoryId: "ribbed",
+        factory: "نیشابور",
+        size: "16",
+        searchText: "میلگرد آجدار میلگرد 16 نیشابور آجدار A3 16 A3 نیشابور",
+      },
     ],
   },
   {
-    id: "beam",
-    label: "تیرآهن",
-    initialCategoryId: "beam",
-    fetchedAt: "2026-07-27T10:00:00.000Z",
-    sourceName: "منبع آزمایشی",
-    sourceHome: "https://example.test/",
-    taxRate: 0.1,
-    categories: [
-      mockCategory("beam", "تیرآهن IPE", [
-        mockRow(4, "تیرآهن ۱۸ فایکو", "18", "فایکو", "beam"),
-      ]),
+    id: "sheet",
+    label: "ورق فولادی",
+    rows: [
+      {
+        product: "ورق سیاه فولاد مبارکه ضخامت 2 میل رول 1000",
+        origin: "فولاد مبارکه",
+        unit: "کیلوگرم",
+        categoryId: "black-sheet",
+        factory: "فولاد مبارکه",
+        size: "1",
+        searchText: "ورق سیاه ورق سیاه فولاد مبارکه ضخامت 2 میل رول 1000 st37",
+      },
     ],
   },
 ];
 
 // ---------------------------------------------------------------------------
-// 1. PURE INDEXING & EVALUATION TESTS
+// 1. NORMALIZATION & ROW FILTERING TESTS
+// ---------------------------------------------------------------------------
+
+test("Arabic Yeh and Kaf normalize for Persian search", () => {
+  assert.equal(normalizeSearchText("  ميلگرد كلاف  "), "میلگرد کلاف");
+});
+
+test("search finds a row by Persian product text", () => {
+  const result = filterProductGroups(normalizationGroups, "سیاه");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "sheet");
+  assert.equal(
+    result[0].rows[0].product,
+    "ورق سیاه فولاد مبارکه ضخامت 2 میل رول 1000",
+  );
+});
+
+test("search matches normalized Persian digits", () => {
+  // Live rows store ASCII digits, so the normalization that matters is on the
+  // query a Persian keyboard produces.
+  const result = filterProductGroups(normalizationGroups, "میلگرد ۱۶");
+  assert.equal(result.length, 1);
+  assert.equal(result[0].id, "rebar");
+  assert.equal(result[0].rows[0].size, "16");
+});
+
+test("empty search retains all groups", () => {
+  assert.equal(filterProductGroups(normalizationGroups, "  ").length, 2);
+});
+
+// ---------------------------------------------------------------------------
+// 2. PURE INDEXING & EVALUATION TESTS
 // ---------------------------------------------------------------------------
 
 test("buildCatalogSearchGroups indexes all rows, category IDs, and search text accurately", () => {
@@ -142,15 +128,4 @@ test("evaluateCatalogSearch handles queries with no matching products cleanly", 
 
   assert.equal(result.matchedGroups.length, 0);
   assert.match(result.statusMessage, /نتیجه‌ای برای «محصول_ناموجود_xyz» پیدا نشد/);
-});
-
-test("priceSectionHeading formats headings for category, subcategory, and home routes", () => {
-  const subcatHeading = priceSectionHeading("میلگرد ساده", "میلگرد");
-  assert.equal(subcatHeading.title, "جدول قیمت و مشخصات فنی میلگرد ساده");
-
-  const catHeading = priceSectionHeading(undefined, "تیرآهن");
-  assert.equal(catHeading.title, "جدول و مقایسه قیمت انواع تیرآهن");
-
-  const defaultHeading = priceSectionHeading(undefined, undefined);
-  assert.equal(defaultHeading.title, "قیمت روز آهن‌آلات و مقاطع فولادی");
 });

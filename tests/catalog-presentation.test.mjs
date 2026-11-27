@@ -107,6 +107,9 @@ test("pending and unavailable are different states", () => {
 test("dimensions are localized without digit grouping", () => {
   assert.equal(localizeCatalogValue("1250"), "۱۲۵۰");
   assert.equal(localizeCatalogValue("16"), "۱۶");
+  assert.equal(localizeCatalogValue("طول*1250"), "طول*۱۲۵۰");
+  assert.equal(localizeCatalogValue("1000 گرم"), "۱۰۰۰ گرم");
+  assert.equal(localizeCatalogValue("A3"), "A۳");
   assert.equal(localizeCatalogValue(""), "—");
   assert.equal(localizeCatalogValue(null), "—");
 });

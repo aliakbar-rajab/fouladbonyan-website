@@ -3,7 +3,6 @@ import {
   FormEvent,
   useEffect,
   useRef,
-  useState,
 } from "react";
 import CatalogPrices from "./CatalogPrices";
 import { CategoryOverview } from "./CategoryOverview";
@@ -43,8 +42,6 @@ export default function App({
     initialSubcategoryLabel,
   });
 
-  const [searchInput, setSearchInput] = useState("");
-
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const didAutoScrollCategoryRoute = useRef(false);
 
@@ -56,15 +53,11 @@ export default function App({
 
   const submitSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await workspace.submitSearch(searchInput);
-    if (!searchInput.trim()) {
-      setSearchInput("");
-    }
+    await workspace.submitSearch();
     scrollToPriceWorkspace();
   };
 
   const handleClearSearch = () => {
-    setSearchInput("");
     workspace.clearSearch();
     scrollToPriceWorkspace();
   };
@@ -111,8 +104,8 @@ export default function App({
                     id="site-search"
                     type="search"
                     placeholder="جست‌وجوی میلگرد، ورق، تیرآهن و…"
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
+                    value={workspace.search.input}
+                    onChange={(event) => workspace.setSearchInput(event.target.value)}
                   />
                   <button
                     type="submit"
@@ -136,16 +129,12 @@ export default function App({
                   <label htmlFor="product-family-select">گروه محصول</label>
                   <select
                     id="product-family-select"
-                    value={workspace.isCategoryRoute || workspace.search.isActive ? workspace.selectedTabId : ""}
+                    value={workspace.selectedGroupValue}
                     onChange={(event) => {
                       const groupId = event.target.value as ProductGroupId;
-                      if (workspace.search.isActive) {
-                        setSearchInput("");
-                        workspace.selectGroup(groupId);
-                        scrollToPriceWorkspace();
-                        return;
+                      if (!workspace.selectTab(groupId)) {
+                        window.location.assign(subcategoryHref(groupId));
                       }
-                      window.location.assign(subcategoryHref(groupId));
                     }}
                   >
                     <option value="" disabled>انتخاب گروه محصول</option>
@@ -175,10 +164,6 @@ export default function App({
                           key={group.id}
                           onClick={(event) => {
                             workspace.selectTab(group.id, event);
-                            if (workspace.search.isActive) {
-                              setSearchInput("");
-                              scrollToPriceWorkspace();
-                            }
                           }}
                         >
                           {group.shortLabel}
