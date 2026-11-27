@@ -6,11 +6,10 @@ import {
   loadOverviewSummaries,
   type CategoryPriceOverview,
 } from "./catalog-reader";
-import { formatPersianNumber } from "./persian-numbers.mjs";
-import { getTrendPresentation } from "./catalog-behavior.mjs";
 import {
   PRICE_PENDING_TEXT,
   PRICE_UNAVAILABLE_TEXT,
+  presentPriceMovement,
   presentPriceRange,
 } from "./catalog-presentation";
 import { getThumbnailSources } from "./image-utils";
@@ -98,12 +97,6 @@ function OverviewQuickLinks({
   );
 }
 
-function formatStatusText(status: string, percent: number): string {
-  const trend = getTrendPresentation(status, percent);
-  if (!trend.amount) return trend.direction;
-  return `${trend.direction} (${formatPersianNumber(trend.amount, 1)}٪)`;
-}
-
 /**
  * What an item with no price ranges reads.
  *
@@ -176,6 +169,7 @@ export function SteelPriceOverview() {
             {summaries.map((item) => {
               const thumbs = getThumbnailSources(item.image);
               const targetHref = overviewFlagshipHref(item.id);
+              const movement = presentPriceMovement(item.status, item.percent);
               return (
                 <tr key={item.id} className="overview-row">
                   <td className="overview-cell-group">
@@ -237,9 +231,9 @@ export function SteelPriceOverview() {
                   </td>
                   <td className="overview-cell-status">
                     <span
-                      className={`overview-status-badge is-${item.status}`}
+                      className={`overview-status-badge ${movement.toneClass}`}
                     >
-                      {formatStatusText(item.status, item.percent)}
+                      {movement.text}
                     </span>
                   </td>
                   <td className="overview-cell-action">

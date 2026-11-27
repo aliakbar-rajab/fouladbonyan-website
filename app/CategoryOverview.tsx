@@ -1,12 +1,13 @@
 import {
-  categoryCredibleSummary,
-  categoryPricingState,
-  hasDisplayablePriceRange,
+  categoryPricing,
+  type CategoryPricing,
 } from "./catalog-pricing.mjs";
-import { getTrendPresentation } from "./catalog-behavior.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { formatPersianNumber } from "./persian-numbers.mjs";
-import { presentPriceRange } from "./catalog-presentation";
+import {
+  presentPriceMovement,
+  presentPriceRange,
+} from "./catalog-presentation";
 import {
   getCategoryById,
   subcategoryHref,
@@ -31,26 +32,25 @@ function groupingCountLabel(category: CatalogCategory) {
  * row and the card below so the two shells cannot quote different prices for
  * the same category -- nor disagree about whether there is one to quote.
  */
-function overviewPrice(category: CatalogCategory) {
-  const summary = categoryCredibleSummary(category);
-  return presentPriceRange(
-    hasDisplayablePriceRange(categoryPricingState(category), summary)
-      ? summary
-      : null,
-  );
+function overviewPrice(pricing: CategoryPricing) {
+  return presentPriceRange(pricing.kind === "range" ? pricing : null);
 }
 
 function CategoryOverviewRow({
   groupId,
   category,
+  pricing,
 }: {
   groupId: ProductGroupId;
   category: CatalogCategory;
+  pricing: CategoryPricing;
 }) {
   const href = subcategoryHref(groupId, category.id);
-  const pricingState = categoryPricingState(category);
-  const price = overviewPrice(category);
-  const trend = getTrendPresentation(category.summary.status, category.summary.percent);
+  const price = overviewPrice(pricing);
+  const movement = presentPriceMovement(
+    category.summary.status,
+    category.summary.percent,
+  );
 
   return (
     <tr className="overview-row">
@@ -78,13 +78,17 @@ function CategoryOverviewRow({
         </span>
       </td>
       <td className="overview-cell-unit">
-        <span>{pricingState.units.length === 1 ? pricingState.units[0] : "متفاوت"}</span>
+        <span>
+          {pricing.kind === "range"
+            ? pricing.unit
+            : pricing.kind === "mixed"
+              ? "متفاوت"
+              : "—"}
+        </span>
       </td>
       <td className="overview-cell-status">
-        <span className={`overview-status-badge is-${category.summary.status}`}>
-          {trend.amount
-            ? `${trend.direction} (${formatPersianNumber(trend.amount, 2)}٪)`
-            : trend.direction}
+        <span className={`overview-status-badge ${movement.toneClass}`}>
+          {movement.text}
         </span>
       </td>
       <td className="overview-cell-action">
@@ -103,12 +107,14 @@ function CategoryOverviewRow({
 function CategoryOverviewCard({
   groupId,
   category,
+  pricing,
 }: {
   groupId: ProductGroupId;
   category: CatalogCategory;
+  pricing: CategoryPricing;
 }) {
   const href = subcategoryHref(groupId, category.id);
-  const price = overviewPrice(category);
+  const price = overviewPrice(pricing);
 
   return (
     <article className="overview-card">
@@ -144,6 +150,10 @@ function CategoryOverviewContent({
   catalog: GroupCatalog;
 }) {
   const group = getCategoryById(groupId);
+  const categoryEntries = catalog.categories.map((category) => ({
+    category,
+    pricing: categoryPricing(category),
+  }));
 
   return (
     <div className="steel-price-overview" id="category-overview">
@@ -171,16 +181,26 @@ function CategoryOverviewContent({
             </tr>
           </thead>
           <tbody>
-            {catalog.categories.map((category) => (
-              <CategoryOverviewRow key={category.id} groupId={groupId} category={category} />
+            {categoryEntries.map(({ category, pricing }) => (
+              <CategoryOverviewRow
+                key={category.id}
+                groupId={groupId}
+                category={category}
+                pricing={pricing}
+              />
             ))}
           </tbody>
         </table>
       </div>
 
       <div className="overview-mobile-cards" role="group" aria-label={`فهرست انواع ${catalog.label}`}>
-        {catalog.categories.map((category) => (
-          <CategoryOverviewCard key={category.id} groupId={groupId} category={category} />
+        {categoryEntries.map(({ category, pricing }) => (
+          <CategoryOverviewCard
+            key={category.id}
+            groupId={groupId}
+            category={category}
+            pricing={pricing}
+          />
         ))}
       </div>
 

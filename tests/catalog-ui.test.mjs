@@ -247,6 +247,24 @@ test("F4: a whole-number move is not padded with decimals", () => {
   assert.match(changeCell.textContent, /کاهش ۳٪/);
 });
 
+test("price movement cells apply normalized CSS tone classes rather than raw upstream status", () => {
+  render(
+    React.createElement(PriceCatalog, {
+      catalog: {
+        ...catalog,
+        initialCategoryId: "only",
+        categories: [category("only", "آزمون", row(5, "up", 155))],
+      },
+      phoneHref,
+    }),
+  );
+
+  const changeCell = screen.getByRole("table").querySelector(".row-change");
+  assert.equal(changeCell.classList.contains("is-unverified"), true);
+  assert.equal(changeCell.classList.contains("is-up"), false);
+  assert.equal(changeCell.textContent, "نیازمند بررسی");
+});
+
 test("F2: a search that is still loading does not report 'no products found'", async () => {
   render(React.createElement(App));
   await settle();

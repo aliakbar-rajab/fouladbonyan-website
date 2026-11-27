@@ -1,4 +1,4 @@
-import { getTrendPresentation } from "./catalog-behavior.mjs";
+import { presentPriceMovement } from "./catalog-presentation";
 import { EurIcon, GoldIcon, TetherIcon, UsdIcon, type IconProps } from "./icons";
 import { useMarketPrices, type MarketPriceItem } from "./use-market-prices";
 import { PRICE_WORKSPACE_ID } from "./use-catalog-workspace";
@@ -30,10 +30,6 @@ function formatPrice(value: number) {
   return value.toLocaleString("fa-IR");
 }
 
-function formatPercent(value: number) {
-  return value.toLocaleString("fa-IR", { maximumFractionDigits: 2 });
-}
-
 function formatUpdatedAt(iso: string) {
   return updatedAtFormatter.format(new Date(iso));
 }
@@ -43,10 +39,10 @@ function formatCheckedAt(iso: string) {
 }
 
 function MarketPriceCard({ item }: { item: MarketPriceItem }) {
-  const trend = getTrendPresentation(item.status, item.percent);
+  const movement = presentPriceMovement(item.status, item.percent);
   const Icon = ASSET_ICONS[item.id] ?? GoldIcon;
   return (
-    <article className={`market-price-card is-${item.status}`}>
+    <article className={`market-price-card ${movement.toneClass}`}>
       <header>
         <span className="market-price-icon" aria-hidden="true">
           <Icon />
@@ -58,8 +54,8 @@ function MarketPriceCard({ item }: { item: MarketPriceItem }) {
         <small>{item.unit}</small>
       </p>
       <p className="market-price-trend">
-        <span>{trend.direction}</span>
-        {trend.amount ? <span>{formatPercent(trend.amount)}٪</span> : null}
+        <span>{movement.direction}</span>
+        {movement.percentText ? <span>{movement.percentText}</span> : null}
       </p>
       <p className="market-price-updated">
         به‌روزرسانی:{" "}

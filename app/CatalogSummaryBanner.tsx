@@ -1,14 +1,9 @@
 import { useMemo } from "react";
-import { getTrendPresentation } from "./catalog-behavior.mjs";
-import {
-  categoryCredibleSummary,
-  categoryPricingState,
-  hasDisplayablePriceRange,
-} from "./catalog-pricing.mjs";
+import { categoryPricing } from "./catalog-pricing.mjs";
 import type { CatalogCategory } from "./catalog-types";
 import { ContactLink } from "./ContactLink";
-import { formatPersianNumber, toPersianDigits } from "./persian-numbers.mjs";
-import { presentPrice } from "./catalog-presentation";
+import { toPersianDigits } from "./persian-numbers.mjs";
+import { presentPrice, presentPriceMovement } from "./catalog-presentation";
 import { QUOTE_FORM_HREF } from "./quote-handoff";
 import { siteConfig } from "./site-config";
 
@@ -31,13 +26,9 @@ export function CatalogSummaryBanner({
 }) {
   const summaryPrice = (price: number) =>
     presentPrice(price, { taxIncluded, taxRate }).text;
-  const trend = getTrendPresentation(
+  const movement = presentPriceMovement(
     category.summary.status,
     category.summary.percent,
-  );
-  const pricingState = useMemo(
-    () => categoryPricingState(category),
-    [category],
   );
 
   /*
@@ -51,10 +42,7 @@ export function CatalogSummaryBanner({
    * Date and movement stay on `category.summary`: neither is distorted by a
    * single row's price.
    */
-  const summary = useMemo(
-    () => categoryCredibleSummary(category),
-    [category],
-  );
+  const pricing = useMemo(() => categoryPricing(category), [category]);
 
   return (
     <section
@@ -64,7 +52,7 @@ export function CatalogSummaryBanner({
       <h3 id={`catalog-price-title-${category.id}`}>
         قیمت {category.label}
       </h3>
-      {!pricingState.hasPrices ? (
+      {pricing.kind === "unavailable" ? (
         <div className="zero-price-inquiry-card" role="region" aria-label={`استعلام فوری ${category.label}`}>
           <p>
             قیمت عددی {category.label} امروز اعلام نشده است. برای استعلام قیمت
@@ -88,59 +76,54 @@ export function CatalogSummaryBanner({
             </a>
           </div>
         </div>
-      ) : pricingState.units.length > 1 ? (
+      ) : pricing.kind === "mixed" ? (
         <p>
           قیمت‌های {category.label} با واحدهای فروش متفاوت ثبت شده‌اند؛
           مبلغ و واحد هر ردیف را در جدول بررسی کنید.
         </p>
       ) : (
-        <p>
-          قیمت {category.label} امروز{" "}
-          <time dateTime={fetchedAt}>
-            {toPersianDigits(category.summary.date)}
-          </time>{" "}
-          در بازه‌ای
-          بین <b>{summaryPrice(summary.min)}</b> تا{" "}
-          <b>{summaryPrice(summary.max)}</b> تومان
-          {taxIncluded
-            ? " (با احتساب ارزش افزوده) "
-            : " (بدون احتساب ارزش افزوده) "}
-          قرار دارد.
-        </p>
+        <>
+          <p>
+            قیمت {category.label} امروز{" "}
+            <time dateTime={fetchedAt}>
+              {toPersianDigits(category.summary.date)}
+            </time>{" "}
+            در بازه‌ای
+            بین <b>{summaryPrice(pricing.min)}</b> تا{" "}
+            <b>{summaryPrice(pricing.max)}</b> تومان
+            {taxIncluded
+              ? " (با احتساب ارزش افزوده) "
+              : " (بدون احتساب ارزش افزوده) "}
+            قرار دارد.
+          </p>
+          <div className="rebar-stats">
+            <article className="is-max">
+              <StatMarker type="max" />
+              <span>بیشترین قیمت</span>
+              <strong>{summaryPrice(pricing.max)}</strong>
+              <small>تومان</small>
+            </article>
+            <article className="is-min">
+              <StatMarker type="min" />
+              <span>کمترین قیمت</span>
+              <strong>{summaryPrice(pricing.min)}</strong>
+              <small>تومان</small>
+            </article>
+            <article className="is-change">
+              <StatMarker type="change" />
+              <span>میزان نوسان روزانه</span>
+              <strong>{movement.text}</strong>
+              <small>نسبت به روز قبل</small>
+            </article>
+            <article className="is-average">
+              <StatMarker type="average" />
+              <span>میانگین قیمت بازار</span>
+              <strong>{summaryPrice(pricing.average)}</strong>
+              <small>تومان</small>
+            </article>
+          </div>
+        </>
       )}
-      {hasDisplayablePriceRange(pricingState, summary) ? (
-        <div className="rebar-stats">
-          <article className="is-max">
-            <StatMarker type="max" />
-            <span>بیشترین قیمت</span>
-            <strong>{summaryPrice(summary.max)}</strong>
-            <small>تومان</small>
-          </article>
-          <article className="is-min">
-            <StatMarker type="min" />
-            <span>کمترین قیمت</span>
-            <strong>{summaryPrice(summary.min)}</strong>
-            <small>تومان</small>
-          </article>
-          <article className="is-change">
-            <StatMarker type="change" />
-            <span>میزان نوسان روزانه</span>
-            <strong>
-              {trend.direction}
-              {trend.amount
-                ? ` ${formatPersianNumber(trend.amount, 2)}٪`
-                : ""}
-            </strong>
-            <small>نسبت به روز قبل</small>
-          </article>
-          <article className="is-average">
-            <StatMarker type="average" />
-            <span>میانگین قیمت بازار</span>
-            <strong>{summaryPrice(summary.average)}</strong>
-            <small>تومان</small>
-          </article>
-        </div>
-      ) : null}
     </section>
   );
 }

@@ -6,15 +6,12 @@ import {
   deriveWallThicknessFromSize,
   effectiveRowSpecification,
   effectiveSpecificationLabel,
-  getTrendPresentation,
   sortFactoryRows,
 } from "../app/catalog-behavior.mjs";
 import {
   categoriesCrediblePricedRows,
-  categoryCredibleSummary,
   categoryPricedRows,
-  categoryPricingState,
-  hasDisplayablePriceRange,
+  categoryPricing,
   priceRangesByUnit,
   summarisePricedRows,
 } from "../app/catalog-pricing.mjs";
@@ -231,9 +228,10 @@ test("known source ambiguities are represented honestly", async () => {
     "گروه",
   );
 
-  const beamPricing = categoryPricingState(
+  const beamPricing = categoryPricing(
     beam.categories.find((category) => category.id === "beam"),
   );
+  assert.equal(beamPricing.kind, "mixed");
   assert.deepEqual(new Set(beamPricing.units), new Set(["شاخه", "کیلوگرم"]));
 
   const unpriced = snapshot.catalogs
@@ -247,9 +245,9 @@ test("known source ambiguities are represented honestly", async () => {
   assert.ok(unpriced.length > 0);
   assert.ok(
     unpriced.every((category) => {
-      const state = categoryPricingState(category);
+      const pricing = categoryPricing(category);
       return (
-        !state.hasPrices &&
+        pricing.kind === "unavailable" &&
         category.summary.min === 0 &&
         category.summary.max === 0 &&
         category.summary.average === 0
@@ -306,32 +304,7 @@ test("live catalog search indexes real rows and navigation metadata", async () =
   assert.equal(result[0].rows[0].size, "32");
 });
 
-test("trend and calculator helpers preserve business meaning", () => {
-  assert.deepEqual(getTrendPresentation("down", -2.5), {
-    direction: "کاهش",
-    symbol: "↓",
-    amount: 2.5,
-  });
-  assert.deepEqual(getTrendPresentation("up", 1), {
-    direction: "افزایش",
-    symbol: "↑",
-    amount: 1,
-  });
-  assert.deepEqual(getTrendPresentation("up", 0), {
-    direction: "بدون تغییر",
-    symbol: "—",
-    amount: 0,
-  });
-  assert.deepEqual(getTrendPresentation("up", 155), {
-    direction: "نیازمند بررسی",
-    symbol: "!",
-    amount: 0,
-  });
-  assert.deepEqual(getTrendPresentation("mixed", 0), {
-    direction: "نوسان ترکیبی",
-    symbol: "↕",
-    amount: 0,
-  });
+test("rebar weight calculator rejects fractional or non-positive branch quantities", () => {
   assert.equal(calculateRebarWeight(16, 12, 2), (16 ** 2 / 162) * 12 * 2);
   assert.equal(calculateRebarWeight(16, 12, 1.5), null);
   assert.equal(calculateRebarWeight(16, 12, 0), null);
@@ -401,7 +374,7 @@ test("catalog-pricing: priced-row extraction ignores null, zero, and non-finite 
   assert.equal(priced[0].price, 1000);
 });
 
-test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md invariants", () => {
+test("catalog-pricing: categoryPricing returns discriminated unavailable, mixed, and range states", () => {
   const makeCategory = (rows) => ({ factories: [{ rows }] });
 
   const singleUnit = makeCategory([
@@ -409,46 +382,33 @@ test("catalog-pricing: pricing state and displayable-range gate match CONTEXT.md
     { price: 20, unit: "کیلوگرم" },
     { price: null, unit: "کیلوگرم" },
   ]);
-  assert.deepEqual(categoryPricingState(singleUnit), {
-    hasPrices: true,
-    units: ["کیلوگرم"],
+  assert.deepEqual(categoryPricing(singleUnit), {
+    kind: "range",
+    unit: "کیلوگرم",
+    min: 10,
+    max: 20,
+    average: 15,
   });
-  assert.equal(
-    hasDisplayablePriceRange(
-      categoryPricingState(singleUnit),
-      { min: 10, max: 20 },
-    ),
-    true,
-  );
 
   const mixedUnits = makeCategory([
     { price: 10, unit: "کیلوگرم" },
     { price: 30, unit: "شاخه" },
   ]);
-  assert.deepEqual(categoryPricingState(mixedUnits), {
-    hasPrices: true,
+  assert.deepEqual(categoryPricing(mixedUnits), {
+    kind: "mixed",
     units: ["کیلوگرم", "شاخه"],
   });
-  assert.equal(
-    hasDisplayablePriceRange(
-      categoryPricingState(mixedUnits),
-      { min: 10, max: 30 },
-    ),
-    false,
-  );
 
-  const unpriced = makeCategory([{ price: null, unit: "کیلوگرم" }]);
-  assert.deepEqual(categoryPricingState(unpriced), {
-    hasPrices: false,
+  const missingUnit = makeCategory([{ price: 10, unit: "" }]);
+  assert.deepEqual(categoryPricing(missingUnit), {
+    kind: "mixed",
     units: [],
   });
-  assert.equal(
-    hasDisplayablePriceRange(categoryPricingState(unpriced), {
-      min: 0,
-      max: 0,
-    }),
-    false,
-  );
+
+  const unpriced = makeCategory([{ price: null, unit: "کیلوگرم" }]);
+  assert.deepEqual(categoryPricing(unpriced), {
+    kind: "unavailable",
+  });
 });
 
 /** A category shaped just enough for the pricing helpers. */
@@ -469,8 +429,10 @@ test("catalog-pricing: a displayed summary drops an implausible row but keeps it
   const category = pricedCategory("ribbed", rows);
 
   assert.deepEqual(summarisePricedRows(rows).min, 1_400, "the stored summary stays faithful");
-  assert.equal(categoryCredibleSummary(category).min, 70_500);
-  assert.equal(categoryCredibleSummary(category).max, 83_200);
+  const pricing = categoryPricing(category);
+  assert.equal(pricing.kind, "range");
+  assert.equal(pricing.min, 70_500);
+  assert.equal(pricing.max, 83_200);
   assert.equal(
     categoryPricedRows(category).length,
     5,
@@ -520,8 +482,10 @@ test("catalog-pricing: credibility is judged per category, never across a group"
 
 test("catalog-pricing: a category with no implausible row summarises exactly as before", () => {
   const rows = [kg(64_980), kg(79_900), kg(87_400)];
+  const pricing = categoryPricing(pricedCategory("angle", rows));
+  assert.equal(pricing.kind, "range");
   assert.deepEqual(
-    categoryCredibleSummary(pricedCategory("angle", rows)),
+    { min: pricing.min, max: pricing.max, average: pricing.average },
     summarisePricedRows(rows),
   );
 });

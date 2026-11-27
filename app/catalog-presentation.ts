@@ -19,6 +19,7 @@
  * still choose their own markup; they no longer choose the rule.
  */
 import { isPricedRow } from "./catalog-pricing.mjs";
+import { normalizeCatalogTrend } from "./catalog-trend.mjs";
 import {
   formatPersianNumber,
   toAsciiDigits,
@@ -104,7 +105,7 @@ export function presentPrice(
  *
  * A range is available only when both ends are real prices; whether a
  * particular category is *allowed* a range at all stays with
- * `hasDisplayablePriceRange` in catalog-pricing.mjs, which is a question about
+ * `categoryPricing` in catalog-pricing.mjs, which is a question about
  * Sales units rather than about presentation.
  */
 export function presentPriceRange(
@@ -177,4 +178,60 @@ export function formatCatalogSize(
 export function unixSecondsToIso(value: number): string | undefined {
   if (!value || !Number.isFinite(value)) return undefined;
   return new Date(value * 1000).toISOString();
+}
+
+export type PriceMovementStatus =
+  | "up"
+  | "down"
+  | "same"
+  | "unverified"
+  | "mixed";
+
+export type PresentedPriceMovement = {
+  /** Normalized movement status after sanity checks. */
+  status: PriceMovementStatus;
+  /** CSS modifier matching the normalized status (`is-up`, `is-down`, ...). */
+  toneClass: `is-${PriceMovementStatus}`;
+  /** Human-readable Persian direction label. */
+  direction: string;
+  /** Formatted Persian percentage magnitude with `٪`, or null when inapplicable. */
+  percentText: string | null;
+  /** Complete formatted label (`"افزایش ۰٫۱۴٪"`, or `direction` without percent). */
+  text: string;
+};
+
+const MOVEMENT_DIRECTIONS: Record<PriceMovementStatus, string> = {
+  up: "افزایش",
+  down: "کاهش",
+  same: "بدون تغییر",
+  unverified: "نیازمند بررسی",
+  mixed: "نوسان ترکیبی",
+};
+
+/**
+ * Price movement, as the page shows and styles it.
+ *
+ * Normalizes upstream status and percentage in one place so every caller pairs
+ * the same formatted text with the CSS tone of the normalized status.
+ */
+export function presentPriceMovement(
+  status: string | null | undefined,
+  percent: number | null | undefined,
+): PresentedPriceMovement {
+  const normalized = normalizeCatalogTrend(status, percent);
+  const normalizedStatus = normalized.status as PriceMovementStatus;
+  const direction = MOVEMENT_DIRECTIONS[normalizedStatus];
+  const amount = Math.abs(normalized.percent);
+  const percentText =
+    (normalizedStatus === "up" || normalizedStatus === "down") && amount > 0
+      ? `${formatPersianNumber(amount, 2)}٪`
+      : null;
+
+  return {
+    status: normalizedStatus,
+    toneClass: `is-${normalizedStatus}`,
+    direction,
+    percentText,
+    text: percentText ? `${direction} ${percentText}` : direction,
+  };
 }

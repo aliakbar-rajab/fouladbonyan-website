@@ -7,6 +7,7 @@ import {
   formatCatalogSize,
   localizeCatalogValue,
   presentPrice,
+  presentPriceMovement,
   presentPriceRange,
   unixSecondsToIso,
 } from "../app/catalog-presentation.ts";
@@ -128,5 +129,64 @@ test("fractional toman prices round cleanly and special sizes format cleanly", (
   assert.deepEqual(formatCatalogSize("83*43", "thick-wall-pipe"), {
     text: "۸۳ × ۴۳",
     ltr: true,
+  });
+});
+
+test("price movement pairs normalized status, CSS tone, and cached Persian percent", () => {
+  assert.deepEqual(presentPriceMovement("down", -2.5), {
+    status: "down",
+    toneClass: "is-down",
+    direction: "کاهش",
+    percentText: "۲٫۵٪",
+    text: "کاهش ۲٫۵٪",
+  });
+  assert.deepEqual(presentPriceMovement("up", 0.14), {
+    status: "up",
+    toneClass: "is-up",
+    direction: "افزایش",
+    percentText: "۰٫۱۴٪",
+    text: "افزایش ۰٫۱۴٪",
+  });
+  assert.deepEqual(presentPriceMovement("up", 1), {
+    status: "up",
+    toneClass: "is-up",
+    direction: "افزایش",
+    percentText: "۱٪",
+    text: "افزایش ۱٪",
+  });
+  assert.deepEqual(presentPriceMovement("up", 0), {
+    status: "same",
+    toneClass: "is-same",
+    direction: "بدون تغییر",
+    percentText: null,
+    text: "بدون تغییر",
+  });
+  assert.deepEqual(presentPriceMovement("same", 2), {
+    status: "same",
+    toneClass: "is-same",
+    direction: "بدون تغییر",
+    percentText: null,
+    text: "بدون تغییر",
+  });
+  assert.deepEqual(presentPriceMovement("up", 155), {
+    status: "unverified",
+    toneClass: "is-unverified",
+    direction: "نیازمند بررسی",
+    percentText: null,
+    text: "نیازمند بررسی",
+  });
+  assert.deepEqual(presentPriceMovement("mixed", 0), {
+    status: "mixed",
+    toneClass: "is-mixed",
+    direction: "نوسان ترکیبی",
+    percentText: null,
+    text: "نوسان ترکیبی",
+  });
+  assert.deepEqual(presentPriceMovement("unknown", Number.NaN), {
+    status: "unverified",
+    toneClass: "is-unverified",
+    direction: "نیازمند بررسی",
+    percentText: null,
+    text: "نیازمند بررسی",
   });
 });

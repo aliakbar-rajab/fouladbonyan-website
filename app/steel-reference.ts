@@ -15,11 +15,7 @@
  * hydrate against exactly the bytes they were prerendered from.
  */
 import { calculateRebarWeight } from "./catalog-behavior.mjs";
-import {
-  categoryCredibleSummary,
-  categoryPricingState,
-  hasDisplayablePriceRange,
-} from "./catalog-pricing.mjs";
+import { categoryPricing } from "./catalog-pricing.mjs";
 import { subcategoryHref } from "./category-meta";
 import { parsePersianNumber } from "./persian-numbers.mjs";
 import type {
@@ -483,17 +479,16 @@ function buildRebarPriceBridge(rebar?: {
 }): RebarPriceBridge | null {
   const ribbed = rebar?.categories.find((item) => item.id === "ribbed");
   if (!ribbed) return null;
-  const state = categoryPricingState(ribbed);
-  const summary = categoryCredibleSummary(ribbed);
-  if (!hasDisplayablePriceRange(state, summary)) return null;
+  const pricing = categoryPricing(ribbed);
+  if (pricing.kind !== "range") return null;
 
   return {
     href: subcategoryHref("rebar", "ribbed"),
     simpleHref: subcategoryHref("rebar", "simple"),
     date: ribbed.summary.date,
-    min: summary.min,
-    max: summary.max,
-    average: summary.average,
+    min: pricing.min,
+    max: pricing.max,
+    average: pricing.average,
     factoryCount: ribbed.filters.factories.length,
   };
 }

@@ -2,7 +2,6 @@ import { Fragment } from "react";
 import {
   effectiveRowSpecification,
   effectiveSpecificationLabel,
-  getTrendPresentation,
 } from "./catalog-behavior.mjs";
 import {
   type CatalogCategory,
@@ -15,6 +14,7 @@ import {
   formatCatalogSize,
   localizeCatalogValue,
   presentPrice,
+  presentPriceMovement,
   unixSecondsToIso,
 } from "./catalog-presentation";
 import {
@@ -326,7 +326,7 @@ export function FactoryPriceCardList({
                 <tbody>
                   {factory.rows.map((row, rowIndex) => {
                     const expanded = expandedRows.has(row.id);
-                    const trend = getTrendPresentation(
+                    const movement = presentPriceMovement(
                       row.status,
                       row.percent,
                     );
@@ -392,12 +392,9 @@ export function FactoryPriceCardList({
                           </td>
                           <td
                             data-label="نوسان"
-                            className={`row-change is-${row.status}`}
+                            className={`row-change ${movement.toneClass}`}
                           >
-                            {trend.direction}{" "}
-                            {trend.amount
-                              ? `${formatPersianNumber(trend.amount, 2)}٪`
-                              : ""}
+                            {movement.text}
                           </td>
                           <td data-label="استعلام" className="row-quote-cell">
                             <a
