@@ -1,16 +1,5 @@
-import {
-  isConsolidatedSubcategory,
-  isSingleSubcategoryGroup,
-  productGroups,
-  rendersCatalogOnGroupRoute,
-  subcategoryHref,
-} from "../../app/category-meta.ts";
-import {
-  REBAR_WEIGHT_FAQS,
-  guideIndex,
-  guidePageDefinitions,
-  guidePageKeys,
-} from "../../app/guide-page-data.ts";
+import { productGroups } from "../../app/category-meta.ts";
+import { guidePageKeys } from "../../app/guide-page-data.ts";
 import { infoPageDefinitions } from "../../app/info-page-data.ts";
 import {
   buildHomeGraphStructuredData,
@@ -19,12 +8,14 @@ import {
 } from "../../app/site-config.ts";
 import { loadGroupCatalog } from "../../app/catalog-reader.ts";
 import {
-  pageBreadcrumb,
-  pageHead,
+  buildRedirectsFile,
+  catalogCollectionItems,
   pagePayloadIds,
+  pageSpec,
+  siteRedirectRoutes,
+  standaloneCatalogSubcategories,
 } from "../../app/site-page.ts";
 import { loadPageElement, routePageSource } from "../../app/site-page-element.tsx";
-import { getSubcategoryContent } from "../../app/subcategory-content.ts";
 import {
   HERO_OG_IMAGE,
   buildArticleJsonLd,
@@ -39,12 +30,12 @@ import {
 /**
  * Which pages the site has, and what the build adds to each: lastmods, Open
  * Graph images, extra JSON-LD, hero preloads, and the data behind each
- * hydration payload. What a page *is* -- its title, description, trail, root
- * element and payload ids -- comes from the Site page module
- * (app/site-page.ts, app/site-page-element.tsx), which the page components and
- * the browser boot read too. This file says nothing about how any of it
- * becomes HTML -- static-document.mjs owns that -- so it can be called and
- * asserted on without rendering or writing anything.
+ * hydration payload. What a page *is* -- its title, description, trail,
+ * structured-data inputs, redirects, root element and payload ids -- comes
+ * from the Site page module (app/site-page.ts, app/site-page-element.tsx),
+ * which the page components and the browser boot read too. This file says
+ * nothing about how any of it becomes HTML -- static-document.mjs owns that --
+ * so it can be called and asserted on without rendering or writing anything.
  */
 
 /**
@@ -52,18 +43,21 @@ import {
  * root element, the root's route attributes and where the page is written.
  */
 async function describeRoute(route, siteUrl, { guideReference } = {}) {
-  const head = pageHead(route);
+  const spec = pageSpec(route, { siteUrl });
   return {
-    ...routeLocation(route, siteUrl),
-    route,
-    title: head.title,
-    description: head.description,
-    rootElement: await loadPageElement(route, { guideReference }),
-    pageModuleSource: routePageSource(route),
-    breadcrumb: pageBreadcrumb(route).map((crumb) => ({
-      name: crumb.label,
-      url: `${siteUrl}${crumb.href}`,
-    })),
+    spec,
+    descriptor: {
+      ...routeLocation(route, siteUrl),
+      route,
+      title: spec.head.title,
+      description: spec.head.description,
+      rootElement: await loadPageElement(route, { guideReference }),
+      pageModuleSource: routePageSource(route),
+      breadcrumb: spec.breadcrumb.map((crumb) => ({
+        name: crumb.label,
+        url: `${siteUrl}${crumb.href}`,
+      })),
+    },
   };
 }
 
@@ -92,8 +86,9 @@ export async function collectSitePageDescriptors({
   const pages = [];
 
   // 1. Homepage
+  const { descriptor: homeDescriptor } = await describe({ kind: "home" });
   pages.push({
-    ...(await describe({ kind: "home" })),
+    ...homeDescriptor,
     lastmod: rootLastmod,
     heroPreload: undefined, // Preserves template default hero preload
     payloads: [
@@ -128,44 +123,15 @@ export async function collectSitePageDescriptors({
       ogImageHeight: HERO_OG_IMAGE.height,
     };
 
-    const singleGroup = isSingleSubcategoryGroup(group.id);
-    const onlySubcategory = singleGroup ? catalog.categories[0] : null;
-    const primaryBeam =
-      group.id === "beam"
-        ? catalog.categories.find((c) => c.id === "beam") ?? catalog.categories[0]
-        : null;
-    const overviewItems = singleGroup
-      ? (onlySubcategory?.factories ?? []).map((factory) => ({
-          name: `قیمت ${onlySubcategory.label} ${factory.name}`,
-        }))
-      : group.id === "beam" && primaryBeam
-        ? [
-            {
-              name: "قیمت تیرآهن هاش",
-              url: `${siteUrl}${subcategoryHref("beam", "hash")}`,
-            },
-            ...primaryBeam.factories.map((factory) => ({
-              name: `قیمت ${primaryBeam.label} ${factory.name}`,
-            })),
-          ]
-        : catalog.categories.map((sub) => ({
-            name: `قیمت ${sub.label}`,
-            url: `${siteUrl}${subcategoryHref(group.id, sub.id)}`,
-          }));
-
     // Category landing page
-    const describedGroup = await describe({
-      kind: "catalog",
-      category: group.id,
-    });
-    const groupContent = rendersCatalogOnGroupRoute(group.id)
-      ? getSubcategoryContent(group.id, group.id)
-      : undefined;
+    const groupRoute = { kind: "catalog", category: group.id };
+    const { spec: groupSpec, descriptor: describedGroup } =
+      await describe(groupRoute);
     pages.push({
       ...describedGroup,
       lastmod,
       ogImage: groupOgImage,
-      ogImageAlt: `قیمت ${group.label} | ${siteConfig.brand.name}`,
+      ogImageAlt: groupSpec.ogImageAlt,
       ...ogImageSize,
       heroPreload,
       payloads: catalogPayloads,
@@ -176,80 +142,80 @@ export async function collectSitePageDescriptors({
         pageUrl: describedGroup.pageUrl,
         siteUrl,
         dateModified: catalog.fetchedAt,
-        items: overviewItems,
-      })}${groupContent?.faqs.length ? buildFaqJsonLd(groupContent.faqs) : ""}`,
+        items: catalogCollectionItems(groupRoute, catalog, siteUrl),
+      })}${groupSpec.faqs.length ? buildFaqJsonLd(groupSpec.faqs) : ""}`,
     });
 
-    // Subcategory pages: consolidated routes (angle, channel, and beam IPE)
-    // live on their parent group URL rather than a duplicated subcategory slug.
-    if (!singleGroup) {
-      for (const sub of catalog.categories) {
-        if (isConsolidatedSubcategory(group.id, sub.id)) continue;
-        // Scope initial-page-data to the active subcategory's rows while
-        // keeping lightweight category stubs so tab navigation renders identically
-        // during SSR/hydration.
-        const scopedCatalog = {
-          ...catalog,
-          categories: catalog.categories.map((entry) =>
-            entry.id === sub.id
-              ? entry
-              : {
-                  ...entry,
-                  filters: { sizes: [], factories: [] },
-                  factories: [],
-                },
-          ),
-        };
-        const subcategoryPayloads = [
-          menuPayload,
-          {
-            id: pagePayloadIds.catalog,
-            data: {
-              fetchedAt: snapshot.fetchedAt,
-              sourceName: snapshot.sourceName,
-              sourceHome: snapshot.sourceHome,
-              taxRate: snapshot.taxRate,
-              catalogs: [scopedCatalog],
-            },
+    // Standalone subcategory pages (consolidated routes live on `/<group>/`).
+    for (const sub of standaloneCatalogSubcategories(
+      group.id,
+      catalog.categories,
+    )) {
+      // Scope initial-page-data to the active subcategory's rows while
+      // keeping lightweight category stubs so tab navigation renders identically
+      // during SSR/hydration.
+      const scopedCatalog = {
+        ...catalog,
+        categories: catalog.categories.map((entry) =>
+          entry.id === sub.id
+            ? entry
+            : {
+                ...entry,
+                filters: { sizes: [], factories: [] },
+                factories: [],
+              },
+        ),
+      };
+      const subcategoryPayloads = [
+        menuPayload,
+        {
+          id: pagePayloadIds.catalog,
+          data: {
+            fetchedAt: snapshot.fetchedAt,
+            sourceName: snapshot.sourceName,
+            sourceHome: snapshot.sourceHome,
+            taxRate: snapshot.taxRate,
+            catalogs: [scopedCatalog],
           },
-        ];
+        },
+      ];
 
-        const describedSub = await describe({
-          kind: "catalog",
-          category: group.id,
-          subcategory: sub.id,
-          subcategoryLabel: sub.label,
-        });
-        const subContent = getSubcategoryContent(group.id, sub.id);
-        pages.push({
-          ...describedSub,
-          lastmod,
-          ogImage: groupOgImage,
-          ogImageAlt: `قیمت روز ${sub.label} | ${siteConfig.brand.name}`,
-          ...ogImageSize,
-          heroPreload,
-          payloads: subcategoryPayloads,
-          organizationData: null,
-          extraHeadHtml: `${buildCatalogCollectionJsonLd({
-            title: describedSub.title,
-            description: describedSub.description,
-            pageUrl: describedSub.pageUrl,
-            siteUrl,
-            dateModified: catalog.fetchedAt,
-            items: sub.factories.map((factory) => ({
-              name: `قیمت ${sub.label} ${factory.name}`,
-            })),
-          })}${subContent?.faqs.length ? buildFaqJsonLd(subContent.faqs) : ""}`,
-        });
-      }
+      const subRoute = {
+        kind: "catalog",
+        category: group.id,
+        subcategory: sub.id,
+        subcategoryLabel: sub.label,
+      };
+      const { spec: subSpec, descriptor: describedSub } =
+        await describe(subRoute);
+      pages.push({
+        ...describedSub,
+        lastmod,
+        ogImage: groupOgImage,
+        ogImageAlt: subSpec.ogImageAlt,
+        ...ogImageSize,
+        heroPreload,
+        payloads: subcategoryPayloads,
+        organizationData: null,
+        extraHeadHtml: `${buildCatalogCollectionJsonLd({
+          title: describedSub.title,
+          description: describedSub.description,
+          pageUrl: describedSub.pageUrl,
+          siteUrl,
+          dateModified: catalog.fetchedAt,
+          items: catalogCollectionItems(subRoute, catalog, siteUrl),
+        })}${subSpec.faqs.length ? buildFaqJsonLd(subSpec.faqs) : ""}`,
+      });
     }
   }
 
   // 3. Contact Page
-  const describedContact = await describe({ kind: "contact" });
+  const { spec: contactSpec, descriptor: describedContact } = await describe({
+    kind: "contact",
+  });
   pages.push({
     ...describedContact,
-    lastmod: "2026-08-11",
+    lastmod: contactSpec.lastmod,
     heroPreload: null,
     payloads: [menuPayload],
     organizationData,
@@ -262,13 +228,13 @@ export async function collectSitePageDescriptors({
   });
 
   // 4. Info Pages
-  for (const [page, definition] of Object.entries(infoPageDefinitions)) {
-    const isNoindex = Boolean(definition.noindex);
+  for (const page of Object.keys(infoPageDefinitions)) {
+    const { spec, descriptor } = await describe({ kind: "info", page });
     pages.push({
-      ...(await describe({ kind: "info", page })),
-      lastmod: definition.lastmod,
-      robots: isNoindex ? "noindex, follow" : "index, follow",
-      noindex: isNoindex,
+      ...descriptor,
+      lastmod: spec.lastmod,
+      robots: spec.robots,
+      noindex: spec.noindex,
       heroPreload: null,
       payloads: [menuPayload],
       organizationData: null,
@@ -280,59 +246,55 @@ export async function collectSitePageDescriptors({
   const describeGuide = (route) =>
     describeRoute(route, siteUrl, { guideReference: reference });
 
+  const { spec: guideIndexSpec, descriptor: guideIndexDescriptor } =
+    await describeGuide({ kind: "guide" });
   pages.push({
-    ...(await describeGuide({ kind: "guide" })),
-    lastmod: guideIndex.lastmod,
+    ...guideIndexDescriptor,
+    lastmod: guideIndexSpec.lastmod,
     heroPreload: null,
     payloads: guidePayloads,
     organizationData: null,
   });
 
-  const guideImages = {
-    "rebar-weight-chart": `${siteUrl}/categories/hero-rebar-1280.jpg`,
-    "ribbed-vs-plain-rebar": `${siteUrl}/categories/hero-rebar-1280.jpg`,
-    "beam-weight-chart": `${siteUrl}/categories/hero-beam-1280.jpg`,
-    "ipe-vs-hash-beam": `${siteUrl}/categories/hero-beam-1280.jpg`,
-    "units-and-quote-specs": `${siteUrl}/brand/bonyan-foulad-daria-logo.webp`,
-  };
-
-  // All five articles first entered Git in 5cf2282 on this date. The component
-  // files added on 2026-08-22 only extracted that existing content.
-  const guidePublishedOn = "2026-08-17";
-
   for (const key of guidePageKeys) {
-    const definition = guidePageDefinitions[key];
-    const described = await describeGuide({ kind: "guide", guide: key });
-    const rebarWeightSchemas =
-      key === "rebar-weight-chart"
-        ? `${buildDatasetJsonLd({
-            name: definition.title,
-            description: described.description,
-            url: described.pageUrl,
-            dateModified: snapshot.fetchedAt,
-            siteUrl,
-          })}${buildFaqJsonLd(REBAR_WEIGHT_FAQS)}`
-        : "";
+    const { spec, descriptor: described } = await describeGuide({
+      kind: "guide",
+      guide: key,
+    });
+    const datasetSchema = spec.hasDataset
+      ? buildDatasetJsonLd({
+          name: spec.article.headline,
+          description: described.description,
+          url: described.pageUrl,
+          dateModified: snapshot.fetchedAt,
+          siteUrl,
+        })
+      : "";
+    const faqSchema = spec.faqs.length ? buildFaqJsonLd(spec.faqs) : "";
     pages.push({
       ...described,
-      lastmod: definition.lastmod,
+      lastmod: spec.lastmod,
       heroPreload: null,
       payloads: guidePayloads,
       organizationData: null,
-      // These five carry Article JSON-LD, so the Open Graph type has to agree.
-      // The guide index above is a listing, and stays the template's "website".
-      ogType: "article",
+      ogType: spec.ogType,
       extraHeadHtml: `${buildArticleJsonLd({
-        headline: definition.title,
+        headline: spec.article.headline,
         description: described.description,
         pageUrl: described.pageUrl,
-        datePublished: guidePublishedOn,
-        lastmod: definition.lastmod,
+        datePublished: spec.article.datePublished,
+        lastmod: spec.article.lastmod,
         siteUrl,
-        image: guideImages[key],
-      })}${rebarWeightSchemas}`,
+        image: spec.article.image,
+      })}${datasetSchema}${faqSchema}`,
     });
   }
 
-  return { pages, rootLastmod, siteUrl };
+  return {
+    pages,
+    rootLastmod,
+    siteUrl,
+    redirectRoutes: siteRedirectRoutes(siteUrl),
+    redirectsText: buildRedirectsFile(),
+  };
 }

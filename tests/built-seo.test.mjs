@@ -1013,12 +1013,10 @@ test("subcategory pages scope initial-page-data payloads cleanly", async () => {
 });
 
 /*
- * public/_redirects and REDIRECT_ROUTES describe the same two collapsed URLs
- * from opposite ends of the build. They were written out by hand in both
- * places, plus a third time as the `angle`/`channel` literal in three modules.
- * category-meta owns the rule now; this checks the static file still agrees.
+ * dist/_redirects and static redirect stubs are both generated from
+ * app/site-page.ts (backed by catalogRedirectRules) so they cannot drift.
  */
-test("public/_redirects covers exactly the consolidated and renamed catalog URLs", async () => {
+test("generated dist/_redirects covers exactly the consolidated and renamed catalog URLs", async () => {
   const redirects = await readDist("_redirects");
   const rules = redirects
     .split("\n")

@@ -112,8 +112,7 @@ test("useCatalogWorkspace initializes default home workspace state with compact 
   assert.equal(result.current.search.isActive, false);
   assert.equal(result.current.search.isSearching, false);
   assert.equal(result.current.activeViewRequest.requestId, 0);
-  assert.equal(result.current.hero.categoryGroup, null);
-  assert.equal(result.current.hero.subcategory, null);
+  assert.equal(result.current.hero, null);
 });
 
 test("useCatalogWorkspace derives category overview for overview hubs and catalog directly for consolidated /beam/", () => {
@@ -127,8 +126,8 @@ test("useCatalogWorkspace derives category overview for overview hubs and catalo
   assert.equal(rebarOverview.current.isCategoryRoute, true);
   assert.equal(rebarOverview.current.brandHref, "/");
   assert.equal(rebarOverview.current.activeGroup, "rebar");
-  assert.equal(rebarOverview.current.hero.categoryGroup?.label, "میلگرد");
-  assert.equal(rebarOverview.current.hero.subcategory, null);
+  assert.equal(rebarOverview.current.hero?.label, "میلگرد");
+  assert.equal(rebarOverview.current.hero?.h1, "قیمت روز میلگرد آجدار و ساده");
 
   const { result: beamCatalog } = renderHook(() =>
     useCatalogWorkspace({
@@ -137,8 +136,11 @@ test("useCatalogWorkspace derives category overview for overview hubs and catalo
   );
   assert.equal(beamCatalog.current.viewMode, "catalog");
   assert.equal(beamCatalog.current.activeViewRequest.categoryId, "beam");
-  assert.equal(beamCatalog.current.hero.categoryGroup?.label, "تیرآهن");
-  assert.equal(beamCatalog.current.hero.subcategory, null);
+  assert.equal(beamCatalog.current.hero?.label, "تیرآهن");
+  assert.match(
+    beamCatalog.current.hero?.intro ?? "",
+    /مقایسه قیمت روز تیرآهن استاندارد اروپا/,
+  );
 });
 
 test("useCatalogWorkspace derives catalog view mode and preserves query params for catalog routes", () => {
@@ -156,7 +158,7 @@ test("useCatalogWorkspace derives catalog view mode and preserves query params f
   assert.equal(result.current.activeViewRequest.categoryId, "beam");
   assert.equal(result.current.activeViewRequest.factory, "فایکو");
   assert.equal(result.current.activeViewRequest.size, "18");
-  assert.equal(result.current.hero.subcategory, null);
+  assert.equal(result.current.hero?.label, "تیرآهن");
 });
 
 test("useCatalogWorkspace search submission coordinates async loading, race tokens, and view derivation", async () => {

@@ -21,6 +21,14 @@ const { buildMenuCatalog, loadOverviewSummaries, primeCatalogSnapshot } =
 const { buildGuideReference } = await import("../app/steel-reference.ts");
 const { interpretSiteRoute } = await import("../app/site-route.ts");
 const { loadPageElement } = await import("../app/site-page-element.tsx");
+const {
+  buildRedirectsFile,
+  catalogCollectionItems,
+  pageHero,
+  pageSpec,
+  siteRedirectRoutes,
+} = await import("../app/site-page.ts");
+const { getSubcategoryContent } = await import("../app/subcategory-content.ts");
 
 const snapshot = JSON.parse(
   await readFile(new URL("../app/data/catalog-prices.json", import.meta.url), "utf8"),
@@ -87,6 +95,70 @@ test("every page renders the <title> and trail the build stamped into its head",
         );
       });
     }
+    if (page.route.kind === "catalog") {
+      const expectedHero = pageHero(page.route);
+      assert.ok(expectedHero, `${page.pageUrl} must have a catalog hero spec`);
+      assert.equal(
+        container.querySelector("h1")?.textContent?.trim(),
+        expectedHero.h1,
+        `${page.pageUrl} rendered H1 vs pageHero`,
+      );
+      assert.equal(
+        container.querySelector(".hero-category-intro")?.textContent?.trim(),
+        expectedHero.intro,
+        `${page.pageUrl} rendered hero intro vs pageHero`,
+      );
+    }
+
     unmount();
+  }
+});
+
+test("consolidated catalog routes resolve head, hero intro, FAQs, and collection items from one specification", () => {
+  for (const groupId of ["beam", "angle", "channel"]) {
+    const content = getSubcategoryContent(groupId, groupId);
+    assert.ok(content, `expected consolidated content for ${groupId}`);
+
+    const spec = pageSpec({ kind: "catalog", category: groupId });
+    assert.equal(spec.head.title, content.seoTitle);
+    assert.equal(spec.head.description, content.seoDescription);
+    assert.equal(spec.hero?.h1, content.h1);
+    assert.equal(spec.hero?.intro, content.heroIntro);
+    assert.deepEqual(spec.faqs, content.faqs);
+
+    // Passing the consolidated subcategory explicitly resolves identically.
+    assert.deepEqual(
+      pageSpec({ kind: "catalog", category: groupId, subcategory: groupId }),
+      spec,
+    );
+  }
+
+  const beamCatalog = snapshot.catalogs.find((catalog) => catalog.id === "beam");
+  const beamItems = catalogCollectionItems(
+    { kind: "catalog", category: "beam" },
+    beamCatalog,
+    "https://example.test",
+  );
+  assert.deepEqual(beamItems[0], {
+    name: "قیمت تیرآهن هاش",
+    url: "https://example.test/beam/hash/",
+  });
+  assert.ok(beamItems.length > 1, "beam collection must include IPE factory items");
+});
+
+test("site-page generates _redirects in lockstep with redirect routes", () => {
+  const routes = siteRedirectRoutes("https://example.test");
+  const lines = buildRedirectsFile()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  assert.equal(lines.length, routes.length);
+  for (const route of routes) {
+    assert.ok(
+      lines.includes(`/${route.fromPath.join("/")}/ ${route.toPath} 301`),
+      `missing redirect line for /${route.fromPath.join("/")}/`,
+    );
+    assert.equal(route.toUrl, `https://example.test${route.toPath}`);
   }
 });

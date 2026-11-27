@@ -321,6 +321,11 @@ test("writePrerenderArtifacts creates expected files and directory hierarchy ato
 
     const sitemap = await readFile(join(tempDir, "sitemap.xml"), "utf8");
     assert.match(sitemap, /<loc>https:\/\/fouladbonyan\.com\/rebar\/ribbed\/<\/loc>/);
+
+    const redirects = await readFile(join(tempDir, "_redirects"), "utf8");
+    assert.match(redirects, /^\/angle\/angle\/ \/angle\/ 301$/m);
+    assert.match(redirects, /^\/beam\/beam\/ \/beam\/ 301$/m);
+    assert.match(redirects, /^\/wire\/wire\/ \/wire\/steel-wire\/ 301$/m);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

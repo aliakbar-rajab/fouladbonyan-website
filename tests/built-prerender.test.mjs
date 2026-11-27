@@ -8,6 +8,7 @@ import {
   productGroups,
   rendersCatalogOnGroupRoute,
 } from "../app/category-meta.ts";
+import { pageHero } from "../app/site-page.ts";
 import { loadGroupCatalogs, readDist } from "./helpers/dist.mjs";
 
 /*
@@ -72,9 +73,10 @@ test("prerendered SSG HTML contains complete meaningful content before JavaScrip
       new RegExp(`<div id="root" data-initial-category="${group.id}">[\\s\\S]+<\\/div>`),
       `${group.id} #root must be prerendered with content`,
     );
+    const expectedHero = pageHero({ kind: "catalog", category: group.id });
     assert.match(
       catHtml,
-      new RegExp(`<h1><span>${group.h1}<\\/span><\\/h1>`),
+      new RegExp(`<h1><span>${expectedHero.h1}<\\/span><\\/h1>`),
       `${group.id} must contain expected H1 in initial HTML`,
     );
     assert.match(

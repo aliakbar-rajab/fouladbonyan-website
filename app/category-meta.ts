@@ -12,13 +12,14 @@ export type ProductGroup = {
   imageAlt: string;
   heroImage?: string;
   description: string;
-  h1: string;
-  intro: string;
   subTypes: string;
-  /** <title> for this category's landing page (scripts/lib/prerender-pipeline.mjs). */
-  seoTitle: string;
-  /** <meta name="description"> for this category's landing page. */
-  seoDescription: string;
+  /** Landing-page copy for overview-hub groups; consolidated groups own theirs in subcategory-content.ts. */
+  h1?: string;
+  intro?: string;
+  /** <title> for overview-hub category landing pages. */
+  seoTitle?: string;
+  /** <meta name="description"> for overview-hub category landing pages. */
+  seoDescription?: string;
 };
 
 /** Presentation-only fields, keyed by group id, in taxonomy order. */
@@ -45,13 +46,7 @@ const presentationByGroupId: Record<ProductGroupId, GroupPresentation> = {
     imageAlt: "انواع تیرآهن IPE و هاش سازه‌ای",
     heroImage: "/categories/hero-beam-1680.jpg",
     description: "تیرآهن IPE، هاش و مقاطع سازه‌ای",
-    h1: "قیمت روز تیرآهن IPE و هاش",
-    intro:
-      "تیرآهن معمولی IPE، هاش سبک (HEA) و هاش سنگین (HEB) در سایزهای ۱۲ تا ۳۰ از کارخانه‌های ذوب‌آهن اصفهان، فایکو، یزد و... . فروش تیرآهن به‌صورت شاخه‌ای یا برمبنای وزن نهایی باسکول بر حسب کیلوگرم انجام می‌شود. برای سفارش شاخه‌های سنگین و هاش، نوع استاندارد و طول شاخه را مشخص کنید.",
     subTypes: "تیرآهن IPE، هاش سبک و هاش سنگین",
-    seoTitle: "قیمت تیرآهن IPE و هاش امروز | بنیان فولاد داریا",
-    seoDescription:
-      "قیمت روز تیرآهن IPE و هاش از کارخانه‌های معتبر. استعلام قیمت و درخواست پیش‌فاکتور تیرآهن با مشاوره تلفنی.",
   },
   sheet: {
     shortLabel: "ورق",
@@ -101,13 +96,7 @@ const presentationByGroupId: Record<ProductGroupId, GroupPresentation> = {
     imageAlt: "انواع نبشی فولادی بال مساوی و نامساوی",
     heroImage: "/categories/hero-angle-1680.jpg",
     description: "نبشی بال مساوی و بال نامساوی",
-    h1: "قیمت روز نبشی بال مساوی و نامساوی",
-    intro:
-      "نبشی‌های بال مساوی و بال نامساوی از سایز ۳ تا ۲۰ سانتیمتر و ضخامت‌های گوناگون ساخت کارخانه‌های ناب تبریز، ظفر بناب، اصفهان و شکفته. طول شاخه‌ها عموماً ۶ و ۱۲ متری بوده و قیمت‌ها به‌ازای هر کیلوگرم محاسبه می‌شود.",
     subTypes: "نبشی بال مساوی و بال نامساوی ساختمانی",
-    seoTitle: "قیمت نبشی فولادی امروز | بنیان فولاد داریا",
-    seoDescription:
-      "قیمت روز نبشی بال مساوی و بال نامساوی. استعلام قیمت و درخواست پیش‌فاکتور نبشی با مشاوره تلفنی.",
   },
   channel: {
     shortLabel: "ناودانی",
@@ -115,13 +104,7 @@ const presentationByGroupId: Record<ProductGroupId, GroupPresentation> = {
     imageAlt: "انواع ناودانی فولادی سبک و سنگین ساختمانی",
     heroImage: "/categories/hero-channel-1680.jpg",
     description: "ناودانی سبک و سنگین برای مصارف سازه‌ای",
-    h1: "قیمت روز ناودانی سبک و سنگین",
-    intro:
-      "ناودانی‌های سبک (طرح اروپایی/ایرانی) و ناودانی‌های سنگین ساختمانی و صنعتی در سایزهای ۶ تا ۳۰ از کارخانه‌های فایکو، شکفته مشهد و ناب تبریز. محاسبه قیمت بر حسب کیلوگرم است؛ هنگام خرید نوع سبک یا سنگین (UNP) و استاندارد را مشخص فرمایید.",
     subTypes: "ناودانی سبک و سنگین UNP سازه‌ای",
-    seoTitle: "قیمت ناودانی سبک و سنگین امروز | بنیان فولاد داریا",
-    seoDescription:
-      "قیمت روز ناودانی سبک و سنگین برای مصارف سازه‌ای. استعلام قیمت و درخواست پیش‌فاکتور ناودانی با مشاوره تلفنی.",
   },
   wire: {
     shortLabel: "مفتول",
@@ -216,8 +199,8 @@ export type CatalogRedirectRule = {
 };
 
 /**
- * Single source of truth for legacy 301 catalog redirects (`public/_redirects`
- * and built static redirect stubs).
+ * Single source of truth for legacy 301 catalog redirects; app/site-page.ts
+ * projects this list into generated `dist/_redirects` and static redirect stubs.
  */
 export const catalogRedirectRules: readonly CatalogRedirectRule[] = [
   ...singleSubcategoryGroupIds.map((groupId) => ({

@@ -7,12 +7,11 @@ import {
   useSyncExternalStore,
   type Dispatch,
 } from "react";
-import { productGroups, type ProductGroup } from "./category-meta";
+import { productGroups } from "./category-meta";
 import { Breadcrumb } from "./Breadcrumb";
-import { pageBreadcrumb } from "./site-page";
+import type { CatalogPageHero } from "./site-page";
 import { getHeroImageSources } from "./image-utils";
 import { ArrowIcon } from "./icons";
-import { getSubcategoryContent } from "./subcategory-content";
 import {
   carouselReducer,
   initialCarouselState,
@@ -55,23 +54,16 @@ function usePageLoaded() {
   );
 }
 
-export type SubcategoryHeroInfo = {
-  id: string;
-  label: string;
-};
-
 type HeroCarouselProps = {
   reduceMotion: boolean;
   onGoToPrices: () => void;
-  categoryGroup?: ProductGroup | null;
-  subcategory?: SubcategoryHeroInfo | null;
+  hero?: CatalogPageHero | null;
 };
 
 export function HeroCarousel({
   reduceMotion,
   onGoToPrices,
-  categoryGroup,
-  subcategory,
+  hero,
 }: HeroCarouselProps) {
   const [carousel, dispatch] = useReducer(
     carouselReducer,
@@ -92,7 +84,7 @@ export function HeroCarousel({
   const [hoverPaused, setHoverPaused] = useState(false);
   const carouselPaused = userPaused || hoverPaused;
 
-  const isCategory = Boolean(categoryGroup);
+  const isCategory = Boolean(hero);
 
   // One timer per slide shown. While a due slide waits for its photo there is
   // nothing to count down; showing it starts the next interval.
@@ -114,36 +106,14 @@ export function HeroCarousel({
     dispatch({ type: "cancelQueue" });
   };
 
-  if (categoryGroup) {
-    const heroImg = categoryGroup.heroImage ?? categoryGroup.image;
-    const heroSources = getHeroImageSources(heroImg);
-    const customSubContent = subcategory
-      ? getSubcategoryContent(categoryGroup.id, subcategory.id)
-      : undefined;
-    const displayLabel = subcategory ? subcategory.label : categoryGroup.label;
-    const displayH1 = customSubContent
-      ? customSubContent.h1
-      : subcategory
-        ? `قیمت روز ${subcategory.label}`
-        : categoryGroup.h1;
-    const displayIntro = customSubContent
-      ? customSubContent.heroIntro
-      : subcategory
-        ? `استعلام قیمت روز ${subcategory.label} از کارخانه‌های معتبر کشور. برای دریافت پیش‌فاکتور، استعلام موجودی و مشاوره تخصصی خرید ${subcategory.label} با واحد فروش بنیان فولاد داریا تماس بگیرید.`
-        : categoryGroup.intro;
-
-    const breadcrumbItems = pageBreadcrumb({
-      kind: "catalog",
-      category: categoryGroup.id,
-      subcategory: subcategory?.id,
-      subcategoryLabel: subcategory?.label,
-    });
+  if (hero) {
+    const heroSources = getHeroImageSources(hero.image);
 
     return (
       <div className="hero-frame hero-frame-category">
         <section
           className="hero hero-category"
-          aria-label={`معرفی و قیمت روز ${displayLabel}`}
+          aria-label={`معرفی و قیمت روز ${hero.label}`}
         >
           <picture className="hero-image is-active">
             <source
@@ -160,7 +130,7 @@ export function HeroCarousel({
               src={heroSources.fallbackSrc}
               srcSet={heroSources.jpgSrcSet}
               sizes={heroSources.sizes}
-              alt={displayLabel}
+              alt={hero.label}
               width={heroSources.width}
               height={heroSources.height}
               decoding="async"
@@ -170,21 +140,21 @@ export function HeroCarousel({
           </picture>
           <div className="hero-overlay" />
           <div className="shell hero-content">
-            <Breadcrumb items={breadcrumbItems} />
+            <Breadcrumb items={hero.breadcrumb} />
             <h1>
-              <span>{displayH1}</span>
+              <span>{hero.h1}</span>
             </h1>
-            <p className="hero-category-intro">{displayIntro}</p>
+            <p className="hero-category-intro">{hero.intro}</p>
             <div className="hero-actions">
               <button
                 className="hero-price-jump"
                 type="button"
                 onClick={onGoToPrices}
               >
-                مشاهده جدول قیمت {displayLabel}
+                مشاهده جدول قیمت {hero.label}
               </button>
               <a href={QUOTE_FORM_HREF}>
-                درخواست پیش‌فاکتور {displayLabel}
+                درخواست پیش‌فاکتور {hero.label}
               </a>
             </div>
           </div>

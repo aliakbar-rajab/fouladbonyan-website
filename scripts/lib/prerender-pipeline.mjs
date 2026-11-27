@@ -1,6 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { siteConfig } from "../../app/site-config.ts";
+import { buildRedirectsFile, siteRedirectRoutes } from "../../app/site-page.ts";
 import { buildGuideReference } from "../../app/steel-reference.ts";
 import {
   buildMenuCatalog,
@@ -9,7 +10,6 @@ import {
   setMenuCatalog,
 } from "../../app/catalog-reader.ts";
 import {
-  REDIRECT_ROUTES,
   buildRedirectHtml,
   buildSitemapXml,
   renderStaticDocument,
@@ -59,6 +59,8 @@ export async function writePrerenderArtifacts({
   pages,
   rootLastmod,
   siteUrl,
+  redirectRoutes = siteRedirectRoutes(siteUrl),
+  redirectsText = buildRedirectsFile(),
 }) {
   // 1. Render all HTML documents in memory
   const renderedOutputs = pages.map((page) => ({
@@ -84,11 +86,14 @@ export async function writePrerenderArtifacts({
     ),
   );
 
-  // 4. Write sitemap.xml
-  await writeFile(resolve(distDir, "sitemap.xml"), sitemapXml, "utf8");
+  // 4. Write sitemap.xml and generated _redirects
+  await Promise.all([
+    writeFile(resolve(distDir, "sitemap.xml"), sitemapXml, "utf8"),
+    writeFile(resolve(distDir, "_redirects"), redirectsText, "utf8"),
+  ]);
 
-  // 5. Write permanent redirect stubs for single subcategory URLs
-  for (const { fromPath, toUrl, targetLabel } of REDIRECT_ROUTES) {
+  // 5. Write permanent redirect stubs for consolidated / renamed catalog URLs
+  for (const { fromPath, toUrl, targetLabel } of redirectRoutes) {
     const outDir = resolve(distDir, ...fromPath);
     await mkdir(outDir, { recursive: true });
     await writeFile(
@@ -138,13 +143,14 @@ export async function generateStaticSite({
   const reference = buildGuideReference(snapshot);
 
   // Collect page descriptors
-  const { pages, rootLastmod } = await collectSitePageDescriptors({
-    snapshot,
-    menuCatalog,
-    overviewSummaries,
-    reference,
-    siteUrl,
-  });
+  const { pages, rootLastmod, redirectRoutes, redirectsText } =
+    await collectSitePageDescriptors({
+      snapshot,
+      menuCatalog,
+      overviewSummaries,
+      reference,
+      siteUrl,
+    });
 
   const result = await writeArtifacts({
     distDir,
@@ -155,6 +161,8 @@ export async function generateStaticSite({
     })),
     rootLastmod,
     siteUrl,
+    redirectRoutes,
+    redirectsText,
   });
   if (manifest) await rm(resolve(distDir, ".vite"), { recursive: true, force: true });
   return result;

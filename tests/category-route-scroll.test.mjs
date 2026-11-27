@@ -81,7 +81,7 @@ test("a direct category route activates its tab and scrolls to prices", async ()
   );
   assert.match(
     document.body.textContent,
-    /تیرآهن معمولی IPE، هاش سبک/,
+    /مقایسه قیمت روز تیرآهن استاندارد اروپا/,
   );
   const breadcrumb = screen.getByRole("navigation", { name: "مسیر راهنما" });
   assert.ok(breadcrumb);
@@ -222,12 +222,14 @@ test("a direct category route keeps the price jump immediate under reduced motio
 
 test("all category routes produce distinct H1 headings", async () => {
   const { productGroups } = await import("../app/category-meta.ts");
+  const { pageHero } = await import("../app/site-page.ts");
   const h1s = new Set();
 
   for (const group of productGroups) {
-    assert.ok(group.h1, `${group.id} must have an h1 defined`);
-    assert.ok(!h1s.has(group.h1), `Duplicate h1 found: ${group.h1}`);
-    h1s.add(group.h1);
+    const hero = pageHero({ kind: "catalog", category: group.id });
+    assert.ok(hero?.h1, `${group.id} must have an h1 defined`);
+    assert.ok(!h1s.has(hero.h1), `Duplicate h1 found: ${hero.h1}`);
+    h1s.add(hero.h1);
   }
 
   // Also assert homepage H1 is distinct from all category H1s

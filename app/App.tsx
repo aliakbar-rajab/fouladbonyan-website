@@ -89,8 +89,7 @@ export default function App({
         <HeroCarousel
           reduceMotion={reduceMotion}
           onGoToPrices={scrollToPriceWorkspace}
-          categoryGroup={workspace.hero.categoryGroup}
-          subcategory={workspace.hero.subcategory}
+          hero={workspace.hero}
         />
 
         <MarketPrices />

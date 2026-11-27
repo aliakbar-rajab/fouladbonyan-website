@@ -3,14 +3,18 @@ import {
   getCategoryById,
   getSubcategoryLabel,
   productGroups,
-  rendersCatalogOnGroupRoute,
   type ProductGroup,
   type ProductGroupId,
 } from "./category-meta";
 import { initialCategoryIdOf } from "./catalog-reader";
 import { takeCatalogFilterHandoff } from "./catalog-filter-handoff";
 import type { CatalogViewRequest } from "./catalog-types";
-import { resolveCatalogRouteRequest } from "./site-route";
+import {
+  isDirectCatalogRoute,
+  pageHero,
+  type CatalogPageHero,
+} from "./site-page";
+import { resolveCatalogRouteRequest, type SiteRoute } from "./site-route";
 import { filterProductGroups } from "./site-logic.mjs";
 import {
   evaluateCatalogSearch,
@@ -46,10 +50,7 @@ export type CatalogWorkspaceSearchState = {
   statusMessage: string;
 };
 
-export type CatalogWorkspaceHeroState = {
-  categoryGroup: ProductGroup | null;
-  subcategory: { id: string; label: string } | null;
-};
+export type CatalogWorkspaceHeroState = CatalogPageHero | null;
 
 export type CatalogWorkspace = {
   // --- Derived View State ---
@@ -117,12 +118,24 @@ export function useCatalogWorkspace({
     [initialCategory, initialSubcategory, initialSubcategoryLabel],
   );
 
-  const isCategoryRoute = Boolean(route.category);
-  const isDirectCatalogRoute = Boolean(
-    route.category && rendersCatalogOnGroupRoute(route.category),
+  const siteRoute: SiteRoute = useMemo(
+    () =>
+      route.category
+        ? {
+            kind: "catalog",
+            category: route.category,
+            ...(route.subcategory ? { subcategory: route.subcategory } : {}),
+            ...(route.subcategoryLabel
+              ? { subcategoryLabel: route.subcategoryLabel }
+              : {}),
+          }
+        : { kind: "home" },
+    [route.category, route.subcategory, route.subcategoryLabel],
   );
-  const isCategoryOverviewRoute =
-    isCategoryRoute && !route.subcategory && !isDirectCatalogRoute;
+
+  const isCategoryRoute = siteRoute.kind === "catalog";
+  const rendersCatalogDirectly = isDirectCatalogRoute(siteRoute);
+  const isCategoryOverviewRoute = isCategoryRoute && !rendersCatalogDirectly;
 
   const [activeGroup, setActiveGroup] = useState<ProductGroupId>(
     () => route.category ?? productGroups[0].id,
@@ -165,10 +178,12 @@ export function useCatalogWorkspace({
     [route.category],
   );
 
+  const hero = useMemo(() => pageHero(siteRoute), [siteRoute]);
+
   const subcategoryInfo = useMemo(() => {
     const sub =
       route.subcategory ??
-      (isDirectCatalogRoute && route.category
+      (rendersCatalogDirectly && route.category
         ? initialCategoryIdOf(route.category)
         : undefined);
     if (!sub) return null;
@@ -184,7 +199,7 @@ export function useCatalogWorkspace({
     route.subcategory,
     route.subcategoryLabel,
     route.category,
-    isDirectCatalogRoute,
+    rendersCatalogDirectly,
   ]);
 
   const filteredGroups: ProductGroup[] = useMemo(
@@ -348,10 +363,7 @@ export function useCatalogWorkspace({
     activeViewRequest,
     heading,
     brandHref: isCategoryRoute ? "/" : "#top",
-    hero: {
-      categoryGroup,
-      subcategory: route.subcategory ? subcategoryInfo : null,
-    },
+    hero,
     search: {
       query: committedQuery,
       isActive: isSearchActive,

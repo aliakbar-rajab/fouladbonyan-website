@@ -1,8 +1,6 @@
 import { renderToString } from "react-dom/server";
-import {
-  catalogRedirectRules,
-} from "../../app/category-meta.ts";
 import { siteConfig } from "../../app/site-config.ts";
+import { siteRedirectRoutes } from "../../app/site-page.ts";
 import { siteRouteDataset, siteRoutePath } from "../../app/site-route.ts";
 
 /**
@@ -490,14 +488,10 @@ export function buildSitemapXml({ siteUrl, rootLastmod, pages }) {
 }
 
 /*
- * The noindex stubs standing at legacy or collapsed subcategory URLs. Derived from
- * catalogRedirectRules so public/_redirects and static stubs stay in lockstep.
+ * The noindex stubs standing at legacy or collapsed subcategory URLs. Derived
+ * from site-page.ts so generated `dist/_redirects` and static stubs stay in lockstep.
  */
-export const REDIRECT_ROUTES = catalogRedirectRules.map((rule) => ({
-  fromPath: rule.fromPath,
-  toUrl: `${siteConfig.siteUrl}${rule.toPath}`,
-  targetLabel: rule.targetLabel,
-}));
+export const REDIRECT_ROUTES = siteRedirectRoutes();
 
 export function buildRedirectHtml({ toUrl, targetLabel }) {
   return `<!doctype html>
