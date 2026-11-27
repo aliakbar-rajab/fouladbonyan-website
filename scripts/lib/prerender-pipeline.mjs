@@ -5,9 +5,9 @@ import { buildRedirectsFile, siteRedirectRoutes } from "../../app/site-page.ts";
 import { buildGuideReference } from "../../app/steel-reference.ts";
 import {
   buildMenuCatalog,
-  loadOverviewSummaries,
-  primeCatalogSnapshot,
-  setMenuCatalog,
+  buildOverviewSummaries,
+  primeCatalogReader,
+  resetCatalogReader,
 } from "../../app/catalog-reader.ts";
 import {
   buildRedirectHtml,
@@ -130,15 +130,16 @@ export async function generateStaticSite({
     readManifest(),
   ]);
 
-  // Prime catalog cache
-  primeCatalogSnapshot(snapshot);
-
-  // Build shared projections
-  const [menuCatalog, overviewSummaries] = await Promise.all([
-    buildMenuCatalog(),
-    loadOverviewSummaries(),
-  ]);
-  setMenuCatalog(menuCatalog);
+  // Build shared projections from the snapshot, then reset and prime the
+  // catalog store for SSR rendering.
+  const menuCatalog = await buildMenuCatalog(snapshot);
+  const overviewSummaries = buildOverviewSummaries(snapshot);
+  resetCatalogReader();
+  primeCatalogReader({
+    snapshot,
+    menu: menuCatalog,
+    overview: overviewSummaries,
+  });
 
   const reference = buildGuideReference(snapshot);
 

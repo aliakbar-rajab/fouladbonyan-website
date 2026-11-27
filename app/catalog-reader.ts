@@ -24,6 +24,7 @@ export type RetryableLoader<T> = {
   (): Promise<T>;
   getCached: () => T | undefined;
   setCached: (value: T) => void;
+  reset: () => void;
 };
 
 /**
@@ -39,19 +40,25 @@ export function createRetryableLoader<T>(
 ): RetryableLoader<T> {
   let pending: Promise<T> | undefined;
   let cachedValue: T | undefined;
+  let generation = 0;
 
   const fn = () => {
     if (cachedValue !== undefined) {
       return Promise.resolve(cachedValue);
     }
+    const attempt = generation;
     pending ??= Promise.resolve()
       .then(load)
       .then((val) => {
-        cachedValue = val;
+        if (generation === attempt) {
+          cachedValue = val;
+        }
         return val;
       })
       .catch((error: unknown) => {
-        pending = undefined;
+        if (generation === attempt) {
+          pending = undefined;
+        }
         throw error;
       });
     return pending;
@@ -59,89 +66,36 @@ export function createRetryableLoader<T>(
 
   fn.getCached = () => cachedValue;
   fn.setCached = (val: T) => {
+    generation += 1;
     cachedValue = val;
     pending = Promise.resolve(val);
+  };
+  fn.reset = () => {
+    generation += 1;
+    cachedValue = undefined;
+    pending = undefined;
   };
 
   return fn;
 }
 
 // ---------------------------------------------------------------------------
-// 1. SNAPSHOT & GROUP CATALOG INTAKE
+// 1. SNAPSHOT SCOPING & GROUP CATALOG STORE
 // ---------------------------------------------------------------------------
 
-let cachedSnapshot: CatalogSnapshot | undefined;
-let pendingFullSnapshot: Promise<CatalogSnapshot> | undefined;
+type CatalogReaderStore = {
+  snapshot: CatalogSnapshot | undefined;
+  pendingFullSnapshot: Promise<CatalogSnapshot> | undefined;
+  menuCatalog: MenuCatalog | null;
+  generation: number;
+};
 
-function isFullGroupCatalog(group: GroupCatalog): boolean {
-  return (
-    group.categories.length > 0 &&
-    group.categories.every((category) => category.factories.length > 0)
-  );
-}
-
-export const loadCatalogSnapshot = Object.assign(
-  async (): Promise<CatalogSnapshot> => {
-    if (
-      cachedSnapshot !== undefined &&
-      cachedSnapshot.catalogs.length >= productGroups.length &&
-      cachedSnapshot.catalogs.every(isFullGroupCatalog)
-    ) {
-      return cachedSnapshot;
-    }
-    pendingFullSnapshot ??= import("./data/catalog-prices.json")
-      .then((module) => module.default as CatalogSnapshot)
-      .then((full) => {
-        if (cachedSnapshot) {
-          // A subcategory route primes only one category inside its group and
-          // leaves sibling categories stubbed (`factories: []`). Merge full
-          // groups over any partial/stubbed group when the complete snapshot loads.
-          const cachedById = new Map(
-            cachedSnapshot.catalogs.map((c) => [c.id, c]),
-          );
-          cachedSnapshot = {
-            ...full,
-            ...cachedSnapshot,
-            catalogs: full.catalogs.map((fullCatalog) => {
-              const existing = cachedById.get(
-                fullCatalog.id as ProductGroupId,
-              );
-              return existing && isFullGroupCatalog(existing)
-                ? existing
-                : fullCatalog;
-            }),
-          };
-        } else {
-          cachedSnapshot = full;
-        }
-        pendingFullSnapshot = undefined;
-        return cachedSnapshot;
-      })
-      .catch((error: unknown) => {
-        pendingFullSnapshot = undefined;
-        throw error;
-      });
-    return pendingFullSnapshot;
-  },
-  {
-    getCached: () => cachedSnapshot,
-    setCached: (val: CatalogSnapshot) => {
-      if (cachedSnapshot) {
-        const newIds = new Set(val.catalogs.map((c) => c.id));
-        const kept = cachedSnapshot.catalogs.filter(
-          (c) => !newIds.has(c.id as ProductGroupId),
-        );
-        cachedSnapshot = {
-          ...cachedSnapshot,
-          ...val,
-          catalogs: [...val.catalogs, ...kept],
-        };
-      } else {
-        cachedSnapshot = val;
-      }
-    },
-  },
-);
+const store: CatalogReaderStore = {
+  snapshot: undefined,
+  pendingFullSnapshot: undefined,
+  menuCatalog: null,
+  generation: 0,
+};
 
 function enrichGroupCatalog(
   snapshot: CatalogSnapshot,
@@ -155,6 +109,135 @@ function enrichGroupCatalog(
     taxRate: snapshot.taxRate,
   };
 }
+
+function stubCategory(category: CatalogCategory): CatalogCategory {
+  return {
+    ...category,
+    filters: { sizes: [], factories: [] },
+    factories: [],
+  };
+}
+
+function isFullGroupCatalog(group: GroupCatalog): boolean {
+  return (
+    group.categories.length > 0 &&
+    group.categories.every((category) => category.factories.length > 0)
+  );
+}
+
+/**
+ * Build a route-scoped CatalogSnapshot containing only one product group, and
+ * optionally only one active subcategory's rows (stubbing sibling categories so
+ * tab navigation renders identically during SSR/hydration while keeping HTML
+ * payloads small).
+ *
+ * Owning both scoping and partial-group detection inside this module keeps the
+ * stubbed-category wire representation internal to catalog-reader.ts.
+ */
+export function scopeCatalogSnapshot(
+  snapshot: CatalogSnapshot,
+  groupId: ProductGroupId,
+  subcategoryId?: string,
+): CatalogSnapshot {
+  const catalog = snapshot.catalogs.find((item) => item.id === groupId);
+  if (!catalog) {
+    throw new Error(`داده قیمت گروه ${groupId} در دسترس نیست.`);
+  }
+  const enriched = enrichGroupCatalog(snapshot, catalog);
+  if (
+    subcategoryId !== undefined &&
+    !enriched.categories.some((entry) => entry.id === subcategoryId)
+  ) {
+    throw new Error(`زیردسته ${subcategoryId} در گروه ${groupId} یافت نشد.`);
+  }
+
+  const scopedCatalog: GroupCatalog =
+    subcategoryId !== undefined
+      ? {
+          ...enriched,
+          categories: enriched.categories.map((entry) =>
+            entry.id === subcategoryId ? entry : stubCategory(entry),
+          ),
+        }
+      : enriched;
+
+  return {
+    fetchedAt: snapshot.fetchedAt,
+    sourceName: snapshot.sourceName,
+    sourceHome: snapshot.sourceHome,
+    taxRate: snapshot.taxRate,
+    catalogs: [scopedCatalog],
+  };
+}
+
+export const loadCatalogSnapshot = Object.assign(
+  async (): Promise<CatalogSnapshot> => {
+    if (
+      store.snapshot !== undefined &&
+      store.snapshot.catalogs.length >= productGroups.length &&
+      store.snapshot.catalogs.every(isFullGroupCatalog)
+    ) {
+      return store.snapshot;
+    }
+    const attempt = store.generation;
+    store.pendingFullSnapshot ??= import("./data/catalog-prices.json")
+      .then((module) => module.default as CatalogSnapshot)
+      .then((full) => {
+        if (store.generation !== attempt) {
+          return full;
+        }
+        if (store.snapshot) {
+          // A subcategory route primes only one category inside its group and
+          // leaves sibling categories stubbed. Merge full groups over any
+          // partial/stubbed group when the complete snapshot loads.
+          const cachedById = new Map(
+            store.snapshot.catalogs.map((c) => [c.id, c]),
+          );
+          store.snapshot = {
+            ...full,
+            ...store.snapshot,
+            catalogs: full.catalogs.map((fullCatalog) => {
+              const existing = cachedById.get(
+                fullCatalog.id as ProductGroupId,
+              );
+              return existing && isFullGroupCatalog(existing)
+                ? existing
+                : fullCatalog;
+            }),
+          };
+        } else {
+          store.snapshot = full;
+        }
+        store.pendingFullSnapshot = undefined;
+        return store.snapshot;
+      })
+      .catch((error: unknown) => {
+        if (store.generation === attempt) {
+          store.pendingFullSnapshot = undefined;
+        }
+        throw error;
+      });
+    return store.pendingFullSnapshot;
+  },
+  {
+    getCached: () => store.snapshot,
+    setCached: (val: CatalogSnapshot) => {
+      if (store.snapshot) {
+        const newIds = new Set(val.catalogs.map((c) => c.id));
+        const kept = store.snapshot.catalogs.filter(
+          (c) => !newIds.has(c.id as ProductGroupId),
+        );
+        store.snapshot = {
+          ...store.snapshot,
+          ...val,
+          catalogs: [...val.catalogs, ...kept],
+        };
+      } else {
+        store.snapshot = val;
+      }
+    },
+  },
+);
 
 /** The category a group opens on. */
 export function initialCategoryIdOf(groupId: ProductGroupId): string {
@@ -249,10 +332,23 @@ function toMenuGroup(
 }
 
 /**
- * Built once per build from the primed catalog caches. The dev server has no
- * prerender step, so the same function also backs the async fallback.
+ * Built from an explicit snapshot (build / SSR) or from the catalog store when
+ * no snapshot is provided (dev server async fallback).
  */
-export async function buildMenuCatalog(): Promise<MenuCatalog> {
+export async function buildMenuCatalog(
+  snapshot?: CatalogSnapshot,
+): Promise<MenuCatalog> {
+  if (snapshot) {
+    return productGroups
+      .map((group) => {
+        const catalog = snapshot.catalogs.find((item) => item.id === group.id);
+        if (!catalog) {
+          throw new Error(`داده قیمت گروه ${group.id} در دسترس نیست.`);
+        }
+        return toMenuGroup(group.id, enrichGroupCatalog(snapshot, catalog));
+      })
+      .filter((group): group is MenuGroup => group !== null);
+  }
   const groups = await Promise.all(
     productGroups.map(async (group) =>
       toMenuGroup(group.id, await loadGroupCatalog(group.id)),
@@ -261,10 +357,8 @@ export async function buildMenuCatalog(): Promise<MenuCatalog> {
   return groups.filter((group): group is MenuGroup => group !== null);
 }
 
-let cachedMenuCatalog: MenuCatalog | null = null;
-
 export function setMenuCatalog(catalog: MenuCatalog) {
-  cachedMenuCatalog = catalog;
+  store.menuCatalog = catalog;
 }
 
 /**
@@ -281,7 +375,7 @@ export const loadMenuGroup = Object.assign(
   {
     getCached: (groupId?: ProductGroupId): MenuGroup | undefined =>
       groupId
-        ? (cachedMenuCatalog?.find((group) => group.id === groupId) ?? undefined)
+        ? (store.menuCatalog?.find((group) => group.id === groupId) ?? undefined)
         : undefined,
   },
 );
@@ -348,21 +442,24 @@ function summariseGroup(
   };
 }
 
-export const loadOverviewSummaries = createRetryableLoader<
-  CategoryPriceOverview[]
->(async () => {
-  const catalogs = await loadAllGroupCatalogs();
+export function buildOverviewSummaries(
+  snapshot: CatalogSnapshot,
+): CategoryPriceOverview[] {
   const categoriesByGroup = new Map(
-    catalogs.map((catalog) => [catalog.id, catalog.categories]),
+    snapshot.catalogs.map((catalog) => [catalog.id, catalog.categories]),
   );
 
   return productGroups.map((group) =>
     summariseGroup(group, categoriesByGroup.get(group.id) ?? []),
   );
-});
+}
+
+export const loadOverviewSummaries = createRetryableLoader<
+  CategoryPriceOverview[]
+>(async () => buildOverviewSummaries(await loadCatalogSnapshot()));
 
 // ---------------------------------------------------------------------------
-// 4. UNIFIED PRIMING INTERFACE
+// 4. UNIFIED STORE LIFECYCLE (PRIME & RESET)
 // ---------------------------------------------------------------------------
 
 export type CatalogPrimingOptions = {
@@ -370,6 +467,18 @@ export type CatalogPrimingOptions = {
   menu?: MenuCatalog | null;
   overview?: CategoryPriceOverview[] | null;
 };
+
+/**
+ * Clear all cached snapshots, projections, and in-flight loads so a subsequent
+ * SSR build or in-process hydration run starts from an empty catalog store.
+ */
+export function resetCatalogReader() {
+  store.generation += 1;
+  store.snapshot = undefined;
+  store.pendingFullSnapshot = undefined;
+  store.menuCatalog = null;
+  loadOverviewSummaries.reset();
+}
 
 /**
  * Prime catalog caches prior to React hydration or during SSR.

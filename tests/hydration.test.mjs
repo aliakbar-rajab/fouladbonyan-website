@@ -1,12 +1,8 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import { promisify } from "node:util";
 import test from "node:test";
+import { hydrateRoute } from "./helpers/hydrate-route.mjs";
 
-const run = promisify(execFile);
-const projectDir = resolve(import.meta.dirname, "..");
 const readDist = (path) =>
   readFile(new URL(`../dist/${path}`, import.meta.url), "utf8");
 
@@ -34,20 +30,10 @@ const ROUTES = [
   "guide/rebar-weight-chart",
 ];
 
-async function hydrate(route) {
-  const { stdout } = await run(
-    process.execPath,
-    ["--import", "tsx", "tests/helpers/hydrate-route.mjs", route],
-    { cwd: projectDir, timeout: 120_000 },
-  );
-  const line = stdout.trim().split("\n").at(-1);
-  return JSON.parse(line);
-}
-
 test("built pages hydrate with no recoverable React errors", async (t) => {
   for (const route of ROUTES) {
     await t.test(`/${route}`, async () => {
-      const result = await hydrate(route);
+      const result = await hydrateRoute(route);
       assert.deepEqual(
         result.recoverable,
         [],

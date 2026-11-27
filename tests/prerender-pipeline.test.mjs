@@ -18,8 +18,8 @@ import {
 } from "../scripts/lib/prerender-pipeline.mjs";
 import {
   buildMenuCatalog,
-  loadOverviewSummaries,
-  primeCatalogSnapshot,
+  buildOverviewSummaries,
+  resetCatalogReader,
 } from "../app/catalog-reader.ts";
 import { buildGuideReference } from "../app/steel-reference.ts";
 import {
@@ -65,11 +65,9 @@ test("collectSitePageDescriptors compiles all 65 static site descriptors with di
   );
   const snapshot = JSON.parse(snapshotRaw);
 
-  primeCatalogSnapshot(snapshot);
-  const [menuCatalog, overviewSummaries] = await Promise.all([
-    buildMenuCatalog(),
-    loadOverviewSummaries(),
-  ]);
+  resetCatalogReader();
+  const menuCatalog = await buildMenuCatalog(snapshot);
+  const overviewSummaries = buildOverviewSummaries(snapshot);
   const reference = buildGuideReference(snapshot);
 
   const { pages, rootLastmod, siteUrl } = await collectSitePageDescriptors({

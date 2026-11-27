@@ -6,7 +6,7 @@ import {
   buildOrganizationStructuredData,
   siteConfig,
 } from "../../app/site-config.ts";
-import { loadGroupCatalog } from "../../app/catalog-reader.ts";
+import { scopeCatalogSnapshot } from "../../app/catalog-reader.ts";
 import {
   buildRedirectsFile,
   catalogCollectionItems,
@@ -100,19 +100,11 @@ export async function collectSitePageDescriptors({
 
   // 2. Category Landing Pages & Subcategories
   for (const group of productGroups) {
-    const catalog = await loadGroupCatalog(group.id);
+    const groupSnapshot = scopeCatalogSnapshot(snapshot, group.id);
+    const [catalog] = groupSnapshot.catalogs;
     const lastmod = catalog.fetchedAt.slice(0, 10);
     const heroPreload = buildHeroPreloadTag(group);
 
-    // Scoped hydration payload: contains only the current group's catalog
-    // instead of injecting the entire multi-category snapshot
-    const groupSnapshot = {
-      fetchedAt: snapshot.fetchedAt,
-      sourceName: snapshot.sourceName,
-      sourceHome: snapshot.sourceHome,
-      taxRate: snapshot.taxRate,
-      catalogs: [catalog],
-    };
     const catalogPayloads = [
       menuPayload,
       { id: pagePayloadIds.catalog, data: groupSnapshot },
@@ -151,32 +143,11 @@ export async function collectSitePageDescriptors({
       group.id,
       catalog.categories,
     )) {
-      // Scope initial-page-data to the active subcategory's rows while
-      // keeping lightweight category stubs so tab navigation renders identically
-      // during SSR/hydration.
-      const scopedCatalog = {
-        ...catalog,
-        categories: catalog.categories.map((entry) =>
-          entry.id === sub.id
-            ? entry
-            : {
-                ...entry,
-                filters: { sizes: [], factories: [] },
-                factories: [],
-              },
-        ),
-      };
       const subcategoryPayloads = [
         menuPayload,
         {
           id: pagePayloadIds.catalog,
-          data: {
-            fetchedAt: snapshot.fetchedAt,
-            sourceName: snapshot.sourceName,
-            sourceHome: snapshot.sourceHome,
-            taxRate: snapshot.taxRate,
-            catalogs: [scopedCatalog],
-          },
+          data: scopeCatalogSnapshot(snapshot, group.id, sub.id),
         },
       ];
 

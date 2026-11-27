@@ -16,8 +16,12 @@ dom.window.HTMLCanvasElement.prototype.getContext = () => null;
 
 const { cleanup, render, within } = await import("@testing-library/react");
 const { collectSitePageDescriptors } = await import("../scripts/lib/site-pages.mjs");
-const { buildMenuCatalog, loadOverviewSummaries, primeCatalogSnapshot } =
-  await import("../app/catalog-reader.ts");
+const {
+  buildMenuCatalog,
+  buildOverviewSummaries,
+  primeCatalogReader,
+  resetCatalogReader,
+} = await import("../app/catalog-reader.ts");
 const { buildGuideReference } = await import("../app/steel-reference.ts");
 const { interpretSiteRoute } = await import("../app/site-route.ts");
 const { loadPageElement } = await import("../app/site-page-element.tsx");
@@ -33,12 +37,19 @@ const { getSubcategoryContent } = await import("../app/subcategory-content.ts");
 const snapshot = JSON.parse(
   await readFile(new URL("../app/data/catalog-prices.json", import.meta.url), "utf8"),
 );
-primeCatalogSnapshot(snapshot);
+const menuCatalog = await buildMenuCatalog(snapshot);
+const overviewSummaries = buildOverviewSummaries(snapshot);
+resetCatalogReader();
+primeCatalogReader({
+  snapshot,
+  menu: menuCatalog,
+  overview: overviewSummaries,
+});
 const reference = buildGuideReference(snapshot);
 const { pages } = await collectSitePageDescriptors({
   snapshot,
-  menuCatalog: await buildMenuCatalog(),
-  overviewSummaries: await loadOverviewSummaries(),
+  menuCatalog,
+  overviewSummaries,
   reference,
 });
 

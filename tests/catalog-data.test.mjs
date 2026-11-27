@@ -21,10 +21,17 @@ import {
 import { buildCatalogSearchGroups } from "../app/catalog-search.ts";
 import { loadGroupCatalogs } from "./helpers/dist.mjs";
 import {
+  buildMenuCatalog,
+  buildOverviewSummaries,
   createRetryableLoader,
   loadCatalogSnapshot,
   loadGroupCatalog,
+  loadMenuGroup,
+  loadOverviewSummaries,
+  primeCatalogReader,
   primeCatalogSnapshot,
+  resetCatalogReader,
+  scopeCatalogSnapshot,
 } from "../app/catalog-reader.ts";
 import { validateCatalogSnapshot } from "../app/catalog-validation.mjs";
 import { filterProductGroups } from "../app/site-logic.mjs";
@@ -534,31 +541,94 @@ test("catalog-pricing: per-unit ranges never cross Sales units", () => {
 
 test("catalog-reader: loadCatalogSnapshot upgrades a trimmed subcategory cache to the full snapshot", async () => {
   const full = await readJson("../app/data/catalog-prices.json");
-  const sheet = structuredClone(full.catalogs.find((c) => c.id === "sheet"));
-  const scopedSheet = {
-    ...sheet,
-    categories: sheet.categories.map((entry) =>
-      entry.id === "sheet-ck45"
-        ? entry
-        : { ...entry, filters: { sizes: [], factories: [] }, factories: [] },
-    ),
-  };
+  const scoped = scopeCatalogSnapshot(full, "sheet", "sheet-ck45");
 
-  primeCatalogSnapshot({
-    fetchedAt: full.fetchedAt,
-    sourceName: full.sourceName,
-    sourceHome: full.sourceHome,
-    taxRate: full.taxRate,
-    catalogs: [scopedSheet],
-  });
+  try {
+    resetCatalogReader();
+    primeCatalogSnapshot(scoped);
 
-  const cachedBefore = loadGroupCatalog.getCached("sheet");
-  assert.ok(cachedBefore.categories.some((c) => c.factories.length === 0));
+    const cachedBefore = loadGroupCatalog.getCached("sheet");
+    assert.ok(cachedBefore.categories.some((c) => c.factories.length === 0));
+    assert.ok(
+      cachedBefore.categories.find((c) => c.id === "sheet-ck45").factories
+        .length > 0,
+      "the active subcategory keeps its factory rows",
+    );
 
-  const upgraded = await loadCatalogSnapshot();
-  assert.equal(upgraded.catalogs.length, full.catalogs.length);
-  const upgradedSheet = upgraded.catalogs.find((c) => c.id === "sheet");
-  assert.ok(upgradedSheet.categories.every((c) => c.factories.length > 0));
+    const upgraded = await loadCatalogSnapshot();
+    assert.equal(upgraded.catalogs.length, full.catalogs.length);
+    const upgradedSheet = upgraded.catalogs.find((c) => c.id === "sheet");
+    assert.ok(upgradedSheet.categories.every((c) => c.factories.length > 0));
+  } finally {
+    resetCatalogReader();
+  }
+});
+
+test("catalog-reader: scopeCatalogSnapshot isolates group or subcategory payloads without mutating source", async () => {
+  const full = await readJson("../app/data/catalog-prices.json");
+  const originalSheet = full.catalogs.find((c) => c.id === "sheet");
+
+  const groupScoped = scopeCatalogSnapshot(full, "sheet");
+  assert.equal(groupScoped.catalogs.length, 1);
+  assert.equal(groupScoped.catalogs[0].id, "sheet");
+  assert.equal(groupScoped.catalogs[0].fetchedAt, full.fetchedAt);
+  assert.ok(
+    groupScoped.catalogs[0].categories.every((c) => c.factories.length > 0),
+  );
+
+  const subScoped = scopeCatalogSnapshot(full, "sheet", "sheet-ck45");
+  assert.equal(subScoped.catalogs.length, 1);
+  for (const category of subScoped.catalogs[0].categories) {
+    if (category.id === "sheet-ck45") {
+      assert.ok(category.factories.length > 0);
+      assert.ok(category.filters.factories.length > 0);
+    } else {
+      assert.deepEqual(category.factories, []);
+      assert.deepEqual(category.filters, { sizes: [], factories: [] });
+    }
+  }
+
+  // Input snapshot stays untouched.
+  assert.ok(originalSheet.categories.every((c) => c.factories.length > 0));
+
+  assert.throws(() => scopeCatalogSnapshot(full, "nonexistent"), /در دسترس نیست/);
+  assert.throws(
+    () => scopeCatalogSnapshot(full, "sheet", "nonexistent"),
+    /یافت نشد/,
+  );
+});
+
+test("catalog-reader: resetCatalogReader clears snapshot, menu, overview, and loader caches", async () => {
+  const full = await readJson("../app/data/catalog-prices.json");
+
+  try {
+    resetCatalogReader();
+
+    // Direct snapshot projections work with an unprimed store.
+    const menu = await buildMenuCatalog(full);
+    const overview = buildOverviewSummaries(full);
+    assert.equal(loadCatalogSnapshot.getCached(), undefined);
+    assert.equal(loadMenuGroup.getCached("rebar"), undefined);
+    assert.equal(loadOverviewSummaries.getCached(), undefined);
+
+    primeCatalogReader({
+      snapshot: scopeCatalogSnapshot(full, "rebar"),
+      menu,
+      overview,
+    });
+    assert.ok(loadGroupCatalog.getCached("rebar"));
+    assert.equal(loadGroupCatalog.getCached("sheet"), undefined);
+    assert.ok(loadMenuGroup.getCached("rebar"));
+    assert.deepEqual(loadOverviewSummaries.getCached(), overview);
+
+    resetCatalogReader();
+    assert.equal(loadCatalogSnapshot.getCached(), undefined);
+    assert.equal(loadGroupCatalog.getCached("rebar"), undefined);
+    assert.equal(loadMenuGroup.getCached("rebar"), undefined);
+    assert.equal(loadOverviewSummaries.getCached(), undefined);
+  } finally {
+    resetCatalogReader();
+  }
 });
 
 test("catalog-behavior: computes thick-wall pipe wall thickness, semantic spec labels, and numeric sorting", () => {
