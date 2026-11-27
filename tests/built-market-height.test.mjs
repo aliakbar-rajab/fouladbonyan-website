@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { chromium } from "@playwright/test";
 import { preview } from "vite";
-import { onRequestGet } from "../functions/api/market-prices.js";
+import { createMarketPricesHandler } from "../functions/api/market-prices.js";
 
 async function measureMarket(page) {
   return page.locator("#market-prices").evaluate(section => {
@@ -28,31 +28,25 @@ function assertFootprint(geometry, context) {
 // Exercise the real endpoint mapping so adding an instrument or changing its
 // label changes the fixture too. No upstream service is needed by this test.
 async function marketFixture() {
-  const originalFetch = globalThis.fetch;
-  const originalCaches = globalThis.caches;
   const pending = [];
-  globalThis.caches = { default: {
-    match: async () => undefined,
-    put: async () => {},
-  } };
-  // Fail explicitly if the endpoint gains an unrepresented upstream key.
-  globalThis.fetch = async () => Response.json({ current: Object.fromEntries(
-    ["geram18", "price_dollar_rl", "crypto-tether-irr", "price_eur"].map(key =>
-      [key, { p: "123,456,780", dp: "1.25", dt: "high" }]),
-  ) });
-  try {
-    const response = await onRequestGet({
-      request: new Request("https://example.test/api/market-prices"),
-      waitUntil: promise => pending.push(promise),
-    });
-    await Promise.all(pending);
-    assert.equal(response.status, 200, "Update the upstream fixture for new instruments");
-    return await response.json();
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (originalCaches === undefined) delete globalThis.caches;
-    else globalThis.caches = originalCaches;
-  }
+  const handle = createMarketPricesHandler({
+    cache: {
+      match: async () => undefined,
+      put: async () => {},
+    },
+    // Fail explicitly if the endpoint gains an unrepresented upstream key.
+    fetch: async () => Response.json({ current: Object.fromEntries(
+      ["geram18", "price_dollar_rl", "crypto-tether-irr", "price_eur"].map(key =>
+        [key, { p: "123,456,780", dp: "1.25", dt: "high" }]),
+    ) }),
+  });
+  const response = await handle({
+    request: new Request("https://example.test/api/market-prices"),
+    waitUntil: promise => pending.push(promise),
+  });
+  await Promise.all(pending);
+  assert.equal(response.status, 200, "Update the upstream fixture for new instruments");
+  return await response.json();
 }
 
 test("built market ready content matches its reserved footprint", { timeout: 120_000 }, async t => {
@@ -63,19 +57,29 @@ test("built market ready content matches its reserved footprint", { timeout: 120
     browser = await chromium.launch({ channel: "chrome" });
     const base = `http://127.0.0.1:${server.httpServer.address().port}`;
     for (const width of [320, 390, 768, 1440]) {
-      await t.test(`${width}px: ready, stale, and surplus cards`, async () => {
+      await t.test(`${width}px: surplus rejected, ready, and stale cards`, async () => {
         const page = await browser.newPage({ viewport: { width, height: 844 }, deviceScaleFactor: 2 });
         let payload = fixture;
         await page.route("**/api/market-prices", route => route.fulfill({ json: payload }));
-        for (const variant of ["ready", "stale", "surplus"]) {
+        for (const variant of ["surplus", "ready", "stale"]) {
           payload = structuredClone(fixture);
           if (variant === "stale") payload.fetchedAt = "2000-01-01T00:00:00Z";
           if (variant === "surplus") payload.items.push({ ...payload.items[0], id: "extra" });
           await page.goto(`${base}/rebar/ribbed/`, { waitUntil: "load" });
-          await page.locator(".market-price-card").first().waitFor();
+          if (variant === "surplus") {
+            await page.locator(".market-status-actions").waitFor();
+          } else {
+            await page.locator(".market-price-card").first().waitFor();
+          }
           await page.evaluate(() => document.fonts.ready);
           const geometry = await measureMarket(page);
-          assert.equal(geometry.cards, 4, "The reserved footprint assumes four visible instruments");
+          assert.equal(
+            geometry.cards,
+            variant === "surplus" ? 0 : 4,
+            variant === "surplus"
+              ? "Surplus payloads violate the four-instrument contract and must be rejected"
+              : "The reserved footprint assumes four visible instruments",
+          );
           assertFootprint(geometry, `${width}px ${variant}`);
         }
 

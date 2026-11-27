@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { validateMarketPriceData } from "./market-price-validation.mjs";
 
 export type MarketPriceItem = {
   id: string;
   label: string;
   unit: string;
   price: number;
-  status: "up" | "down" | "same";
+  status: "up" | "down" | "same" | "unverified";
   percent: number;
   updatedAt: string;
 };
@@ -55,19 +56,6 @@ export function isMarketPriceDataStale(
 const MARKET_PRICES_URL = "/api/market-prices";
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function isMarketPriceData(value: unknown): value is MarketPriceData {
-  return (
-    isRecord(value) &&
-    Array.isArray(value.items) &&
-    value.items.length > 0 &&
-    typeof value.fetchedAt === "string"
-  );
-}
-
 export function useMarketPrices(): MarketPricesResult {
   const [state, setState] = useState<MarketPricesState>({ status: "loading" });
   const [requestVersion, setRequestVersion] = useState(0);
@@ -84,8 +72,9 @@ export function useMarketPrices(): MarketPricesResult {
       try {
         const response = await fetch(MARKET_PRICES_URL, { cache: "no-store" });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data: unknown = await response.json();
-        if (!isMarketPriceData(data)) throw new Error("داده نامعتبر");
+        const data = validateMarketPriceData(
+          await response.json(),
+        ) as MarketPriceData;
         if (!active) return;
         lastGoodRef.current = data;
         setState({

@@ -39,8 +39,8 @@ function toNumber(raw) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-async function fetchFromUpstream() {
-  const response = await fetch(UPSTREAM_URL, {
+async function fetchFromUpstream({ fetchImpl, now }) {
+  const response = await fetchImpl(UPSTREAM_URL, {
     headers: {
       accept: "application/json,text/plain,*/*",
       "accept-language": "fa-IR,fa;q=0.9",
@@ -59,7 +59,7 @@ async function fetchFromUpstream() {
 
   // tgju.org publishes rial figures; the rest of the site quotes toman
   // throughout, so every price is converted (rial / 10) here.
-  const fetchedAt = new Date().toISOString();
+  const fetchedAt = new Date(now()).toISOString();
   const payload = {
     fetchedAt,
     sourceName: "tgju.org",
@@ -106,50 +106,67 @@ function jsonResponse(payload, maxAgeSeconds, extraHeaders = {}) {
   });
 }
 
-export async function onRequestGet({ request, waitUntil }) {
-  const cache = caches.default;
-  const origin = new URL(request.url).origin;
-  // Two independent edge cache entries on the same route: a short-lived
-  // "fresh" copy (what most requests hit) and a long-lived "last good" copy
-  // that is only ever read on an upstream failure. Keeping them as separate
-  // keys means the fallback survives well past the 5-minute fresh window.
-  const freshKey = new Request(`${origin}/api/market-prices`);
-  const fallbackKey = new Request(`${origin}/api/market-prices?cache=fallback`);
-
-  const freshHit = await cache.match(freshKey);
-  if (freshHit) return freshHit;
-
-  try {
-    const payload = await fetchFromUpstream();
-    const response = jsonResponse(payload, FRESH_MAX_AGE_SECONDS);
-    waitUntil(cache.put(freshKey, response.clone()));
-    waitUntil(
-      cache.put(fallbackKey, jsonResponse(payload, FALLBACK_MAX_AGE_SECONDS)),
-    );
-    return response;
-  } catch (error) {
-    const fallbackHit = await cache.match(fallbackKey);
-    if (fallbackHit) {
-      const payload = await fallbackHit.json();
-      return jsonResponse(payload, 0, {
-        "cache-control": "no-store",
-        "x-market-prices-fallback": "true",
-      });
-    }
-    // Never seen a valid response, ever, from this edge location -- report
-    // unavailable rather than inventing a price.
-    return new Response(
-      JSON.stringify({
-        error: "market prices unavailable",
-        message: String(error?.message ?? error),
-      }),
-      {
-        status: 503,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "no-store",
-        },
-      },
-    );
+export function createMarketPricesHandler({
+  cache,
+  fetch: fetchImpl = (...args) => globalThis.fetch(...args),
+  now = Date.now,
+} = {}) {
+  if (!cache) {
+    throw new Error("createMarketPricesHandler requires a cache adapter");
   }
+
+  return async function handleMarketPrices({ request, waitUntil = () => {} }) {
+    const origin = new URL(request.url).origin;
+    // Two independent edge cache entries on the same route: a short-lived
+    // "fresh" copy (what most requests hit) and a long-lived "last good" copy
+    // that is only ever read on an upstream failure. Keeping them as separate
+    // keys means the fallback survives well past the 5-minute fresh window.
+    const freshKey = new Request(`${origin}/api/market-prices`);
+    const fallbackKey = new Request(`${origin}/api/market-prices?cache=fallback`);
+
+    const freshHit = await cache.match(freshKey);
+    if (freshHit) return freshHit;
+
+    try {
+      const payload = await fetchFromUpstream({ fetchImpl, now });
+      const response = jsonResponse(payload, FRESH_MAX_AGE_SECONDS);
+      waitUntil(cache.put(freshKey, response.clone()));
+      waitUntil(
+        cache.put(fallbackKey, jsonResponse(payload, FALLBACK_MAX_AGE_SECONDS)),
+      );
+      return response;
+    } catch (error) {
+      const fallbackHit = await cache.match(fallbackKey);
+      if (fallbackHit) {
+        const payload = await fallbackHit.json();
+        return jsonResponse(payload, 0, {
+          "cache-control": "no-store",
+          "x-market-prices-fallback": "true",
+        });
+      }
+      // Never seen a valid response, ever, from this edge location -- report
+      // unavailable rather than inventing a price.
+      return new Response(
+        JSON.stringify({
+          error: "market prices unavailable",
+          message: String(error?.message ?? error),
+        }),
+        {
+          status: 503,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        },
+      );
+    }
+  };
+}
+
+export function onRequestGet(context) {
+  return createMarketPricesHandler({
+    cache: caches.default,
+    fetch: (...args) => globalThis.fetch(...args),
+    now: Date.now,
+  })(context);
 }
